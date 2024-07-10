@@ -1,0 +1,42 @@
+node_tree.json_node_tree_api:
+  path: '/node_tree/api/getImmediateChildrenOfParent'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::responseForImmediateChildrenOfParent'
+    _title: 'JSON api - node_tree API Parent Immediate Children'
+  methods:  [GET]
+  requirements:
+    _access: 'TRUE'
+node_tree.api_node_tree_content_display:
+  path: '/node_tree/api/getnode_treeContent/{uuid}'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::responseForGetContent'
+    _title: 'node_tree API get node_tree content'
+    uuid: ''
+  requirements:
+    _access: 'TRUE'
+  options:
+    parameters:
+      uuid:
+        type: string
+node_tree.api_get_expanded_tree:
+  path: '/node_tree/api/getExpandedTreePathToNode/{uuid}'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::getExpandedTreePathToNode'
+    _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
+    uuid: ''
+  requirements:
+    _access: 'TRUE'
+  options:
+    parameters:
+      taxonkey:
+        type: string
+node_tree.api_get_expanded_tree_root:
+  path: '/node_tree/api/getExpandedTreePathToRoot'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::getExpandedTreePathToNode'
+    _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
+  requirements:
+    _access: 'TRUE'
+# https://drupal.stackexchange.com/a/123356/1082
+
+      

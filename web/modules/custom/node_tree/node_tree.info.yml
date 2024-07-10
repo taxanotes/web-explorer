@@ -1,0 +1,9 @@
+name: 'Node Tree'
+description: 'Populates nodes of content type node'
+project: node_tree
+version: '1.0'
+type: module
+core: 8.x
+core_version_requirement: ^10
+libraries:
+  - node_tree/tree
