@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_associated_accepted_name_g
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_associated_accepted_name_g
+field_name: field_associated_accepted_name_g
+entity_type: node
+bundle: taxon
+label: 'Associated accepted name (GUID))'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text

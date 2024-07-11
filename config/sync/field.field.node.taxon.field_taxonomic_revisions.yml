@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_taxonomic_revisions
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_taxonomic_revisions
+field_name: field_taxonomic_revisions
+entity_type: node
+bundle: taxon
+label: 'Taxonomic revisions'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long

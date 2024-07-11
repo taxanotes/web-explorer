@@ -1,0 +1,11 @@
+langcode: en
+name: anthophila
+mail: site-email-address@email.placeholder
+slogan: ''
+page:
+  403: ''
+  404: ''
+  front: /node
+admin_compact_mode: false
+weight_select_max: 100
+default_langcode: en

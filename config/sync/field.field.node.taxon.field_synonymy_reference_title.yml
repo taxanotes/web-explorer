@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_synonymy_reference_title
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_synonymy_reference_title
+field_name: field_synonymy_reference_title
+entity_type: node
+bundle: taxon
+label: 'Synonymy reference (Title)'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text

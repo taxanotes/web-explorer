@@ -1,0 +1,395 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon.field_associated_accepted_name
+    - field.field.node.taxon.field_associated_accepted_name_g
+    - field.field.node.taxon.field_associated_accepted_name_t
+    - field.field.node.taxon.field_authors
+    - field.field.node.taxon.field_biological_notes
+    - field.field.node.taxon.field_designation_by
+    - field.field.node.taxon.field_designation_page_number
+    - field.field.node.taxon.field_designation_ref_title
+    - field.field.node.taxon.field_designation_reference_guid
+    - field.field.node.taxon.field_designation_reference_nid
+    - field.field.node.taxon.field_family_level_name_origins
+    - field.field.node.taxon.field_guid
+    - field.field.node.taxon.field_included_species
+    - field.field.node.taxon.field_page_number
+    - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_term_name
+    - field.field.node.taxon.field_rank
+    - field.field.node.taxon.field_reference_guid_
+    - field.field.node.taxon.field_reference_nid
+    - field.field.node.taxon.field_reference_title
+    - field.field.node.taxon.field_synonymy_by
+    - field.field.node.taxon.field_synonymy_page_number
+    - field.field.node.taxon.field_synonymy_reference_guid
+    - field.field.node.taxon.field_synonymy_reference_title
+    - field.field.node.taxon.field_taxonomic_notes
+    - field.field.node.taxon.field_taxonomic_revisions
+    - field.field.node.taxon.field_term_description
+    - field.field.node.taxon.field_type_material_notes
+    - field.field.node.taxon.field_unacceptability_reason
+    - field.field.node.taxon.field_unit_indicator_1
+    - field.field.node.taxon.field_unit_indicator_2
+    - field.field.node.taxon.field_unit_indicator_3
+    - field.field.node.taxon.field_unit_indicator_4
+    - field.field.node.taxon.field_unit_name_1
+    - field.field.node.taxon.field_unit_name_2
+    - field.field.node.taxon.field_unit_name_3
+    - field.field.node.taxon.field_unit_name_4
+    - field.field.node.taxon.field_usage
+    - field.field.node.taxon.field_vernacular_names_area_from
+    - field.field.node.taxon.field_vernacular_names_language
+    - field.field.node.taxon.field_vernacular_names_name
+    - field.field.node.taxon.field_vernacular_names_remarks
+    - field.field.node.taxon.field_vernacular_names_src_guid
+    - field.field.node.taxon.field_vernacular_names_src_nid
+    - field.field.node.taxon.field_vernacular_names_src_title
+    - node.type.taxon
+  module:
+    - text
+    - user
+id: node.taxon.default
+targetEntityType: node
+bundle: taxon
+mode: default
+content:
+  field_associated_accepted_name:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 105
+    region: content
+  field_associated_accepted_name_g:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 107
+    region: content
+  field_associated_accepted_name_t:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 106
+    region: content
+  field_authors:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 115
+    region: content
+  field_biological_notes:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 145
+    region: content
+  field_designation_by:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 134
+    region: content
+  field_designation_page_number:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 135
+    region: content
+  field_designation_ref_title:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 138
+    region: content
+  field_designation_reference_guid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 136
+    region: content
+  field_designation_reference_nid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 137
+    region: content
+  field_family_level_name_origins:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 133
+    region: content
+  field_guid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 103
+    region: content
+  field_included_species:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 146
+    region: content
+  field_page_number:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 116
+    region: content
+  field_parent_guid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 104
+    region: content
+  field_parent_term_name:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 101
+    region: content
+  field_rank:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 117
+    region: content
+  field_reference_guid_:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 118
+    region: content
+  field_reference_nid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 119
+    region: content
+  field_reference_title:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 121
+    region: content
+  field_synonymy_by:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 139
+    region: content
+  field_synonymy_page_number:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 142
+    region: content
+  field_synonymy_reference_guid:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 140
+    region: content
+  field_synonymy_reference_title:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 141
+    region: content
+  field_taxonomic_notes:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 143
+    region: content
+  field_taxonomic_revisions:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 144
+    region: content
+  field_term_description:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 102
+    region: content
+  field_type_material_notes:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 132
+    region: content
+  field_unacceptability_reason:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 122
+    region: content
+  field_unit_indicator_1:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 123
+    region: content
+  field_unit_indicator_2:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 124
+    region: content
+  field_unit_indicator_3:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 125
+    region: content
+  field_unit_indicator_4:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 126
+    region: content
+  field_unit_name_1:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 127
+    region: content
+  field_unit_name_2:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 128
+    region: content
+  field_unit_name_3:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 129
+    region: content
+  field_unit_name_4:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 130
+    region: content
+  field_usage:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 131
+    region: content
+  field_vernacular_names_area_from:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 113
+    region: content
+  field_vernacular_names_language:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 109
+    region: content
+  field_vernacular_names_name:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 108
+    region: content
+  field_vernacular_names_remarks:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 114
+    region: content
+  field_vernacular_names_src_guid:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 110
+    region: content
+  field_vernacular_names_src_nid:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 111
+    region: content
+  field_vernacular_names_src_title:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 112
+    region: content
+  links:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 100
+    region: content
+hidden: {  }

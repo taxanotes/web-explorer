@@ -1,0 +1,9 @@
+first_day: 0
+country:
+  default: CA
+timezone:
+  default: America/Regina
+  user:
+    configurable: true
+    default: 0
+    warn: false

@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_vernacular_names_language
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_vernacular_names_language
+field_name: field_vernacular_names_language
+entity_type: node
+bundle: taxon
+label: 'Vernacular names: Language'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text
