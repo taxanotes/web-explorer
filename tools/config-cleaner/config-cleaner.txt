@@ -1,0 +1,5 @@
+https://drupal.stackexchange.com/a/308680/1082
+
+
+find config/sync -type f -exec sed -i '' '/^uuid: /d' {} \;
+find config/sync -type f -exec sed -i '' '/_core:/{N;d;}' {} \;
