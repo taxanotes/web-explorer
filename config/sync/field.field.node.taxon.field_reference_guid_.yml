@@ -2,13 +2,13 @@ langcode: en
 status: true
 dependencies:
   config:
-    - field.storage.node.field_synonymy_reference_nid
+    - field.storage.node.field_reference_guid_
     - node.type.taxon
-id: node.taxon.field_synonymy_reference_nid
-field_name: field_synonymy_reference_nid
+id: node.taxon.field_reference_guid_
+field_name: field_reference_guid_
 entity_type: node
 bundle: taxon
-label: 'Synonymy reference (NID)'
+label: 'Reference (GUID)'
 description: ''
 required: false
 translatable: false
