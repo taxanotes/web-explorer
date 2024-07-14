@@ -3,8 +3,8 @@ status: true
 dependencies:
   module:
     - node
-id: node.field_reference_guid_
-field_name: field_reference_guid_
+id: node.field_synonymy_reference_nid
+field_name: field_synonymy_reference_nid
 entity_type: node
 type: string
 settings:

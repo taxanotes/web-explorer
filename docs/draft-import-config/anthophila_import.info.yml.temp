@@ -1,0 +1,5 @@
+name: anthophila_import
+type: module
+description: Import Anthophila data
+package: Custom
+core_version_requirement:  ^10
