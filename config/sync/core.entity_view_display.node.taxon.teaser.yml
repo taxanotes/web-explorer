@@ -20,12 +20,13 @@ dependencies:
     - field.field.node.taxon.field_parent_guid
     - field.field.node.taxon.field_parent_term_name
     - field.field.node.taxon.field_rank
-    - field.field.node.taxon.field_reference_guid_
+    - field.field.node.taxon.field_reference_guid
     - field.field.node.taxon.field_reference_nid
     - field.field.node.taxon.field_reference_title
     - field.field.node.taxon.field_synonymy_by
     - field.field.node.taxon.field_synonymy_page_number
     - field.field.node.taxon.field_synonymy_reference_guid
+    - field.field.node.taxon.field_synonymy_reference_nid
     - field.field.node.taxon.field_synonymy_reference_title
     - field.field.node.taxon.field_taxonomic_notes
     - field.field.node.taxon.field_taxonomic_revisions
@@ -79,12 +80,13 @@ hidden:
   field_parent_guid: true
   field_parent_term_name: true
   field_rank: true
-  field_reference_guid_: true
+  field_reference_guid: true
   field_reference_nid: true
   field_reference_title: true
   field_synonymy_by: true
   field_synonymy_page_number: true
   field_synonymy_reference_guid: true
+  field_synonymy_reference_nid: true
   field_synonymy_reference_title: true
   field_taxonomic_notes: true
   field_taxonomic_revisions: true

@@ -19,12 +19,13 @@ dependencies:
     - field.field.node.taxon.field_parent_guid
     - field.field.node.taxon.field_parent_term_name
     - field.field.node.taxon.field_rank
-    - field.field.node.taxon.field_reference_guid_
+    - field.field.node.taxon.field_reference_guid
     - field.field.node.taxon.field_reference_nid
     - field.field.node.taxon.field_reference_title
     - field.field.node.taxon.field_synonymy_by
     - field.field.node.taxon.field_synonymy_page_number
     - field.field.node.taxon.field_synonymy_reference_guid
+    - field.field.node.taxon.field_synonymy_reference_nid
     - field.field.node.taxon.field_synonymy_reference_title
     - field.field.node.taxon.field_taxonomic_notes
     - field.field.node.taxon.field_taxonomic_revisions
@@ -198,9 +199,9 @@ content:
       size: 60
       placeholder: ''
     third_party_settings: {  }
-  field_reference_guid_:
+  field_reference_guid:
     type: string_textfield
-    weight: 138
+    weight: 168
     region: content
     settings:
       size: 60
@@ -241,6 +242,14 @@ content:
   field_synonymy_reference_guid:
     type: string_textfield
     weight: 160
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_synonymy_reference_nid:
+    type: string_textfield
+    weight: 167
     region: content
     settings:
       size: 60
