@@ -1,0 +1,75 @@
+langcode: en
+status: true
+dependencies: {  }
+id: bees_import
+class: null
+  field_plugin_method: null
+cck_plugin_method: null
+migration_tags: null
+migration_group: default
+label: 'Import bees data'
+source:
+  plugin: csv
+  path: ./data-imports/anthophila.csv
+  delimiter: ','
+  enclosure: '"'
+  header_offset: 1
+  ids: [Term name]  
+process:
+  title: name
+  uid:
+    plugin: default_value
+    default_value: 1
+  uuid: uuid
+  type:
+    plugin: default_value
+  title:'Term name'
+  field_parent_term_name:	'Parent Term Name'
+  field_term_description:	'Term description'
+  field_guid:	'GUID'
+  field_parent_guid:	'Parent GUID'
+  field_associated_accepted_name:	 'Associated accepted name (Name)'
+  field_associated_accepted_name_t:	 'Associated accepted name (TID)'
+  field_associated_accepted_name_g:	 'Associated accepted name (GUID)'
+  field_vernacular_names_name:	'Vernacular names: Vernacular name'
+  field_vernacular_names_language:	'Vernacular names: Language'
+  field_vernacular_names_src_guid:	'Vernacular names: Source (GUID)'
+  field_vernacular_names_src_nid:	'Vernacular names: Source (NID)'
+  field_vernacular_names_src_title:	 'Vernacular names: Source (Title)'
+  field_vernacular_names_area_from:	 'Vernacular names: Area from which the vernacular name usage originates'
+  field_vernacular_names_remarks:	 'Vernacular names: Vernacular name remarks'
+  field_authors:	'Authors'
+  field_page_number:	'Page number'
+  field_rank:	 'Rank'
+  field_reference_guid:	 'Reference (GUID)'
+  field_reference_nid:	'Reference (NID)'
+  field_reference_title:	'Reference (Title)'
+  field_unacceptability_reason:	 'Unacceptability Reason'
+  field_unit_name_1:	'Unit name 1'
+  field_unit_name_2:	'Unit name 2'
+  field_unit_name_3:	'Unit name 3'
+  field_unit_name_4:	'Unit name 4'
+  field_unit_indicator_1:	 'Unit indicator 1'
+  field_unit_indicator_2:	 'Unit indicator 2'
+  field_unit_indicator_3:	 'Unit indicator 3'
+  field_unit_indicator_4:	 'Unit indicator 4'
+  field_usage:  'Usage'
+  field_type_material_notes: 	'Type material notes'
+  field_family_level_name_origins: 	'Family-level name origins'
+  field_designation_by:	 'Designation by'
+  field_designation_page_number:	'Designation page number'
+  field_designation_reference_nid: 	'Designation reference (GUID)'
+  field_designation_reference_guid:	 'Designation reference (NID)'
+  field_designation_ref_title: 	'Designation reference (Title)'
+  field_synonymy_by:	'Synonymy by'
+  field_synonymy_reference_guid:	'Synonymy reference (GUID)'
+  field_synonymy_reference_nid:	 'Synonymy reference (NID)'
+  field_synonymy_reference_title:	 'Synonymy reference (Title)'
+  field_synonymy_page_number:	 'Synonymy page number'
+  field_taxonomic_notes: 	'Taxonomic notes'
+  field_taxonomic_revisions: 	'Taxonomic revisions'
+  field_biological_notes:	 'Biological notes'
+  field_included_species: 	'Included species'
+destination:
+  plugin: 'entity:node'
+migration_dependencies: null
