@@ -22,6 +22,7 @@
         "drupal/gin": "^3.0@RC",
         "drupal/gin_toolbar": "^1.0@RC",
         "drupal/migrate_plus": "^6.0",
+        "drupal/migrate_source_csv": "^3.6",
         "drupal/shield": "^1.7",
         "drupal/taxonomy_import": "^2.0",
         "drush/drush": "^11.5"

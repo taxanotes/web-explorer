@@ -3,3 +3,6 @@ type: module
 description: Import Anthophila data
 package: Custom
 core_version_requirement:  ^10
+dependencies:
+  - drupal:migrate
+  - drupal:migrate_plus
