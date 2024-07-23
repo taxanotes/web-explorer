@@ -145,7 +145,8 @@ class NodeTreeCommands extends DrushCommands {
     $view = \Drupal\views\Views::getView('node_tree_view');
     $view->setDisplay('node_tree_all_view_display');
 
-    $view->setItemsPerPage(1000);
+    // if I'm going through all of them programmatically, I don't need to deal with pages 
+    //$view->setItemsPerPage(1000);
     $view->setOffset(0);
 
     $view->execute();
@@ -224,7 +225,6 @@ class NodeTreeCommands extends DrushCommands {
 
     // using:
     // https://drupal.stackexchange.com/questions/280763/programmatically-get-the-results-of-a-view
-
 
     // only expecting one result
     $parent_node_id = 0;
