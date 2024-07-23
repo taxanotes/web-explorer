@@ -18,6 +18,7 @@ dependencies:
     - field.field.node.taxon.field_included_species
     - field.field.node.taxon.field_page_number
     - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
     - field.field.node.taxon.field_parent_term_name
     - field.field.node.taxon.field_rank
     - field.field.node.taxon.field_reference_guid
@@ -78,6 +79,7 @@ hidden:
   field_included_species: true
   field_page_number: true
   field_parent_guid: true
+  field_parent_taxon_reference: true
   field_parent_term_name: true
   field_rank: true
   field_reference_guid: true

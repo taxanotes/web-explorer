@@ -17,6 +17,7 @@ dependencies:
     - field.field.node.taxon.field_included_species
     - field.field.node.taxon.field_page_number
     - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
     - field.field.node.taxon.field_parent_term_name
     - field.field.node.taxon.field_rank
     - field.field.node.taxon.field_reference_guid
@@ -167,6 +168,14 @@ content:
       link_to_entity: false
     third_party_settings: {  }
     weight: 104
+    region: content
+  field_parent_taxon_reference:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 149
     region: content
   field_parent_term_name:
     type: text_default

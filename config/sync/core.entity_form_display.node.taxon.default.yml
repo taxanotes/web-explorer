@@ -17,6 +17,7 @@ dependencies:
     - field.field.node.taxon.field_included_species
     - field.field.node.taxon.field_page_number
     - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
     - field.field.node.taxon.field_parent_term_name
     - field.field.node.taxon.field_rank
     - field.field.node.taxon.field_reference_guid
@@ -180,6 +181,16 @@ content:
     weight: 124
     region: content
     settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_parent_taxon_reference:
+    type: entity_reference_autocomplete
+    weight: 169
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
       size: 60
       placeholder: ''
     third_party_settings: {  }
