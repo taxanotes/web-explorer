@@ -150,13 +150,11 @@ source:
      name: included_species
      label: 'Included species'
 process:
-  title: 'Term name'
-  uid:
-    plugin: default_value
-    default_value: 1
+  title: term_name
   uuid: uuid
   type:
     plugin: default_value
+    default_value: taxon
   field_parent_term_name:	parent_term_name
   field_term_description:	term_description
   field_guid: guid
