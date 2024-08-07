@@ -7,6 +7,19 @@ use Drupal\Component\Serialization\Json;
 use Drupal\views\Views;
 use Drupal\node\Entity\Node;
 
+// THIS:
+// https://drupal.stackexchange.com/questions/310697/programmatically-get-child-nodes-referencing-parent-by-entity-reference-uuid-us
+
+/* what do we need in this file?
+
+- link child to parent
+  - what do we need for that?
+     - child node
+     - parent identifier value in field in that child node
+     - ability to look up parent node based on that value
+        - Drupal view?
+*/
+
 /**
  * A Drush commandfile.
  *
@@ -23,6 +36,11 @@ class NodeTreeCommands extends DrushCommands {
    * @usage node_tree:node_treeupdate file-or-http-address
    *   
    */
+
+  /*
+
+  // not sure if I need this, I don't think I do
+
   public function nodetreeupdate() {
     // node_treeupdate function name is also the command name
 
@@ -49,7 +67,7 @@ class NodeTreeCommands extends DrushCommands {
 
     $species = [];
   } // end function node_treeupdate
-
+  */
 
   /**
    * Gets node_tree data using input CSV for calling parameters (from UKSI)
@@ -142,10 +160,11 @@ class NodeTreeCommands extends DrushCommands {
 
 
   private function _link_parent_node_from_child_nodes() {
-    $view = \Drupal\views\Views::getView('node_tree_view');
+    $view = \Drupal\views\Views::getView('node_tree');
     $view->setDisplay('node_tree_all_view_display');
 
-    // if I'm going through all of them programmatically, I don't need to deal with pages 
+    // if I'm going through all of them programmatically, 
+    //I don't need to deal with pages 
     //$view->setItemsPerPage(1000);
     $view->setOffset(0);
 
@@ -163,7 +182,7 @@ class NodeTreeCommands extends DrushCommands {
 
       // https://drupal.stackexchange.com/questions/274462/how-to-get-a-rendered-output-field-from-view-object-programatically
       //$field__id_parent_value = $row->field__id_parent;
-      $field__id_parent_value = $row->_entity->get('field__id_parent')->getValue()[0]['value'];
+      $field_parent_guid_value = $row->_entity->get('field_parent_guid')->getValue()[0]['value'];
 
       // https://drupal.stackexchange.com/q/308755/1082
       // https://api.drupal.org/api/drupal/core%21modules%21views%21src%21Plugin%21views%21field%21FieldPluginBase.php/class/FieldPluginBase/8.2.x
@@ -184,8 +203,10 @@ class NodeTreeCommands extends DrushCommands {
 
       //var_dump( $field__id_parent_value );
 
+      /*
       $this->output()->writeln("child node id:".$child_node_id);
       $this->output()->writeln("field__id_parent_value:".$field__id_parent_value);
+      */
 
       /*
 
@@ -204,22 +225,23 @@ class NodeTreeCommands extends DrushCommands {
 
 
 
-      $this->_set_entity_reference_to_parent_node_from_child_node($child_node_id, $field__id_parent_value);
+      $this->_set_entity_reference_to_parent_node_from_child_node($child_node_id, $field_parent_guid_value);
     }
   }
 
-  private function _set_entity_reference_to_parent_node_from_child_node($child_node_id, $field__id_parent_value) {
-    $parent_node_id = $this->_get_parent_node_id($field__id_parent_value);
+  private function _set_entity_reference_to_parent_node_from_child_node($child_node_id, $parent_value) {
+    $parent_node_id = $this->_get_parent_node_id($parent_value);
 
     $node = Node::load($child_node_id);
     $node->set('field_parent_node_tree', ['target_id' => $parent_node_id]);
     $node->save();
   }
 
-  private function _get_parent_node_id($field__id_parent_value) {
+  // TO DO: need another view that returns a single result - node_tree_parent
+  private function _get_parent_node_id($parent_value) {
     $view = \Drupal\views\Views::getView('node_tree');
     $view->setDisplay('node_tree_parent');
-    $args = [$field__id_parent_value];
+    $args = [$parent_value];
     $view->setArguments($args);
     $view->execute();
 
