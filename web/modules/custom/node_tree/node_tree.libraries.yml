@@ -1,0 +1,14 @@
+tree:
+  version: VERSION
+  css:
+    base:
+      css/jqtree.css: {}
+      css/_portal.css: {}
+  js:
+    js/tree.jquery.js: {}
+    js/node_tree.js: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - core/jquery
+

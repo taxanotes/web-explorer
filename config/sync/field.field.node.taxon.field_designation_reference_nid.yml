@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_designation_reference_nid
+    - node.type.taxon
+id: node.taxon.field_designation_reference_nid
+field_name: field_designation_reference_nid
+entity_type: node
+bundle: taxon
+label: 'Designation reference (NID)'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

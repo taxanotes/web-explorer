@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_type_material_notes
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_type_material_notes
+field_name: field_type_material_notes
+entity_type: node
+bundle: taxon
+label: 'Type material notes'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long

@@ -1,0 +1,113 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.node.teaser
+    - field.field.node.taxon.field_associated_accepted_name
+    - field.field.node.taxon.field_associated_accepted_name_g
+    - field.field.node.taxon.field_associated_accepted_name_t
+    - field.field.node.taxon.field_authors
+    - field.field.node.taxon.field_biological_notes
+    - field.field.node.taxon.field_designation_by
+    - field.field.node.taxon.field_designation_page_number
+    - field.field.node.taxon.field_designation_ref_title
+    - field.field.node.taxon.field_designation_reference_guid
+    - field.field.node.taxon.field_designation_reference_nid
+    - field.field.node.taxon.field_family_level_name_origins
+    - field.field.node.taxon.field_guid
+    - field.field.node.taxon.field_included_species
+    - field.field.node.taxon.field_page_number
+    - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
+    - field.field.node.taxon.field_parent_term_name
+    - field.field.node.taxon.field_rank
+    - field.field.node.taxon.field_reference_guid
+    - field.field.node.taxon.field_reference_nid
+    - field.field.node.taxon.field_reference_title
+    - field.field.node.taxon.field_synonymy_by
+    - field.field.node.taxon.field_synonymy_page_number
+    - field.field.node.taxon.field_synonymy_reference_guid
+    - field.field.node.taxon.field_synonymy_reference_nid
+    - field.field.node.taxon.field_synonymy_reference_title
+    - field.field.node.taxon.field_taxonomic_notes
+    - field.field.node.taxon.field_taxonomic_revisions
+    - field.field.node.taxon.field_term_description
+    - field.field.node.taxon.field_type_material_notes
+    - field.field.node.taxon.field_unacceptability_reason
+    - field.field.node.taxon.field_unit_indicator_1
+    - field.field.node.taxon.field_unit_indicator_2
+    - field.field.node.taxon.field_unit_indicator_3
+    - field.field.node.taxon.field_unit_indicator_4
+    - field.field.node.taxon.field_unit_name_1
+    - field.field.node.taxon.field_unit_name_2
+    - field.field.node.taxon.field_unit_name_3
+    - field.field.node.taxon.field_unit_name_4
+    - field.field.node.taxon.field_usage
+    - field.field.node.taxon.field_vernacular_names_area_from
+    - field.field.node.taxon.field_vernacular_names_language
+    - field.field.node.taxon.field_vernacular_names_name
+    - field.field.node.taxon.field_vernacular_names_remarks
+    - field.field.node.taxon.field_vernacular_names_src_guid
+    - field.field.node.taxon.field_vernacular_names_src_nid
+    - field.field.node.taxon.field_vernacular_names_src_title
+    - node.type.taxon
+  module:
+    - user
+id: node.taxon.teaser
+targetEntityType: node
+bundle: taxon
+mode: teaser
+content:
+  links:
+    settings: {  }
+    third_party_settings: {  }
+    weight: 100
+    region: content
+hidden:
+  field_associated_accepted_name: true
+  field_associated_accepted_name_g: true
+  field_associated_accepted_name_t: true
+  field_authors: true
+  field_biological_notes: true
+  field_designation_by: true
+  field_designation_page_number: true
+  field_designation_ref_title: true
+  field_designation_reference_guid: true
+  field_designation_reference_nid: true
+  field_family_level_name_origins: true
+  field_guid: true
+  field_included_species: true
+  field_page_number: true
+  field_parent_guid: true
+  field_parent_taxon_reference: true
+  field_parent_term_name: true
+  field_rank: true
+  field_reference_guid: true
+  field_reference_nid: true
+  field_reference_title: true
+  field_synonymy_by: true
+  field_synonymy_page_number: true
+  field_synonymy_reference_guid: true
+  field_synonymy_reference_nid: true
+  field_synonymy_reference_title: true
+  field_taxonomic_notes: true
+  field_taxonomic_revisions: true
+  field_term_description: true
+  field_type_material_notes: true
+  field_unacceptability_reason: true
+  field_unit_indicator_1: true
+  field_unit_indicator_2: true
+  field_unit_indicator_3: true
+  field_unit_indicator_4: true
+  field_unit_name_1: true
+  field_unit_name_2: true
+  field_unit_name_3: true
+  field_unit_name_4: true
+  field_usage: true
+  field_vernacular_names_area_from: true
+  field_vernacular_names_language: true
+  field_vernacular_names_name: true
+  field_vernacular_names_remarks: true
+  field_vernacular_names_src_guid: true
+  field_vernacular_names_src_nid: true
+  field_vernacular_names_src_title: true

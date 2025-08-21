@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_unit_name_3
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_unit_name_3
+field_name: field_unit_name_3
+entity_type: node
+bundle: taxon
+label: 'Unit name 3'
+description: ''
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text

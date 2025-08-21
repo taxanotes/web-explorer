@@ -1,0 +1,218 @@
+langcode: en
+status: true
+dependencies: {  }
+id: bees_import
+class: null
+field_plugin_method: null
+cck_plugin_method: null
+migration_tags: null
+migration_group: null
+label: 'Import bees data'
+source:
+  plugin: csv
+  path: ../data-imports/anthophila.csv
+  delimiter: ','
+  enclosure: '"'
+  header_offset: 1
+  ids:
+    - term_name
+  fields:
+    -
+      name: term_name
+      label: 'Term name'
+    -
+      name: parent_term_name
+      label: 'Parent Term Name'
+    -
+      name: term_description
+      label: 'Term description'
+    -
+      name: guid
+      label: GUID
+    -
+      name: parent_guid
+      label: 'Parent GUID'
+    -
+      name: associated_accepted_name
+      label: 'Associated accepted name (Name)'
+    -
+      name: associated_accepted_name_t
+      label: 'Associated accepted name (TID)'
+    -
+      name: associated_accepted_name_g
+      label: 'Associated accepted name (GUID)'
+    -
+      name: vernacular_names_name
+      label: 'Vernacular names: Vernacular name'
+    -
+      name: vernacular_names_language
+      label: 'Vernacular names: Language'
+    -
+      name: vernacular_names_src_guid
+      label: 'Vernacular names: Source (GUID)'
+    -
+      name: vernacular_names_src_nid
+      label: 'Vernacular names: Source (NID)'
+    -
+      name: vernacular_names_src_title
+      label: 'Vernacular names: Source (Title)'
+    -
+      name: vernacular_names_area_from
+      label: 'Vernacular names: Area from which the vernacular name usage originates'
+    -
+      name: vernacular_names_remarks
+      label: 'Vernacular names: Vernacular name remarks'
+    -
+      name: authors
+      label: Authors
+    -
+      name: page_number
+      label: 'Page number'
+    -
+      name: rank
+      label: Rank
+    -
+      name: reference_guid
+      label: 'Reference (GUID)'
+    -
+      name: reference_nid
+      label: 'Reference (NID)'
+    -
+      name: reference_title
+      label: 'Reference (Title)'
+    -
+      name: unacceptability_reason
+      label: 'Unacceptability Reason'
+    -
+      name: unit_name_1
+      label: 'Unit name 1'
+    -
+      name: unit_name_2
+      label: 'Unit name 2'
+    -
+      name: unit_name_3
+      label: 'Unit name 3'
+    -
+      name: unit_name_4
+      label: 'Unit name 4'
+    -
+      name: unit_indicator_1
+      label: 'Unit indicator 1'
+    -
+      name: unit_indicator_2
+      label: 'Unit indicator 2'
+    -
+      name: unit_indicator_3
+      label: 'Unit indicator 3'
+    -
+      name: unit_indicator_4
+      label: 'Unit indicator 4'
+    -
+      name: usage
+      label: Usage
+    -
+      name: type_material_notes
+      label: 'Type material notes'
+    -
+      name: family_level_name_origins
+      label: 'Family-level name origins'
+    -
+      name: designation_by
+      label: 'Designation by'
+    -
+      name: designation_page_number
+      label: 'Designation page number'
+    -
+      name: designation_reference_nid
+      label: 'Designation reference (GUID)'
+    -
+      name: designation_reference_guid
+      label: 'Designation reference (NID)'
+    -
+      name: designation_ref_title
+      label: 'Designation reference (Title)'
+    -
+      name: synonymy_by
+      label: 'Synonymy by'
+    -
+      name: synonymy_reference_guid
+      label: 'Synonymy reference (GUID)'
+    -
+      name: synonymy_reference_nid
+      label: 'Synonymy reference (NID)'
+    -
+      name: synonymy_reference_title
+      label: 'Synonymy reference (Title)'
+    -
+      name: synonymy_page_number
+      label: 'Synonymy page number'
+    -
+      name: taxonomic_notes
+      label: 'Taxonomic notes'
+    -
+      name: taxonomic_revisions
+      label: 'Taxonomic revisions'
+    -
+      name: biological_notes
+      label: 'Biological notes'
+    -
+      name: included_species
+      label: 'Included species'
+process:
+  title: term_name
+  uid:
+    plugin: default_value
+    default_value: 1
+  uuid: uuid
+  type:
+    plugin: default_value
+    default_value: taxon
+  field_parent_term_name: parent_term_name
+  field_term_description: term_description
+  field_guid: guid
+  field_parent_guid: parent_guid
+  field_associated_accepted_name: associated_accepted_name
+  field_associated_accepted_name_t: associated_accepted_name_t
+  field_associated_accepted_name_g: associated_accepted_name_g
+  field_vernacular_names_name: vernacular_names_name
+  field_vernacular_names_language: vernacular_names_language
+  field_vernacular_names_src_guid: vernacular_names_src_guid
+  field_vernacular_names_src_nid: vernacular_names_src_nid
+  field_vernacular_names_src_title: vernacular_names_src_title
+  field_vernacular_names_area_from: vernacular_names_area_from
+  field_vernacular_names_remarks: vernacular_names_remarks
+  field_authors: authors
+  field_page_number: page_number
+  field_rank: rank
+  field_reference_guid: reference_guid
+  field_reference_nid: reference_nid
+  field_reference_title: reference_titl
+  field_unacceptability_reason: unacceptability_reason
+  field_unit_name_1: unit_name_1
+  field_unit_name_2: unit_name_2
+  field_unit_name_3: unit_name_3
+  field_unit_name_4: unit_name_4
+  field_unit_indicator_1: unit_indicator_1
+  field_unit_indicator_2: unit_indicator_2
+  field_unit_indicator_3: unit_indicator_3
+  field_unit_indicator_4: unit_indicator_4
+  field_usage: usage
+  field_type_material_notes: type_material_notes
+  field_family_level_name_origins: family_level_name_origins
+  field_designation_by: designation_by
+  field_designation_page_number: designation_page_number
+  field_designation_reference_nid: designation_reference_nid
+  field_designation_reference_guid: designation_reference_guid
+  field_designation_ref_title: designation_ref_title
+  field_synonymy_by: synonymy_by
+  field_synonymy_reference_guid: synonymy_reference_guid
+  field_synonymy_reference_nid: synonymy_reference_nid
+  field_synonymy_reference_title: synonymy_reference_title
+  field_synonymy_page_number: synonymy_page_number
+  field_taxonomic_notes: taxonomic_notes
+  field_taxonomic_revisions: taxonomic_revisions
+  field_biological_notes: biological_notes
+  field_included_species: included_species
+destination:
+  plugin: 'entity:node'
+migration_dependencies: null
