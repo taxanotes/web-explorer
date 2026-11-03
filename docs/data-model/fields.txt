@@ -1,0 +1,47 @@
+Term name
+Parent Term Name
+Term description
+GUID
+Parent GUID
+Associated accepted name (Name)
+Associated accepted name (TID)
+Associated accepted name (GUID)
+Vernacular names: Vernacular name
+Vernacular names: Language
+Vernacular names: Source (GUID)
+Vernacular names: Source (NID)
+Vernacular names: Source (Title)
+Vernacular names: Area from which the vernacular name usage originates
+Vernacular names: Vernacular name remarks
+Authors
+Page number
+Rank
+Reference (GUID)
+Reference (NID)
+Reference (Title)
+Unacceptability Reason
+Unit indicator 1
+Unit indicator 2
+Unit indicator 3
+Unit indicator 4
+Unit name 1
+Unit name 2
+Unit name 3
+Unit name 4
+Usage
+Type material notes
+Family-level name origins
+Designation by
+Designation page number
+Designation reference (GUID)
+Designation reference (NID)
+Designation reference (Title)
+Synonymy by
+Synonymy reference (GUID)
+Synonymy reference (NID)
+Synonymy reference (Title)
+Synonymy page number
+Taxonomic notes
+Taxonomic revisions
+Biological notes
+Included species

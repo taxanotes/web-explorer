@@ -6,6 +6,7 @@
 !share/
 share/*
 !share/purpose.txt
+.ddev/traefik/
 
 drush/contrib/
 vendor
@@ -130,3 +131,7 @@ out/
 # not ignored at this time, may ignore useful files by mistake
 #target/
 
+
+# ddev/local overrides
+web/sites/*/settings.ddev.php
+web/sites/*/services.local.yml

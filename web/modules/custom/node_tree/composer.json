@@ -1,0 +1,17 @@
+{
+    "name": "drupal/node_tree",
+    "description": "Populates nodes of content type node",
+    "type": "drupal-module",
+    "autoload": {
+        "psr-4": {
+            "Drupal\\node_tree\\": "src/"
+        }
+    },
+    "extra": {
+        "drush": {
+            "services": {
+                "drush.services.yml": "^10"
+            }
+        }
+    }
+}

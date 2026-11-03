@@ -1,0 +1,34 @@
+
+
+ddev drush php-eval "var_dump(Drupal::keyValue('migrate_status')->set('taxonomy_importer_myriatrix_xls_reduced_(gsheet)', 0));"
+
+ddev drush migrate:import taxonomy_importer_myriatrix_xls_reduced_(gsheet)
+
+ddev drush migrate:rollback taxonomy_importer_myriatrix_xls_reduced_(gsheet)
+
+
+--
+
+
+ddev drush migrate:import myriatrix
+
+ddev drush migrate:rollback myriatrix
+- where "myriatrix" is the `id:` in: config/sync/migrate_plus.migration.myriatrix.yml
+
+
+also:
+
+ddev drush migrate:reset-status myriatrix
+ddev drush migrate:rollback myriatrix
+
+
+ddev drush migrate:import myriatrixtest
+ddev drush migrate:reset-status myriatrixtest
+ddev drush migrate:rollback myriatrixtest
+
+
+also ddev drush node_treelnk to link nodes in the tree 
+
+and to debug drush commands do: ddev drush node_treelnk --xdebug for example
+
+There are three roots (top parents) in Myriatrix: Myriapoda, Onychophora, and "Deleted taxa" or something like that.

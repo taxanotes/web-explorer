@@ -1,0 +1,8 @@
+https://drupal.stackexchange.com/questions/293945/for-content-what-are-the-differences-between-nodes-and-terms
+
+https://www.reddit.com/r/drupal/comments/q5ox6c/when_to_use_content_type_vs_taxonomy/
+
+https://www.drupal.org/forum/support/post-installation/2013-04-10/content-as-node-vs-taxonomy
+
+https://drupal.stackexchange.com/questions/309952/should-i-use-an-entity-reference-for-nodes-or-taxonomy-terms
+
