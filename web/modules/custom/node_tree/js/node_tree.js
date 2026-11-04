@@ -20,9 +20,13 @@
             $container.find('.node-tree-loading').remove();
             $tree.tree({ data: data, autoOpen: false, dragAndDrop: false, dataUrl: dataUrl });
             bindEvents($tree);
-            var selected = $tree.tree('getSelectedNode');
-            if (selected) {
-              showContent(selected.id);
+            var target = $tree.tree('getNodeById', guid);
+            if (target) {
+              $tree.tree('selectNode', target);
+              showContent(guid);
+              if (target.element && target.element.scrollIntoView) {
+                target.element.scrollIntoView({ block: 'center' });
+              }
             }
           });
         }
