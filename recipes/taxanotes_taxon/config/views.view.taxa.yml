@@ -2,10 +2,15 @@ langcode: en
 status: true
 dependencies:
   config:
+    - field.storage.node.field_authors
+    - field.storage.node.field_guid
+    - field.storage.node.field_rank
+    - field.storage.node.field_usage
     - node.type.taxon
     - system.menu.main
   module:
     - node
+    - options
     - user
 id: taxa
 label: Taxa
@@ -88,10 +93,10 @@ display:
           multi_type: separator
           separator: ', '
           field_api_classes: false
-        field_rank_value:
-          id: field_rank_value
+        field_rank:
+          id: field_rank
           table: node__field_rank
-          field: field_rank_value
+          field: field_rank
           relationship: none
           group_type: group
           admin_label: ''
@@ -152,10 +157,10 @@ display:
           multi_type: separator
           separator: ', '
           field_api_classes: false
-        field_authors_value:
-          id: field_authors_value
+        field_authors:
+          id: field_authors
           table: node__field_authors
-          field: field_authors_value
+          field: field_authors
           relationship: none
           group_type: group
           admin_label: ''
@@ -217,10 +222,10 @@ display:
           multi_type: separator
           separator: ', '
           field_api_classes: false
-        field_usage_value:
-          id: field_usage_value
+        field_usage:
+          id: field_usage
           table: node__field_usage
-          field: field_usage_value
+          field: field_usage
           relationship: none
           group_type: group
           admin_label: ''
@@ -281,10 +286,10 @@ display:
           multi_type: separator
           separator: ', '
           field_api_classes: false
-        field_guid_value:
-          id: field_guid_value
+        field_guid:
+          id: field_guid
           table: node__field_guid
-          field: field_guid_value
+          field: field_guid
           relationship: none
           group_type: group
           admin_label: ''
@@ -561,7 +566,11 @@ display:
         - url.query_args
         - 'user.node_grants:view'
         - user.permissions
-      tags: {  }
+      tags:
+        - 'config:field.storage.node.field_authors'
+        - 'config:field.storage.node.field_guid'
+        - 'config:field.storage.node.field_rank'
+        - 'config:field.storage.node.field_usage'
   page_1:
     id: page_1
     display_title: Page
@@ -588,4 +597,8 @@ display:
         - url.query_args
         - 'user.node_grants:view'
         - user.permissions
-      tags: {  }
+      tags:
+        - 'config:field.storage.node.field_authors'
+        - 'config:field.storage.node.field_guid'
+        - 'config:field.storage.node.field_rank'
+        - 'config:field.storage.node.field_usage'
