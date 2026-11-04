@@ -11,4 +11,5 @@ node_tree:
     - core/drupal
     - core/drupalSettings
     - core/jquery
+    - core/once
 

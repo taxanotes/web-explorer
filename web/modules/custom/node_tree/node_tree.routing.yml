@@ -1,3 +1,17 @@
+node_tree.page:
+  path: '/taxonomy-tree'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::page'
+    _title: 'Taxonomy tree'
+  requirements:
+    _permission: 'access content'
+node_tree.page_node:
+  path: '/taxonomy-tree/node/{guid}'
+  defaults:
+    _controller: 'Drupal\node_tree\Controller\NodeTreeController::page'
+    _title: 'Taxonomy tree'
+  requirements:
+    _permission: 'access content'
 node_tree.json_node_tree_api:
   path: '/node_tree/api/getImmediateChildrenOfParent'
   defaults:
@@ -5,7 +19,7 @@ node_tree.json_node_tree_api:
     _title: 'JSON api - node_tree API Parent Immediate Children'
   methods:  [GET]
   requirements:
-    _access: 'TRUE'
+    _permission: 'access content'
 node_tree.api_node_tree_content_display:
   path: '/node_tree/api/getNodeTreeContent/{uuid}'
   defaults:
@@ -13,11 +27,7 @@ node_tree.api_node_tree_content_display:
     _title: 'node_tree API get node_tree content'
     uuid: ''
   requirements:
-    _access: 'TRUE'
-  options:
-    parameters:
-      uuid:
-        type: string
+    _permission: 'access content'
 node_tree.api_get_expanded_tree:
   path: '/node_tree/api/getExpandedTreePathToNode/{uuid}'
   defaults:
@@ -25,18 +35,11 @@ node_tree.api_get_expanded_tree:
     _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
     uuid: ''
   requirements:
-    _access: 'TRUE'
-  options:
-    parameters:
-      taxonkey:
-        type: string
+    _permission: 'access content'
 node_tree.api_get_expanded_tree_root:
   path: '/node_tree/api/getExpandedTreePathToRoot'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::getExpandedTreePathToNode'
     _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
   requirements:
-    _access: 'TRUE'
-# https://drupal.stackexchange.com/a/123356/1082
-
-      
+    _permission: 'access content'

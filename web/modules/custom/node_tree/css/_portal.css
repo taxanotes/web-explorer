@@ -1,1 +1,7 @@
 /* */
+
+/* Tree page layout (node_tree.page): tree on the left, taxon on the right. */
+.node-tree-page { display: flex; gap: 2rem; align-items: flex-start; }
+.node-tree-column { flex: 0 0 24rem; max-width: 40%; overflow: auto; }
+.node-tree-content-column { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 800px) { .node-tree-page { flex-direction: column; } .node-tree-column { max-width: 100%; } }

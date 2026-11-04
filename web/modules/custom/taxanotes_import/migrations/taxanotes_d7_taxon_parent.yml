@@ -1,0 +1,49 @@
+id: taxanotes_d7_taxon_parent
+label: 'Scratchpads (Drupal 7) taxa: link parent and accepted name'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_taxon
+  track_changes: true
+process:
+  # Load the node created by the first pass; rows without one are skipped.
+  nid:
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      source: guid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  field_parent_taxon_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: parent_guid
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      no_stub: true
+  field_accepted_name:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: accepted_guid
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      no_stub: true
+destination:
+  plugin: 'entity:node'
+  default_bundle: taxon
+  overwrite_properties:
+    - field_parent_taxon_reference
+    - field_accepted_name
+migration_dependencies:
+  required:
+    - taxanotes_d7_taxon
+  optional: {  }

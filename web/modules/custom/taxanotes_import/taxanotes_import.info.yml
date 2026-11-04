@@ -1,0 +1,10 @@
+name: 'Taxanotes import'
+description: 'Migrations and source plugins that bring taxa into Taxanotes: the live Scratchpads (Drupal 7) database track. Instance-specific values (which vocabulary, which database) come from settings, not from this module.'
+type: module
+package: Taxanotes
+core_version_requirement: ^10.3 || ^11
+dependencies:
+  - drupal:migrate
+  - drupal:migrate_drupal
+  - drupal:node
+  - drupal:taxonomy

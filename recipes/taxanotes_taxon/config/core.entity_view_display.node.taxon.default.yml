@@ -1,0 +1,259 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon.field_accepted_guid
+    - field.field.node.taxon.field_accepted_name
+    - field.field.node.taxon.field_accepted_tid
+    - field.field.node.taxon.field_authors
+    - field.field.node.taxon.field_guid
+    - field.field.node.taxon.field_legacy_tid
+    - field.field.node.taxon.field_page_number
+    - field.field.node.taxon.field_page_url
+    - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
+    - field.field.node.taxon.field_parent_term_name
+    - field.field.node.taxon.field_rank
+    - field.field.node.taxon.field_reference_guid
+    - field.field.node.taxon.field_reference_nid
+    - field.field.node.taxon.field_reference_title
+    - field.field.node.taxon.field_term_description
+    - field.field.node.taxon.field_unacceptability_reason
+    - field.field.node.taxon.field_unit_indicator_1
+    - field.field.node.taxon.field_unit_indicator_2
+    - field.field.node.taxon.field_unit_indicator_3
+    - field.field.node.taxon.field_unit_indicator_4
+    - field.field.node.taxon.field_unit_name_1
+    - field.field.node.taxon.field_unit_name_2
+    - field.field.node.taxon.field_unit_name_3
+    - field.field.node.taxon.field_unit_name_4
+    - field.field.node.taxon.field_usage
+    - field.field.node.taxon.field_vernacular_names
+    - node.type.taxon
+  module:
+    - custom_field
+    - link
+    - options
+    - text
+    - user
+id: node.taxon.default
+targetEntityType: node
+bundle: taxon
+mode: default
+content:
+  field_accepted_guid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 19
+    region: content
+  field_accepted_name:
+    type: entity_reference_label
+    label: inline
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 18
+    region: content
+  field_accepted_tid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 20
+    region: content
+  field_authors:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 15
+    region: content
+  field_guid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_legacy_tid:
+    type: number_integer
+    label: inline
+    settings:
+      thousand_separator: ''
+      prefix_suffix: false
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_page_number:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 21
+    region: content
+  field_page_url:
+    type: link
+    label: inline
+    settings:
+      trim_length: 80
+      url_only: false
+      url_plain: false
+      rel: ''
+      target: _blank
+    third_party_settings: {  }
+    weight: 22
+    region: content
+  field_parent_guid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  field_parent_taxon_reference:
+    type: entity_reference_label
+    label: inline
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 4
+    region: content
+  field_parent_term_name:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 5
+    region: content
+  field_rank:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 6
+    region: content
+  field_reference_guid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 24
+    region: content
+  field_reference_nid:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 23
+    region: content
+  field_reference_title:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 25
+    region: content
+  field_term_description:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 26
+    region: content
+  field_unacceptability_reason:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 17
+    region: content
+  field_unit_indicator_1:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 7
+    region: content
+  field_unit_indicator_2:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 9
+    region: content
+  field_unit_indicator_3:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 11
+    region: content
+  field_unit_indicator_4:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 13
+    region: content
+  field_unit_name_1:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 8
+    region: content
+  field_unit_name_2:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 10
+    region: content
+  field_unit_name_3:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 12
+    region: content
+  field_unit_name_4:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 14
+    region: content
+  field_usage:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 16
+    region: content
+  field_vernacular_names:
+    type: custom_table
+    label: above
+    settings:
+      fields: {  }
+      hide_empty: false
+    third_party_settings: {  }
+    weight: 40
+    region: content
+hidden:
+  links: true

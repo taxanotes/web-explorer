@@ -1,0 +1,292 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon.field_accepted_guid
+    - field.field.node.taxon.field_accepted_name
+    - field.field.node.taxon.field_accepted_tid
+    - field.field.node.taxon.field_authors
+    - field.field.node.taxon.field_guid
+    - field.field.node.taxon.field_legacy_tid
+    - field.field.node.taxon.field_page_number
+    - field.field.node.taxon.field_page_url
+    - field.field.node.taxon.field_parent_guid
+    - field.field.node.taxon.field_parent_taxon_reference
+    - field.field.node.taxon.field_parent_term_name
+    - field.field.node.taxon.field_rank
+    - field.field.node.taxon.field_reference_guid
+    - field.field.node.taxon.field_reference_nid
+    - field.field.node.taxon.field_reference_title
+    - field.field.node.taxon.field_term_description
+    - field.field.node.taxon.field_unacceptability_reason
+    - field.field.node.taxon.field_unit_indicator_1
+    - field.field.node.taxon.field_unit_indicator_2
+    - field.field.node.taxon.field_unit_indicator_3
+    - field.field.node.taxon.field_unit_indicator_4
+    - field.field.node.taxon.field_unit_name_1
+    - field.field.node.taxon.field_unit_name_2
+    - field.field.node.taxon.field_unit_name_3
+    - field.field.node.taxon.field_unit_name_4
+    - field.field.node.taxon.field_usage
+    - field.field.node.taxon.field_vernacular_names
+    - node.type.taxon
+  module:
+    - custom_field
+    - link
+    - path
+    - text
+id: node.taxon.default
+targetEntityType: node
+bundle: taxon
+mode: default
+content:
+  created:
+    type: datetime_timestamp
+    weight: 102
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_accepted_guid:
+    type: string_textfield
+    weight: 19
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_accepted_name:
+    type: entity_reference_autocomplete
+    weight: 18
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_accepted_tid:
+    type: string_textfield
+    weight: 20
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_authors:
+    type: string_textfield
+    weight: 15
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_guid:
+    type: string_textfield
+    weight: 1
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_legacy_tid:
+    type: number
+    weight: 2
+    region: content
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+  field_page_number:
+    type: string_textfield
+    weight: 21
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_page_url:
+    type: link_default
+    weight: 22
+    region: content
+    settings:
+      placeholder_url: ''
+      placeholder_title: ''
+    third_party_settings: {  }
+  field_parent_guid:
+    type: string_textfield
+    weight: 3
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_parent_taxon_reference:
+    type: entity_reference_autocomplete
+    weight: 4
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_parent_term_name:
+    type: string_textfield
+    weight: 5
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_rank:
+    type: options_select
+    weight: 6
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_reference_guid:
+    type: string_textfield
+    weight: 24
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_reference_nid:
+    type: string_textfield
+    weight: 23
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_reference_title:
+    type: string_textfield
+    weight: 25
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_term_description:
+    type: text_textarea
+    weight: 26
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: {  }
+  field_unacceptability_reason:
+    type: options_select
+    weight: 17
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_unit_indicator_1:
+    type: options_select
+    weight: 7
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_unit_indicator_2:
+    type: options_select
+    weight: 9
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_unit_indicator_3:
+    type: options_select
+    weight: 11
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_unit_indicator_4:
+    type: options_select
+    weight: 13
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_unit_name_1:
+    type: string_textfield
+    weight: 8
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_unit_name_2:
+    type: string_textfield
+    weight: 10
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_unit_name_3:
+    type: string_textfield
+    weight: 12
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_unit_name_4:
+    type: string_textfield
+    weight: 14
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_usage:
+    type: options_select
+    weight: 16
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  field_vernacular_names:
+    type: custom_stacked
+    weight: 40
+    region: content
+    settings:
+      wrapper: details
+      label_value: ''
+      label_limit: 60
+      label_prefix: Item
+      auto_collapse: false
+      open: true
+      fields: {  }
+    third_party_settings: {  }
+  path:
+    type: path
+    weight: 103
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+  status:
+    type: boolean_checkbox
+    weight: 100
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: {  }
+  title:
+    type: string_textfield
+    weight: 0
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  uid:
+    type: entity_reference_autocomplete
+    weight: 101
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+hidden:
+  promote: true
+  sticky: true

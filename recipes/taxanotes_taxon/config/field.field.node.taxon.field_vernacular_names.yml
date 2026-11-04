@@ -1,0 +1,88 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_vernacular_names
+    - node.type.taxon
+  module:
+    - custom_field
+id: node.taxon.field_vernacular_names
+field_name: field_vernacular_names
+entity_type: node
+bundle: taxon
+label: 'Vernacular names'
+description: 'Common names: name, ISO language code, area the usage originates from, remarks.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  add_more_label: 'Add vernacular name'
+  field_settings:
+    name:
+      check_empty: true
+      type: text
+      widget_settings:
+        label: Name
+        settings:
+          description: ''
+          description_display: after
+          size: 60
+          placeholder: ''
+          maxlength: 255
+          maxlength_js: false
+          prefix: ''
+          suffix: ''
+          required: false
+      weight: 0
+    language:
+      check_empty: false
+      type: text
+      widget_settings:
+        label: Language
+        settings:
+          description: 'ISO 639 code, e.g. fr'
+          description_display: after
+          size: 10
+          placeholder: ''
+          maxlength: 12
+          maxlength_js: false
+          prefix: ''
+          suffix: ''
+          required: false
+      weight: 1
+    area:
+      check_empty: false
+      type: textarea
+      widget_settings:
+        label: Area
+        settings:
+          description: ''
+          description_display: after
+          rows: 2
+          placeholder: ''
+          formatted: false
+          default_format: plain_text
+          format:
+            guidelines: false
+            help: false
+          required: false
+      weight: 2
+    remarks:
+      check_empty: false
+      type: textarea
+      widget_settings:
+        label: Remarks
+        settings:
+          description: ''
+          description_display: after
+          rows: 2
+          placeholder: ''
+          formatted: false
+          default_format: plain_text
+          format:
+            guidelines: false
+            help: false
+          required: false
+      weight: 3
+field_type: custom
