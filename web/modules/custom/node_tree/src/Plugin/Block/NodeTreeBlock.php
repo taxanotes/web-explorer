@@ -16,26 +16,19 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
   admin_label: new TranslatableMarkup('NodeTreeBlock'),
   category: new TranslatableMarkup('Custom'),
 )]
-final class NodeTreeBlock extends BlockBase
-{
+final class NodeTreeBlock extends BlockBase {
 
   /**
    * {@inheritdoc}
    */
-  public function build(): array
-  {
-    /*
-    $build['content'] = [
-      '#markup' => $this->t('It works!'),
-    ];
-    */
+  public function build(): array {
     return [
       '#theme' => 'node-tree-hierarchy-tree-block',
-      '#attached' => array(
-        'library' => array(
+      '#attached' => [
+        'library' => [
           'node_tree/node_tree',
-        ),
-      ),
+        ],
+      ],
       '#data' => [
         'title' => $this->t('Hierarchy'),
       ],
@@ -44,4 +37,5 @@ final class NodeTreeBlock extends BlockBase
       ],
     ];
   }
+
 }

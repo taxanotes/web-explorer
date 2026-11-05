@@ -45,11 +45,14 @@ final class TaxonSummaryBlock extends BlockBase implements ContainerFactoryPlugi
    */
   public function build(): array {
     $query = $this->database->select('node_field_data', 'n');
-    $query->leftJoin('node__field_rank', 'r', 'r.entity_id = n.nid');
+    // One row per node (the default translation), the rank of that
+    // translation, deleted field rows (a field being purged) left out.
+    $query->leftJoin('node__field_rank', 'r', 'r.entity_id = n.nid AND r.langcode = n.langcode AND r.deleted = 0');
     $query->addExpression('COUNT(n.nid)', 'c');
     $query->addField('r', 'field_rank_value', 'rank');
     $query->condition('n.type', 'taxon')
       ->condition('n.status', NodeInterface::PUBLISHED)
+      ->condition('n.default_langcode', 1)
       ->groupBy('r.field_rank_value')
       ->addTag('node_access');
     $counts = [];

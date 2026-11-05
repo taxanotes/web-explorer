@@ -10,8 +10,8 @@ use Drupal\Core\Form\FormStateInterface;
 /**
  * Edits the front page, About page and footer texts of this instance.
  *
- * instances/<slug>/instance.yml seeds these through the taxanotes_front
- * recipe; a value set there is written again each time
+ * The file instances/<slug>/instance.yml seeds these through the
+ * taxanotes_front recipe; a value set there is written again each time
  * scripts/new-instance.sh runs, a key left out of instance.yml keeps what is
  * saved here.
  */
