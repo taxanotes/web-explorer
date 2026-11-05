@@ -105,6 +105,10 @@ for cmd in sudo mariadb php composer htpasswd certbot openssl tar create_site_st
   command -v "$cmd" > /dev/null || die "$cmd is not on PATH"
 done
 environment=production
+# Everything the script, tar and composer create is group-readable for
+# www-data and closed to others, whatever umask the caller had (a run under
+# `umask 077` once left web/ unreadable to Apache: HTTP 500 on every page).
+umask 027
 owner="$(id -un)"
 group=www-data
 stamp="$(date +%Y%m%d_%H%M%S)"
