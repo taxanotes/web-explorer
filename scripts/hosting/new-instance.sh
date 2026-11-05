@@ -21,7 +21,8 @@
 #   site       create_site_structure when /var/www/<category>/<domain> is
 #              missing, plus the private/tmp asset directories and logs/
 #   secrets    settings/instance.env (keys of instances/.env.example; created
-#              with a random hash salt and database passwords)
+#              with a random hash salt, database passwords and
+#              SITE_MAIL=noreply@<domain>; a placeholder address is warned about)
 #   database   d<slug>_1 and user u<slug>_1 (the toolkit's naming, as
 #              create_database would, but through `sudo mariadb`: the toolkit
 #              command is interactive and wants a MySQL root password); a
@@ -253,8 +254,9 @@ if [ ! -f "$env_file" ]; then
     -e "s/^MIGRATE_DB_HOST=.*/MIGRATE_DB_HOST=localhost/" \
     -e "s/^MIGRATE_DB_USER=.*/MIGRATE_DB_USER=$migrate_user/" \
     -e "s/^MIGRATE_DB_PASSWORD=.*/MIGRATE_DB_PASSWORD=$(random_string 24)/" \
+    -e "s|^SITE_MAIL=.*|SITE_MAIL=noreply@$domain|" \
     "$code/instances/.env.example" > "$env_file"
-  note "created from instances/.env.example with a fresh HASH_SALT and random database passwords"
+  note "created from instances/.env.example with a fresh HASH_SALT, random database passwords and SITE_MAIL=noreply@$domain"
 else
   note "exists, kept"
 fi
@@ -268,7 +270,11 @@ db_pass="$(env_get DB_PASSWORD)"
 migrate_user="$(env_get MIGRATE_DB_USER)"
 migrate_pass="$(env_get MIGRATE_DB_PASSWORD)"
 site_mail="$(env_get SITE_MAIL)"
-site_mail="${site_mail:-webmaster@example.com}"
+site_mail="${site_mail:-noreply@$domain}"
+case "$site_mail" in
+  *@example.com|*@example.org|*@example.net)
+    warn "SITE_MAIL=$site_mail in $env_file is a placeholder: receivers reject mail from example domains; set an address at $domain (or one a mailer can send from)" ;;
+esac
 admin_pass="$(env_get ADMIN_PASSWORD)"
 [ -n "$db_pass" ] || die "DB_PASSWORD is empty in $env_file"
 for v in "$db_user" "$db_pass" "$migrate_user" "$migrate_pass"; do
@@ -620,3 +626,6 @@ fi
 log "Done: $url"
 note "release $version live; basic auth user(s): $(cut -d: -f1 "$htpasswd_file" | paste -sd ' ' -)"
 note "log in as admin with: drush_run $domain live user:login"
+if [ ! -x /usr/sbin/sendmail ] && ! command -v sendmail > /dev/null 2>&1; then
+  warn "no sendmail on this server: Drupal cannot send mail (password resets, account notices) until a mailer is installed; give users a password with drush_run $domain live \"user:password NAME PASS\" or a one-time link with \"user:login --uri=$url NAME\""
+fi

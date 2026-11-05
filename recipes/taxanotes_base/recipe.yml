@@ -10,6 +10,7 @@ install:
   - migrate_tools
   - node_tree
   - taxanotes_import
+  - update
 input:
   site_name:
     data_type: string
@@ -52,3 +53,11 @@ config:
         name: ${site_name}
         slogan: ${site_slogan}
         mail: ${site_mail}
+    # Updates reach an instance as releases (scripts/hosting/new-instance.sh),
+    # so the site mails nobody about them: the Update module still reports on
+    # /admin/reports/updates, and cron no longer tries to send a notice
+    # (which fails on a host without a mailer). `drush config:set
+    # update.settings notification.emails` re-enables the mail.
+    update.settings:
+      simpleConfigUpdate:
+        notification.emails: []

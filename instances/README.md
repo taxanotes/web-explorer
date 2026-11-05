@@ -95,7 +95,13 @@ every consumer, the scripts and the generated files alike, sees the same
 instance.
 
 `site.mail` is deliberately not here: addresses are not committed; `.env`
-`SITE_MAIL` carries it (default `webmaster@example.com`).
+`SITE_MAIL` carries it (default `webmaster@example.com` on ddev, where mail
+goes to Mailpit; the hosting script seeds `noreply@<domain>` and warns about an
+example address). The base recipe empties `update.settings:notification.emails`:
+updates arrive as releases, nobody is mailed about them. A host without a
+mailer (server04 today) sends no password resets either: give a user a
+password with `drush user:password NAME PASS` or a one-time link with
+`drush user:login --uri=https://<domain> NAME`.
 
 ## Environments: ddev and production
 
