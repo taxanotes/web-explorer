@@ -7,8 +7,6 @@
 
 declare(strict_types=1);
 
-use Drupal\Core\Render\Markup;
-
 /**
  * The accent colour of this instance: six upper-case hex digits.
  *
@@ -26,18 +24,17 @@ function taxanotes_classic_colour(): string {
  *
  * The Drupal 7 scratchpads_colour module wrote a stylesheet per colour and
  * put the colour on the body as a class; here the colour is one CSS custom
- * property (--sp-colour) the stylesheets use, plus the same body class.
+ * property (--sp-colour) the stylesheets use, plus the same body class. The
+ * property is set as the style attribute of the html element: an inline
+ * declaration beats every stylesheet, whereas a <style> in the head is
+ * printed before the aggregated CSS and loses to global.css's :root default
+ * (which is what happened on the first build: every instance rendered
+ * 047DB8).
  */
 function taxanotes_classic_preprocess_html(array &$variables): void {
   $colour = taxanotes_classic_colour();
   $variables['attributes']['class'][] = 'scratchpad-colour-' . $colour;
-  $variables['#attached']['html_head'][] = [
-    [
-      '#tag' => 'style',
-      '#value' => Markup::create(':root{--sp-colour:#' . $colour . ';}'),
-    ],
-    'taxanotes_classic_colour',
-  ];
+  $variables['html_attributes']->setAttribute('style', '--sp-colour:#' . $colour . ';');
   $variables['#cache']['tags'][] = 'config:taxanotes_classic.settings';
 }
 

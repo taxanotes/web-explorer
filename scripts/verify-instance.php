@@ -32,7 +32,15 @@
  *   nodes): the D7 and D11 counts of species pages and images (with the
  *   rule the image import applies), their taxon links and licences, and a
  *   page-by-page comparison of title, status, taxon and every text section
- *   for every D7 spm node.
+ *   for every D7 spm node;
+ * - classic (when the default theme is taxanotes_classic): the front page
+ *   and a taxon page rendered as anonymous through the kernel: the accent
+ *   colour of taxanotes_classic.settings must appear as the style attribute
+ *   of the html element (an inline declaration, which is what beats the
+ *   stylesheet's default; a <style> in the head did not, and every instance
+ *   rendered 047DB8 until that was checked on the rendered page) and as the
+ *   body class, the front page must carry the three recent-content columns,
+ *   the taxon page its tab markers.
  */
 
 use Drupal\Core\Database\Database;
@@ -40,6 +48,8 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Site\Settings;
 use Drupal\views\Plugin\views\field\Broken;
 use Drupal\views\Views;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 $vocab = $extra[0] ?? NULL;
 if (!$vocab) {
@@ -758,4 +768,57 @@ if ($d11->schema()->tableExists('node__field_general_description') && $d7->schem
     ? (int) $d11->query('SELECT COUNT(*) FROM {migrate_message_taxanotes_d7_media_image}')->fetchField() : 0;
 }
 
-echo json_encode(['counts' => $c, 'fields' => $f, 'checksums' => $sums, 'literature' => $lit, 'species' => $spm], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
+// ---------------------------------------------------------------------------
+// The classic view as rendered (the theme's own HTML, not its config).
+$classic = [];
+if (\Drupal::config('system.theme')->get('default') === 'taxanotes_classic') {
+  $colour = strtoupper((string) \Drupal::config('taxanotes_classic.settings')->get('colour'));
+  $classic['colour setting'] = $colour;
+  $render = function (string $path): string {
+    $account_switcher = \Drupal::service('account_switcher');
+    $account_switcher->switchTo(new AnonymousUserSession());
+    try {
+      // Several sub-requests in one process: the lazy context repository
+      // keeps the first request's route contexts (the node of the route,
+      // none on the front page) and the block access handler the access
+      // results computed with them, so without these resets a taxon page
+      // rendered after the front page has none of its node-bound blocks.
+      \Drupal::service('current_route_match')->resetRouteMatch();
+      $repository = \Drupal::service('context.repository');
+      $contexts = new \ReflectionProperty($repository, 'contexts');
+      $contexts->setValue($repository, []);
+      \Drupal::entityTypeManager()->getAccessControlHandler('block')->resetCache();
+      $request = Request::create($path);
+      $request->setSession(\Drupal::request()->getSession());
+      $response = \Drupal::service('http_kernel')->handle($request, HttpKernelInterface::SUB_REQUEST);
+      return (string) $response->getContent();
+    }
+    finally {
+      $account_switcher->switchBack();
+    }
+  };
+  $front = $render('/');
+  $classic['front: html style attribute carries the colour'] = str_contains($front, 'style="--sp-colour:#' . $colour . ';"');
+  $classic['front: body class scratchpad-colour-<colour>'] = str_contains($front, 'scratchpad-colour-' . $colour);
+  $classic['front: no other --sp-colour declaration in the page'] = substr_count($front, '--sp-colour:') === 1;
+  $classic['front: recent-content columns'] = substr_count($front, 'taxanotes-recent-columns__column');
+  $classic['front: header search form'] = str_contains($front, 'taxanotes-header-search');
+  $nid = (int) $d11->query("SELECT n.nid FROM {node_field_data} n INNER JOIN {node__field_taxonomic_name} t ON t.field_taxonomic_name_target_id = n.nid WHERE n.type = 'taxon' AND n.status = 1 ORDER BY n.nid LIMIT 1")->fetchField()
+    ?: (int) $d11->query("SELECT nid FROM {node_field_data} WHERE type = 'taxon' AND status = 1 ORDER BY nid LIMIT 1")->fetchField();
+  if ($nid) {
+    $taxon = $render('/node/' . $nid);
+    $classic['taxon page checked'] = '/node/' . $nid;
+    $classic['taxon: html style attribute carries the colour'] = str_contains($taxon, 'style="--sp-colour:#' . $colour . ';"');
+    $classic['taxon: tab markers (data-taxanotes-tab)'] = substr_count($taxon, 'data-taxanotes-tab=');
+    $classic['taxon: classification tree block'] = str_contains($taxon, 'block-node-tree-hierarchicaltaxontree');
+  }
+}
+
+echo json_encode([
+  'counts' => $c,
+  'fields' => $f,
+  'checksums' => $sums,
+  'literature' => $lit,
+  'species' => $spm,
+  'classic' => $classic,
+], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
