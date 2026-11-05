@@ -262,7 +262,31 @@ content:
       label_prefix: Item
       auto_collapse: false
       open: true
-      fields: {  }
+      fields:
+        name:
+          type: text
+          weight: 0
+          size: 60
+          placeholder: ''
+          maxlength: 255
+          maxlength_js: false
+        language:
+          type: text
+          weight: 1
+          size: 10
+          placeholder: ''
+          maxlength: 12
+          maxlength_js: false
+        area:
+          type: textarea
+          weight: 2
+          rows: 2
+          placeholder: ''
+        remarks:
+          type: textarea
+          weight: 3
+          rows: 2
+          placeholder: ''
     third_party_settings: {  }
   path:
     type: path

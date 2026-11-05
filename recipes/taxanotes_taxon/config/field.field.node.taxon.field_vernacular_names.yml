@@ -18,71 +18,50 @@ default_value: {  }
 default_value_callback: ''
 settings:
   add_more_label: 'Add vernacular name'
+  # custom_field 4.0.4+ keeps only the field-level settings here; the widget
+  # type and its size/rows/maxlength live in the form display component
+  # (core.entity_form_display.node.taxon.default.yml, settings.fields).
   field_settings:
     name:
+      label: Name
       check_empty: true
-      type: text
-      widget_settings:
-        label: Name
-        settings:
-          description: ''
-          description_display: after
-          size: 60
-          placeholder: ''
-          maxlength: 255
-          maxlength_js: false
-          prefix: ''
-          suffix: ''
-          required: false
-      weight: 0
+      required: false
+      translatable: false
+      description: ''
+      description_display: after
+      prefix: ''
+      suffix: ''
     language:
+      label: Language
       check_empty: false
-      type: text
-      widget_settings:
-        label: Language
-        settings:
-          description: 'ISO 639 code, e.g. fr'
-          description_display: after
-          size: 10
-          placeholder: ''
-          maxlength: 12
-          maxlength_js: false
-          prefix: ''
-          suffix: ''
-          required: false
-      weight: 1
+      required: false
+      translatable: false
+      description: 'ISO 639 code, e.g. fr'
+      description_display: after
+      prefix: ''
+      suffix: ''
     area:
+      label: Area
       check_empty: false
-      type: textarea
-      widget_settings:
-        label: Area
-        settings:
-          description: ''
-          description_display: after
-          rows: 2
-          placeholder: ''
-          formatted: false
-          default_format: plain_text
-          format:
-            guidelines: false
-            help: false
-          required: false
-      weight: 2
+      required: false
+      translatable: false
+      description: ''
+      description_display: after
+      formatted: false
+      default_format: plain_text
+      format:
+        guidelines: false
+        help: false
     remarks:
+      label: Remarks
       check_empty: false
-      type: textarea
-      widget_settings:
-        label: Remarks
-        settings:
-          description: ''
-          description_display: after
-          rows: 2
-          placeholder: ''
-          formatted: false
-          default_format: plain_text
-          format:
-            guidelines: false
-            help: false
-          required: false
-      weight: 3
+      required: false
+      translatable: false
+      description: ''
+      description_display: after
+      formatted: false
+      default_format: plain_text
+      format:
+        guidelines: false
+        help: false
 field_type: custom
