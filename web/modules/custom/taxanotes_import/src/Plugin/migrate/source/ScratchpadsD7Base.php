@@ -103,6 +103,19 @@ abstract class ScratchpadsD7Base extends SqlBase {
   }
 
   /**
+   * The D7 public files directory of this instance from settings, or NULL.
+   *
+   * $settings['taxanotes_import']['source_files_dir'], set by the instance
+   * scripts from instance.yml source.files (or the SOURCE_FILES_DIR of the
+   * instance's .env); unset on an instance whose Scratchpads files are not
+   * on this machine.
+   */
+  protected function settingsFilesDir(): ?string {
+    $dir = Settings::get('taxanotes_import', [])['source_files_dir'] ?? NULL;
+    return (is_string($dir) && $dir !== '') ? $dir : NULL;
+  }
+
+  /**
    * Restricts a query to the configured vocabulary, if any.
    *
    * @param \Drupal\Core\Database\Query\SelectInterface $query
@@ -345,6 +358,84 @@ abstract class ScratchpadsD7Base extends SqlBase {
       ];
     }
     return $items;
+  }
+
+  /**
+   * LEFT JOINs the derived table of the best language per entity of a field.
+   *
+   * Scratchpads node fields are translatable too (entity_translation), so a
+   * node can carry one row set per language. This joins exactly one set: the
+   * one in the entity's own language (nodes; `own_language`), else `und`,
+   * else the alphabetically first language (what the D7 site shows on its
+   * default path), as joinFieldTable() ranks term fields. Entities without a
+   * language of their own (files) rank `und` first.
+   *
+   * @param \Drupal\Core\Database\Query\SelectInterface $query
+   *   The query; $field_alias must be the field_data_* table in it.
+   * @param string $table
+   *   The field_data_* table.
+   * @param string $field_alias
+   *   Its alias in the query.
+   * @param string $entity_type
+   *   The D7 entity type of the rows (node, file).
+   * @param string|array|null $bundle
+   *   The bundle(s) to rank, NULL for any.
+   * @param bool $own_language
+   *   TRUE to prefer the entity's own language (nodes only).
+   */
+  protected function joinBestLanguage(SelectInterface $query, string $table, string $field_alias, string $entity_type, string|array|null $bundle, bool $own_language): void {
+    $best = $this->getDatabase()->select($table, 'f2');
+    $best->addField('f2', 'entity_id');
+    if ($own_language && $entity_type === 'node') {
+      $best->innerJoin('node', 'n2', '[n2].[nid] = [f2].[entity_id]');
+      $rank = "CASE WHEN [f2].[language] = [n2].[language] THEN '0' WHEN [f2].[language] = 'und' THEN '1' ELSE '2' END";
+    }
+    else {
+      $rank = "CASE WHEN [f2].[language] = 'und' THEN '1' ELSE '2' END";
+    }
+    $best->addExpression("SUBSTRING(MIN(CONCAT($rank, [f2].[language])), 2)", 'language');
+    $best->condition('f2.entity_type', $entity_type)
+      ->condition('f2.deleted', 0)
+      ->groupBy('f2.entity_id');
+    if ($bundle !== NULL) {
+      $best->condition('f2.bundle', (array) $bundle, 'IN');
+    }
+    $query->innerJoin($best, 'best_' . $field_alias, "[best_$field_alias].[entity_id] = [$field_alias].[entity_id] AND [best_$field_alias].[language] = [$field_alias].[language]");
+  }
+
+  /**
+   * The ids of the files referenced from a file field of given node bundles.
+   *
+   * A subquery for an IN condition: the distinct fids of the current rows of
+   * `field_data_<field>` on nodes of `bundles` (any language).
+   */
+  protected function nodeFileIds(string $field, array $bundles): SelectInterface {
+    $used = $this->getDatabase()->select('field_data_' . $field, 'nf');
+    $used->addField('nf', $field . '_fid');
+    $used->condition('nf.entity_type', 'node')
+      ->condition('nf.bundle', $bundles, 'IN')
+      ->condition('nf.deleted', 0)
+      ->isNotNull('nf.' . $field . '_fid')
+      ->distinct();
+    return $used;
+  }
+
+  /**
+   * The ids of the files tagged with a term of the instance vocabulary.
+   *
+   * A subquery for an IN condition: the distinct file ids carrying, in
+   * `field_data_<field>` (entity type file, any language), a term of the
+   * configured vocabulary; none when the vocabulary is unknown.
+   */
+  protected function taggedFileIds(string $field): SelectInterface {
+    $tagged = $this->getDatabase()->select('field_data_' . $field, 'ft');
+    $tagged->addField('ft', 'entity_id');
+    $tagged->innerJoin('taxonomy_term_data', 'ftd', "[ftd].[tid] = [ft].[{$field}_tid]");
+    $tagged->condition('ft.entity_type', 'file')
+      ->condition('ft.deleted', 0)
+      ->condition('ftd.vid', $this->vocabularyId() ?: -1)
+      ->distinct();
+    return $tagged;
   }
 
   /**

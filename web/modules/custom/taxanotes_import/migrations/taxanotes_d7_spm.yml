@@ -1,0 +1,503 @@
+# Generated from the SPM section list (one text_long per Scratchpads SPM
+# section, D7 field names kept); the recipe taxanotes_species defines the
+# same fields. The migration id is the node uuid, which the D11 node also
+# carries. Revisions of SPM nodes are not migrated (the D7 nodes have them;
+# each page arrives as one revision). The text format follows the D7 one
+# (filtered_html -> basic_html, full_html -> full_html, else basic_html).
+# The source plugin picks, per field, the row set in the node's own language,
+# else `und`, else the first language (the rule of the other node sources).
+id: taxanotes_d7_spm
+label: 'Scratchpads (Drupal 7) taxon descriptions (SPM nodes) to species pages'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_spm
+  track_changes: true
+process:
+  type:
+    plugin: default_value
+    default_value: taxon_description
+  langcode:
+    plugin: default_value
+    default_value: en
+  uuid: uuid
+  title: title
+  uid:
+    plugin: default_value
+    default_value: 1
+  status: status
+  created: created
+  changed: changed
+  field_taxonomic_name:
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      source: taxon_guid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'The taxon of this page is not in the instance (not migrated, or a term of another vocabulary)'
+  field_media:
+    plugin: sub_process
+    source: media
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_media_image
+        source: fid
+        no_stub: true
+  field_general_description/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_general_description_value
+  field_general_description/format:
+    plugin: static_map
+    source: field_general_description_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_biology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_biology_value
+  field_biology/format:
+    plugin: static_map
+    source: field_biology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_conservation_status/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_conservation_status_value
+  field_conservation_status/format:
+    plugin: static_map
+    source: field_conservation_status_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_legislation/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_legislation_value
+  field_legislation/format:
+    plugin: static_map
+    source: field_legislation_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_management/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_management_value
+  field_management/format:
+    plugin: static_map
+    source: field_management_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_procedures/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_procedures_value
+  field_procedures/format:
+    plugin: static_map
+    source: field_procedures_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_diagnostic_description/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_diagnostic_description_value
+  field_diagnostic_description/format:
+    plugin: static_map
+    source: field_diagnostic_description_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_threats/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_threats_value
+  field_threats/format:
+    plugin: static_map
+    source: field_threats_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_trends/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_trends_value
+  field_trends/format:
+    plugin: static_map
+    source: field_trends_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_behavious/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_behavious_value
+  field_behavious/format:
+    plugin: static_map
+    source: field_behavious_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_cytology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_cytology_value
+  field_cytology/format:
+    plugin: static_map
+    source: field_cytology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_genetics/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_genetics_value
+  field_genetics/format:
+    plugin: static_map
+    source: field_genetics_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_growth/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_growth_value
+  field_growth/format:
+    plugin: static_map
+    source: field_growth_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_look_alikes/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_look_alikes_value
+  field_look_alikes/format:
+    plugin: static_map
+    source: field_look_alikes_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_dispersal/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_dispersal_value
+  field_dispersal/format:
+    plugin: static_map
+    source: field_dispersal_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_molecular_biology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_molecular_biology_value
+  field_molecular_biology/format:
+    plugin: static_map
+    source: field_molecular_biology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_morphology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_morphology_value
+  field_morphology/format:
+    plugin: static_map
+    source: field_morphology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_physiology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_physiology_value
+  field_physiology/format:
+    plugin: static_map
+    source: field_physiology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_size/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_size_value
+  field_size/format:
+    plugin: static_map
+    source: field_size_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_taxon_biology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_taxon_biology_value
+  field_taxon_biology/format:
+    plugin: static_map
+    source: field_taxon_biology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_evolution/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_evolution_value
+  field_evolution/format:
+    plugin: static_map
+    source: field_evolution_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_phylogeny/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_phylogeny_value
+  field_phylogeny/format:
+    plugin: static_map
+    source: field_phylogeny_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_associations/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_associations_value
+  field_associations/format:
+    plugin: static_map
+    source: field_associations_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_cyclicity/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_cyclicity_value
+  field_cyclicity/format:
+    plugin: static_map
+    source: field_cyclicity_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_distribution/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_distribution_value
+  field_distribution/format:
+    plugin: static_map
+    source: field_distribution_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_ecology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_ecology_value
+  field_ecology/format:
+    plugin: static_map
+    source: field_ecology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_habitat/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_habitat_value
+  field_habitat/format:
+    plugin: static_map
+    source: field_habitat_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_life_cycle/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_life_cycle_value
+  field_life_cycle/format:
+    plugin: static_map
+    source: field_life_cycle_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_life_expectancy/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_life_expectancy_value
+  field_life_expectancy/format:
+    plugin: static_map
+    source: field_life_expectancy_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_migration/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_migration_value
+  field_migration/format:
+    plugin: static_map
+    source: field_migration_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_trophic_strategy/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_trophic_strategy_value
+  field_trophic_strategy/format:
+    plugin: static_map
+    source: field_trophic_strategy_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_population_biology/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_population_biology_value
+  field_population_biology/format:
+    plugin: static_map
+    source: field_population_biology_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_reproduction/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_reproduction_value
+  field_reproduction/format:
+    plugin: static_map
+    source: field_reproduction_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_diseases/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_diseases_value
+  field_diseases/format:
+    plugin: static_map
+    source: field_diseases_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_risk_statement/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_risk_statement_value
+  field_risk_statement/format:
+    plugin: static_map
+    source: field_risk_statement_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_uses/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_uses_value
+  field_uses/format:
+    plugin: static_map
+    source: field_uses_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_electric_organ_discharge/value:
+    plugin: skip_on_empty
+    method: process
+    source: field_electric_organ_discharge_value
+  field_electric_organ_discharge/format:
+    plugin: static_map
+    source: field_electric_organ_discharge_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+destination:
+  plugin: 'entity:node'
+  default_bundle: taxon_description
+migration_dependencies:
+  required:
+    - taxanotes_d7_taxon
+  optional:
+    - taxanotes_d7_media_image

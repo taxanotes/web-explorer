@@ -223,16 +223,21 @@ the recipe to include the middle initials D7 stores) and would re-parse and
 overwrite the parts if the computed `name` were set.
 
 `scratchpads_d7_file` lists the `file_managed` rows that `field_file` on a
-biblio node points at and resolves each under `source_files_dir`
-(`$settings['taxanotes_import']['source_files_dir']`, from `instance.yml`
-`source.files`; under ddev `.ddev/docker-compose.scratchpads-files.yaml`
-bind-mounts the Scratchpads files directory read-only at
-`/mnt/scratchpads/myriatrix/files`). A file that is not there skips its row
-with the message *Source file is not available locally* (`drush
-migrate:messages taxanotes_d7_file` lists them; `scripts/verify-instance.php`
-counts them), and the reference imports without it; a later run with the
+biblio node points at, plus the image files the instance uses (below), and
+resolves each under `source_files_dir`
+(`$settings['taxanotes_import']['source_files_dir']`, from `.env`
+`SOURCE_FILES_DIR` or `instance.yml` `source.files`; under ddev
+`.ddev/docker-compose.scratchpads-files.yaml` bind-mounts the Scratchpads
+files directory read-only at `/mnt/scratchpads/myriatrix/files`). A file
+that is not there skips its row with the message *Source file is not
+available locally*, an image the image toolkit cannot render (TIFF) with
+*Image type the image toolkit cannot render* (`drush migrate:messages
+taxanotes_d7_file` lists them; `scripts/verify-instance.php` counts them),
+and the reference or media item imports without it; a later run with the
 files present picks them up. Files are copied, never moved, into
 `public://scratchpads/<D7 relative path>` and reused when already there.
+The instance scripts run this migration only when the directory is
+configured; `scripts/list-source-files.php` prints the paths it would copy.
 
 `taxanotes_d7_taxon_reference` uses the taxon source with
 `with_reference_only: true` (only the terms whose D7 `field_reference` is
@@ -241,6 +246,36 @@ parent pass; rolling it back keeps the links. Rolling back
 `taxanotes_d7_biblio` deletes the references (the taxa and their shadow
 fields are untouched; `field_reference` then points at nothing until the
 reference import and this pass with `--update` run again).
+
+### Species pages and images
+
+`scratchpads_d7_spm` selects the current revision of every `spm` node (the
+Scratchpads taxon description; revisions are not migrated) keyed on the node
+uuid, which the `taxon_description` node also takes as its uuid. The text
+sections are discovered from `field_config_instance` (every `text_long` on
+the type: the 36 standard SPM sections, plus `field_electric_organ_discharge`
+on Mormyrids), each read with the node language rule and mapped by the
+migration onto the field of the same name (`filtered_html` becomes
+`basic_html`, `full_html` stays, anything else `basic_html`). The taxon is
+the lowest-delta term of the instance vocabulary in `field_taxonomic_name`
+(terms of other vocabularies, the Myriatrix morphology terms, and any further
+taxon are dropped; a page whose taxon is not in the instance is skipped with
+a message). `field_media` is mapped through the media migration.
+
+`scratchpads_d7_image` selects the image files (`file_managed.type = image`)
+that are placed on an spm node (`field_media`) or tagged with a term of the
+instance vocabulary (`field_taxonomic_name` on the file), the same rule as
+the image branch of the file source; `taxanotes_d7_media_image` turns each
+into an Image media item whose id is the D7 fid, wrapping the file entity the
+file migration created (an image whose file was skipped there is skipped
+here with a message), with the taxa (by GUID), the Creative Commons licence
+(the Scratchpads creative_commons numbers 1 all rights reserved, 2 CC BY, 3
+CC BY-SA, 4 CC BY-ND, 5 CC BY-NC, 6 CC BY-NC-SA, 7 CC BY-NC-ND, 8 CC0, 9
+public domain), the creator as the credit, the description, and the
+description as plain text (else the file name) for the alt text. Media
+thumbnails are derived by core on save. Rolling back `taxanotes_d7_spm` and
+`taxanotes_d7_media_image` deletes the pages and media items and leaves the
+taxa, the literature and the file entities untouched.
 
 ## Local ddev setup for the D7 track
 

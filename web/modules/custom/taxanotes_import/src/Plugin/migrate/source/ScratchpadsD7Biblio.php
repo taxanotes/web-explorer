@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
-use Drupal\Core\Database\Query\SelectInterface;
 use Drupal\migrate\Attribute\MigrateSource;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Row;
@@ -249,25 +248,6 @@ final class ScratchpadsD7Biblio extends ScratchpadsD7Base {
   }
 
   /**
-   * LEFT JOINs the derived table of the best language per node of a field.
-   *
-   * The node's own language first, else `und`, else the alphabetically first
-   * language (what the D7 site shows on its default path), as
-   * joinFieldTable() ranks term fields.
-   */
-  protected function joinBestNodeLanguage(SelectInterface $query, string $table, string $field_alias): void {
-    $best = $this->getDatabase()->select($table, 'f2');
-    $best->addField('f2', 'entity_id');
-    $best->innerJoin('node', 'n2', '[n2].[nid] = [f2].[entity_id]');
-    $best->addExpression("SUBSTRING(MIN(CONCAT(CASE WHEN [f2].[language] = [n2].[language] THEN '0' WHEN [f2].[language] = 'und' THEN '1' ELSE '2' END, [f2].[language])), 2)", 'language');
-    $best->condition('f2.entity_type', 'node')
-      ->condition('f2.bundle', $this->configuration['node_type'])
-      ->condition('f2.deleted', 0)
-      ->groupBy('f2.entity_id');
-    $query->innerJoin($best, 'best', "[best].[entity_id] = [$field_alias].[entity_id] AND [best].[language] = [$field_alias].[language]");
-  }
-
-  /**
    * The taxa every biblio node cites, by nid: distinct vocabulary terms.
    */
   protected function taxa(): array {
@@ -287,7 +267,7 @@ final class ScratchpadsD7Biblio extends ScratchpadsD7Base {
       ->condition('f.bundle', $this->configuration['node_type'])
       ->condition('f.deleted', 0)
       ->orderBy('f.entity_id')->orderBy('f.delta');
-    $this->joinBestNodeLanguage($query, $table, 'f');
+    $this->joinBestLanguage($query, $table, 'f', 'node', $this->configuration['node_type'], TRUE);
     $query->innerJoin('taxonomy_term_data', 'td', "[td].[tid] = [f].[{$field}_tid]");
     $query->addField('td', 'tid');
     $vid = $this->vocabularyId();
@@ -327,7 +307,7 @@ final class ScratchpadsD7Biblio extends ScratchpadsD7Base {
       ->condition('f.bundle', $this->configuration['node_type'])
       ->condition('f.deleted', 0)
       ->orderBy('f.entity_id')->orderBy('f.delta');
-    $this->joinBestNodeLanguage($query, $table, 'f');
+    $this->joinBestLanguage($query, $table, 'f', 'node', $this->configuration['node_type'], TRUE);
     foreach ($query->execute()->fetchAll() as $r) {
       if (!$r[$field . '_fid']) {
         continue;
