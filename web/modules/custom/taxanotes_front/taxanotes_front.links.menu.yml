@@ -1,0 +1,20 @@
+# Main menu entries of every instance; "Home" comes from the standard profile
+# and "Taxa" from the taxa view (taxanotes_taxon recipe).
+taxanotes_front.classification:
+  title: Classification
+  description: 'Browse the taxa as a tree.'
+  route_name: node_tree.page
+  menu_name: main
+  weight: 1
+
+taxanotes_front.about:
+  title: About
+  route_name: taxanotes_front.about
+  menu_name: main
+  weight: 10
+
+taxanotes_front.settings:
+  title: 'Taxanotes front page'
+  description: 'Front page title and introduction, About page, footer text.'
+  parent: system.admin_config_system
+  route_name: taxanotes_front.settings

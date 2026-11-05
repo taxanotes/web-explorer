@@ -1,0 +1,81 @@
+/* Front-page blocks of a Taxanotes instance (theme-neutral; Olivero sets the
+   type and spacing). */
+
+/* Taxon search block: one row, the field takes the width that is left. */
+.taxanotes-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.taxanotes-search__input {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+/* Taxon summary block: counts as tiles. */
+.taxanotes-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.taxanotes-summary__count {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.taxanotes-summary__links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+/* Front page: the "recent" blocks sit side by side when there is room. */
+.path-frontpage .region--content-below {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0 2rem;
+  align-items: start;
+}
+.path-frontpage .region--content-below > .block {
+  min-width: 0;
+}
+
+/* The "recent" and "children" views: the name on one line, authors, rank
+   and date on the next (Olivero wraps each field and its content in divs). */
+.taxanotes-recent .views-row {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.taxanotes-recent .views-field,
+.taxanotes-recent .field-content {
+  display: inline;
+}
+.taxanotes-recent .views-field-title {
+  display: block;
+}
+.taxanotes-recent .views-field-field-authors,
+.taxanotes-recent .views-field-field-rank,
+.taxanotes-recent .views-field-created,
+.taxanotes-recent .views-field-changed {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+.taxanotes-recent .views-field-field-rank::before,
+.taxanotes-recent .views-field-created::before,
+.taxanotes-recent .views-field-changed::before {
+  content: "\00b7\00a0";
+}
+.taxanotes-recent .views-field-field-authors:has(.field-content:empty) + .views-field-field-rank::before {
+  content: none;
+}
+.taxanotes-tree-link-view {
+  margin-bottom: 0.75rem;
+}

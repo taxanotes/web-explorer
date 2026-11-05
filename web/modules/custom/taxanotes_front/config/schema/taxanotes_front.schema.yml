@@ -1,0 +1,35 @@
+taxanotes_front.settings:
+  type: config_object
+  label: 'Taxanotes front page settings'
+  mapping:
+    front_title:
+      type: label
+      label: 'Front page title (empty: "Welcome to <site name>")'
+    front_intro:
+      type: text
+      label: 'Front page introduction (HTML)'
+    about_title:
+      type: label
+      label: 'About page title'
+    about_body:
+      type: text
+      label: 'About page body (HTML)'
+    footer_text:
+      type: text
+      label: 'Footer text (HTML)'
+
+block.settings.taxanotes_front_text:
+  type: block_settings
+  label: 'Instance text block'
+  mapping:
+    text_key:
+      type: string
+      label: 'Which text of taxanotes_front.settings to show'
+
+block.settings.taxanotes_front_search:
+  type: block_settings
+  label: 'Taxon search block'
+
+block.settings.taxanotes_front_summary:
+  type: block_settings
+  label: 'Taxon summary block'
