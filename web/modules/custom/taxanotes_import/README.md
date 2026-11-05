@@ -1,11 +1,13 @@
 # Taxanotes import
 
 Migrations that bring taxa into the shared `taxon` content type (recipe
-`recipes/taxanotes_taxon`).
+`recipes/taxanotes_taxon`) and the literature into bibcite references linked
+to them (recipe `recipes/taxanotes_literature`).
 
 ## Drupal 7 Scratchpads track
 
-Four plugin migrations in group `taxanotes`, run in this order:
+Nine plugin migrations in group `taxanotes`, run in this order (the taxa
+first, then the literature, then the pass that links the two):
 
 | id | what it does |
 |---|---|
@@ -13,6 +15,11 @@ Four plugin migrations in group `taxanotes`, run in this order:
 | `taxanotes_d7_taxon` | one `taxon` node per term of the source vocabulary, keyed on the Scratchpads GUID; all scalar fields, GUIDs of parent / accepted name kept as strings |
 | `taxanotes_d7_taxon_parent` | second pass: resolves `field_parent_taxon_reference` and `field_accepted_name` through the first migration's id map |
 | `taxanotes_d7_taxon_revision` | the term revision history (Scratchpads `taxonomy_revision` tables) as node revisions, oldest first; the D7 current revision becomes the node's default revision |
+| `taxanotes_d7_biblio_contributor` | one `bibcite_contributor` per `biblio_contributor_data` row (cid kept as the id): last, first and middle names, prefix, suffix |
+| `taxanotes_d7_biblio_keyword` | one `bibcite_keyword` per `biblio_keyword_data` row (kid kept) |
+| `taxanotes_d7_file` | one file entity per attachment of a biblio node (`field_file`) that exists under `source_files_dir`, copied to `public://scratchpads/<D7 path>`; a file not on this machine skips its row with a message |
+| `taxanotes_d7_biblio` | one `bibcite_reference` per biblio node, keyed on the node uuid (kept in `field_scratchpads_uuid`): the 14 publication types mapped onto bibcite's, every `biblio_*` column onto the bibcite field of the same name, authors (role and category), keywords, the taxa it names (`field_taxonomic_name`, through the taxon migration by GUID) and the attachments |
+| `taxanotes_d7_taxon_reference` | second pass over the taxa with a protologue: `field_reference` (entity reference to the bibcite reference) from the shadow `field_reference_guid` through the reference migration; the shadow fields stay |
 
 Source plugin `scratchpads_d7_taxon` is built on core migrate's `SqlBase`
 (not on the `migrate_drupal` d7 sources, which are deprecated in Drupal 11.3
@@ -36,6 +43,10 @@ $settings['taxanotes_import'] = [
   // Root terms whose whole subtree is imported unpublished. Optional;
   // defaults to ['Deleted taxa'], the Scratchpads convention.
   'unpublished_roots' => ['Deleted taxa'],
+  // The D7 public files directory as PHP reaches it (instance.yml
+  // source.files): the literature attachments are copied from it. Optional;
+  // without it taxanotes_d7_file skips every file with a message.
+  'source_files_dir' => '/mnt/scratchpads/myriatrix/files',
 ];
 ```
 
@@ -186,6 +197,51 @@ revision import with `--update` (a map row whose revision no longer exists
 falls back to creating it). The revision destination's rollback skips
 revisions that no longer exist.
 
+### Literature
+
+`scratchpads_d7_biblio` (built on `ScratchpadsD7Base` for the GUID rule)
+selects the current revision of every biblio node (`node` joined to `biblio`
+on `node.vid`) with every `biblio_*` column, and loads once per import the
+contributors of each revision (`biblio_contributor`, rank order), the keyword
+ids, the taxa (`field_data_field_taxonomic_name`: one row set per language,
+the node's own language first, else `und`, else the first, like the term
+fields; one link per distinct term of the instance vocabulary, with its
+GUID) and the attachments (`field_data_field_file`, same language rule).
+The migration maps the D7 publication type ids onto bibcite's reference
+types (100 book, 101 book_chapter, 102 journal_article, 103 conference_paper,
+104 conference_proceedings, 105 newspaper_article, 106 magazine_article, 108
+thesis, 109 report, 120 personal, 121 manuscript, 124 unpublished, 125
+database, 129 miscellaneous; anything else miscellaneous), the author rows
+onto bibcite's contributor roles (`auth_type`: 1 author, 2 secondary_author,
+... 14 editor, 22 advisor) and categories (`auth_category` 1..5), strips the
+HTML italics Scratchpads keeps in titles (bibcite titles are plain text),
+turns biblio's "in press" year 9999 into no year, keeps the citekey (the D7
+nid, the `.bib` key), copies dates as the strings biblio stored and gives
+abstracts the `basic_html` format. Contributors carry only their name parts:
+bibcite composes the name it shows from them (`full_name_pattern`, set by
+the recipe to include the middle initials D7 stores) and would re-parse and
+overwrite the parts if the computed `name` were set.
+
+`scratchpads_d7_file` lists the `file_managed` rows that `field_file` on a
+biblio node points at and resolves each under `source_files_dir`
+(`$settings['taxanotes_import']['source_files_dir']`, from `instance.yml`
+`source.files`; under ddev `.ddev/docker-compose.scratchpads-files.yaml`
+bind-mounts the Scratchpads files directory read-only at
+`/mnt/scratchpads/myriatrix/files`). A file that is not there skips its row
+with the message *Source file is not available locally* (`drush
+migrate:messages taxanotes_d7_file` lists them; `scripts/verify-instance.php`
+counts them), and the reference imports without it; a later run with the
+files present picks them up. Files are copied, never moved, into
+`public://scratchpads/<D7 relative path>` and reused when already there.
+
+`taxanotes_d7_taxon_reference` uses the taxon source with
+`with_reference_only: true` (only the terms whose D7 `field_reference` is
+set) and the `entity:node` destination with `overwrite_properties`, like the
+parent pass; rolling it back keeps the links. Rolling back
+`taxanotes_d7_biblio` deletes the references (the taxa and their shadow
+fields are untouched; `field_reference` then points at nothing until the
+reference import and this pass with `--update` run again).
+
 ## Local ddev setup for the D7 track
 
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to the
@@ -205,6 +261,12 @@ drush migrate:import taxanotes_d7_user
 drush migrate:import taxanotes_d7_taxon
 drush migrate:import taxanotes_d7_taxon_parent
 drush migrate:import taxanotes_d7_taxon_revision --feedback=2000
+drush recipe recipes/taxanotes_literature
+drush migrate:import taxanotes_d7_biblio_contributor
+drush migrate:import taxanotes_d7_biblio_keyword
+drush migrate:import taxanotes_d7_file
+drush migrate:import taxanotes_d7_biblio
+drush migrate:import taxanotes_d7_taxon_reference
 ```
 
 All migrations are idempotent (`track_changes: true`): re-running imports
