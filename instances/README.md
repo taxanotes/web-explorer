@@ -218,3 +218,4 @@ control is a checksum, not a count.
 |---|---|---|---|
 | `myriatrix` | `web/sites/default` (built by hand before this script; its `settings.local.php` is hand-written) | taxanotes-dev.ddev.site / myriatrix.taxanotes.net | D7 vocabulary `myriatrix`, database `myriatrix` (ddev) / `s_myriatrix` (production) |
 | `mormyrids` | `web/sites/mormyrids` | mormyrids.taxanotes-dev.ddev.site / mormyrids.taxanotes.net | D7 vocabulary `mormyridae`, database `mormyrids` (ddev) / `s_mormyrids` (production) |
+| `anthophila` | `web/sites/anthophila` | anthophila.taxanotes-dev.ddev.site / anthophila.taxanotes.net (no DNS yet) | D7 vocabulary `bee_family_genus_groups` (2022 dump), database `anthophila` (ddev) / `s_anthophila` (production) |

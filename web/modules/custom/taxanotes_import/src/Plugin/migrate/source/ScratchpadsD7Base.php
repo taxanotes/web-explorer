@@ -70,6 +70,11 @@ abstract class ScratchpadsD7Base extends SqlBase {
   protected int|false|null $vocabularyId = NULL;
 
   /**
+   * Whether taxonomy_term_data.language exists, resolved once.
+   */
+  protected ?bool $termsHaveLanguage = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state) {
@@ -161,6 +166,11 @@ abstract class ScratchpadsD7Base extends SqlBase {
    * term of the two pilot vocabularies does, and the current revision takes
    * its values from the data tables anyway (ScratchpadsD7TaxonRevision).
    *
+   * A Scratchpads site that never enabled entity_translation for terms has
+   * no taxonomy_term_data.language column at all (the 2022 Anthophila dump;
+   * its field rows are all `und`): then there is no own language to prefer
+   * and the rule is `und` first, else the alphabetically first language.
+   *
    * @param \Drupal\Core\Database\Query\SelectInterface $query
    *   The query; $entity_alias must be taxonomy_term_data (or, for revisions,
    *   taxonomy_term_data_revision) with the columns tid and revision_id.
@@ -188,13 +198,13 @@ abstract class ScratchpadsD7Base extends SqlBase {
 
     $best = $this->getDatabase()->select($table, 'f');
     $best->addField('f', 'entity_id');
-    if ($entity_type === 'taxonomy_term') {
+    if ($entity_type === 'taxonomy_term' && $this->termsHaveLanguage()) {
       $best->innerJoin('taxonomy_term_data', 't', '[t].[tid] = [f].[entity_id]');
       $rank = "CASE WHEN [f].[language] = [t].[language] THEN '0' WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
     }
     else {
-      // Other entities (field collection items) have no language of their
-      // own to prefer.
+      // Other entities (field collection items), and terms of a site without
+      // entity_translation, have no language of their own to prefer.
       $rank = "CASE WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
     }
     $best->addExpression("SUBSTRING(MIN(CONCAT($rank, [f].[language])), 2)", 'language');
@@ -212,6 +222,19 @@ abstract class ScratchpadsD7Base extends SqlBase {
     }
     $query->leftJoin($best, $best_alias, $on);
     $query->leftJoin($table, $alias, $join);
+  }
+
+  /**
+   * Whether taxonomy_term_data has a language column (entity_translation).
+   *
+   * The column is added by the entity_translation module (D7 core terms have
+   * none); Myriatrix and Mormyrids have it, the 2022 Anthophila dump has not.
+   */
+  protected function termsHaveLanguage(): bool {
+    if ($this->termsHaveLanguage === NULL) {
+      $this->termsHaveLanguage = $this->getDatabase()->schema()->fieldExists('taxonomy_term_data', 'language');
+    }
+    return $this->termsHaveLanguage;
   }
 
   /**

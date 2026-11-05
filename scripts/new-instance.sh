@@ -195,13 +195,17 @@ gen_sites_block() {
 }
 begin='// BEGIN taxanotes instances (generated; do not edit inside this block)'
 end='// END taxanotes instances'
-block="$(gen_sites_block)"
+# The block goes through a file: macOS awk rejects a newline in a -v value
+# ("newline in string"), which a block of two or more lines has.
+block_file="$(mktemp)"
+gen_sites_block > "$block_file"
 tmp="$(mktemp)"
-awk -v begin="$begin" -v end="$end" -v block="$block" '
-  $0 == begin { print; if (block != "") print block; skip = 1; next }
+awk -v begin="$begin" -v end="$end" -v block_file="$block_file" '
+  $0 == begin { print; while ((getline line < block_file) > 0) print line; close(block_file); skip = 1; next }
   $0 == end { skip = 0 }
   !skip { print }
 ' web/sites/sites.php > "$tmp"
+rm -f "$block_file"
 if cmp -s "$tmp" web/sites/sites.php; then
   note "unchanged"
   rm -f "$tmp"

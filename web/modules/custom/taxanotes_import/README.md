@@ -47,7 +47,11 @@ exactly one row per term (`ScratchpadsD7Base::joinFieldTable()`): the row in
 the term's own language, else the `und` row, else the alphabetically first
 language (what the D7 site shows on its default path). Without this a term
 yielded one source row per language combination, i.e. the same GUID twice,
-and the last row won.
+and the last row won. A site that never enabled entity_translation for terms
+has no `taxonomy_term_data.language` column (the 2022 Anthophila dump; its
+field rows are all `und`): the join then has no own language to prefer and
+takes `und` first (`termsHaveLanguage()`), and `scripts/verify-instance.php`
+applies the same rule.
 
 The parts of the scientific name, which Scratchpads stores as four field
 pairs (`field_unit_indicator1..4`, `field_unit_name1..4`), land in one

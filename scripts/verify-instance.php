@@ -58,9 +58,17 @@ $c['d11 users uid>1'] = (int) $d11->query('SELECT COUNT(*) FROM {users_field_dat
 $c['d11 users total'] = (int) $d11->query('SELECT COUNT(*) FROM {users_field_data}')->fetchField();
 $c['d11 roles'] = $d11->query('SELECT roles_target_id, COUNT(*) c FROM {user__roles} GROUP BY roles_target_id ORDER BY roles_target_id')->fetchAllKeyed();
 $c['d11 phpass hashes'] = (int) $d11->query("SELECT COUNT(*) FROM {users_field_data} WHERE pass LIKE '\$S\$%'")->fetchField();
-$c['d7 users with changed = 0'] = (int) $d7->query('SELECT COUNT(*) FROM {users} WHERE uid > 1 AND changed = 0')->fetchField();
+// users.changed is a Scratchpads addition; a site without it (the 2022
+// Anthophila dump) counts as "changed = 0" for every account, and the
+// migration then sets changed to the registration time.
+$users_changed = $d7->schema()->fieldExists('users', 'changed');
+$c['d7 users with changed = 0'] = (int) $d7->query($users_changed
+  ? 'SELECT COUNT(*) FROM {users} WHERE uid > 1 AND changed = 0'
+  : 'SELECT COUNT(*) FROM {users} WHERE uid > 1')->fetchField();
 $c['d11 users whose changed differs from D7 (changed, or created when 0)'] = 0;
-foreach ($d7->query('SELECT uid, created, changed FROM {users} WHERE uid > 1') as $u) {
+foreach ($d7->query($users_changed
+  ? 'SELECT uid, created, changed FROM {users} WHERE uid > 1'
+  : 'SELECT uid, created, 0 AS changed FROM {users} WHERE uid > 1') as $u) {
   $expected = (int) $u->changed ?: (int) $u->created;
   $actual = (int) $d11->query('SELECT changed FROM {users_field_data} WHERE uid = :u', [':u' => $u->uid])->fetchField();
   if ($expected !== $actual) {
@@ -110,8 +118,12 @@ $c['d11 usage'] = $d11->query('SELECT field_usage_value, COUNT(*) c FROM {node__
 // Every term, every current value, against the D7 data tables.
 //
 // D7 field rows: one per language; the migration picks the term's own
-// language, else und, else the alphabetically first (joinFieldTable()).
-$term_lang = $d7->query('SELECT tid, language FROM {taxonomy_term_data} WHERE vid = :v', [':v' => $vid])->fetchAllKeyed();
+// language, else und, else the alphabetically first (joinFieldTable()). A
+// site without entity_translation has no taxonomy_term_data.language column
+// (the 2022 Anthophila dump): no own language, und first.
+$term_lang = $d7->schema()->fieldExists('taxonomy_term_data', 'language')
+  ? $d7->query('SELECT tid, language FROM {taxonomy_term_data} WHERE vid = :v', [':v' => $vid])->fetchAllKeyed()
+  : [];
 
 /**
  * One value per term of a D7 data field, with the migration's language rule.
