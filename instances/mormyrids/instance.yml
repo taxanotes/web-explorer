@@ -1,16 +1,23 @@
-# Instance definition: Mormyrids (John Sullivan's Scratchpad of African weakly
-# electric fishes). Committed, no secrets: credentials are in .env next to it
-# (see instances/.env.example). Schema: instances/README.md.
+# Instance definition: Mormyrids (the Scratchpad of African weakly electric
+# fishes, mormyrids.taxanotes.net). Committed, no secrets: credentials are in
+# .env next to it (see instances/.env.example). Schema: instances/README.md.
 slug: mormyrids
 site:
   name: 'Mormyridae - African weakly electric fishes'
   slogan: 'Mintotom mi ne vé ?'
   theme: olivero
   admin_theme: claro
+# Hostnames per environment; the first of each list is the canonical URL.
+# ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
+# production: one checkout per instance (see instances/README.md).
 hostnames:
-  - mormyrids.taxanotes-dev.ddev.site
+  ddev:
+    - mormyrids.taxanotes-dev.ddev.site
+  production:
+    - mormyrids.taxanotes.net
 drupal:
-  # web/sites/<sites_subdir>; mapped from the hostnames in web/sites/sites.php.
+  # web/sites/<sites_subdir> (default: slug); mapped from the ddev hostnames
+  # in web/sites/sites.php.
   sites_subdir: mormyrids
   profile: standard
   database: mormyrids

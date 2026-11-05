@@ -28,7 +28,7 @@ web/sites/*/settings.local.php
 /web/sites/*/files
 
 # ignore local services.yml settings
-web/sites/default/services.yml
+web/sites/*/services.yml
 
 # Ignore SimpleTest multi-site environment.
 /web/sites/simpletest
@@ -141,3 +141,8 @@ docs/planning/
 
 # Per-instance config export directories (backup targets, never a source of truth).
 config/instances/
+
+# Per-instance source data (Scratchpads dumps hold the users table) and any dump anywhere.
+instances/*/data-imports/
+*.sql
+*.sql.gz

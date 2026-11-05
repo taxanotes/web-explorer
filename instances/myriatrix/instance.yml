@@ -9,7 +9,10 @@ site:
   theme: olivero
   admin_theme: claro
 hostnames:
-  - taxanotes-dev.ddev.site
+  ddev:
+    - taxanotes-dev.ddev.site
+  production:
+    - myriatrix.taxanotes.net
 drupal:
   sites_subdir: default
   profile: standard

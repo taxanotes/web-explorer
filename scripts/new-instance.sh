@@ -3,7 +3,7 @@
 # Creates (or brings up to date) a local Taxanotes instance from its
 # definition, as a Drupal multisite of the ddev project in this checkout.
 #
-#   scripts/new-instance.sh <slug>
+#   scripts/new-instance.sh <slug> [--reinstall]
 #
 # reads instances/<slug>/instance.yml (committed, no secrets) and
 # instances/<slug>/.env (gitignored secrets; created with a random hash salt
@@ -17,12 +17,25 @@
 # nothing that is already in place (migrations only import rows that changed
 # in Drupal 7).
 #
+# It never installs over an existing database: Drupal is installed only when
+# the instance's database holds no table at all. A database with tables that
+# does not bootstrap (db container down, broken settings, PHP fatal, partial
+# install) stops the run; --reinstall is the one way to drop it and install
+# again. Before any drush write the script checks that drush resolves the
+# instance's URL to web/sites/<sites_subdir>, so a hostname that is not (yet)
+# mapped can never make the run act on another instance's site directory.
+#
+# This is the ddev (local) implementation: hostnames come from
+# `hostnames.ddev` of instance.yml and settings.local.php is generated for
+# the ddev environment. See instances/README.md for the production layout.
+#
 # Needs: ddev (running project), bash 3.2+ (macOS's /bin/bash is enough). Everything else runs inside the
 # web container (php, drush, composer's vendor/).
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <slug>   (instances/<slug>/instance.yml must exist)" >&2
+  echo "usage: $0 <slug> [--reinstall]   (instances/<slug>/instance.yml must exist)" >&2
+  echo "  --reinstall  drop the instance's existing database tables and install Drupal again" >&2
   exit 2
 }
 
@@ -30,8 +43,19 @@ log() { printf '\n==> %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
 die() { printf 'new-instance: %s\n' "$*" >&2; exit 1; }
 
-[ $# -eq 1 ] || usage
-slug="$1"
+slug=""
+reinstall=0
+for arg in "$@"; do
+  case "$arg" in
+    --reinstall) reinstall=1 ;;
+    -*) usage ;;
+    *) [ -z "$slug" ] || usage; slug="$arg" ;;
+  esac
+done
+[ -n "$slug" ] || usage
+# The environment this script builds for (hostnames.<environment> in
+# instance.yml, trusted hosts of the generated settings.local.php).
+environment=ddev
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 inst_dir="instances/$slug"
@@ -47,7 +71,8 @@ in_web() {
   { printf '%q ' "$@"; echo; } | ddev exec -s web bash -s
 }
 
-# One value (or list, one item per line) from instance.yml.
+# One value (or list, one item per line) from instance.yml, defaults applied
+# (scripts/lib/instance.php is the one place that knows them).
 inst() {
   in_web php scripts/lib/instance.php get "$yml" "$1"
 }
@@ -70,12 +95,10 @@ db_name="$(inst drupal.database)"
 hostnames=()
 while IFS= read -r host; do
   [ -n "$host" ] && hostnames+=("$host")
-done < <(inst hostnames)
+done < <(inst "hostnames.$environment")
 [ -n "$site_name" ] || die "site.name is missing in $yml"
-[ "${#hostnames[@]}" -gt 0 ] || die "hostnames is empty in $yml"
-subdir="${subdir:-$slug}"
-profile="${profile:-standard}"
-db_name="${db_name:-$slug}"
+[ "${#hostnames[@]}" -gt 0 ] || die "hostnames.$environment is empty in $yml"
+[ -n "$subdir" ] && [ -n "$profile" ] && [ -n "$db_name" ] || die "instance.php returned no drupal.sites_subdir/profile/database for $yml"
 primary_host="${hostnames[0]}"
 url="https://$primary_host"
 site_dir="web/sites/$subdir"
@@ -93,6 +116,8 @@ if [ ! -f "$env_file" ]; then
 else
   note "exists, kept"
 fi
+# Credentials: owner-only, also for a hand-copied file.
+chmod 600 "$env_file"
 [ -n "$(env_get HASH_SALT)" ] || die "HASH_SALT is empty in $env_file"
 site_mail="$(env_get SITE_MAIL)"
 site_mail="${site_mail:-webmaster@example.com}"
@@ -106,7 +131,7 @@ admin_pass="$(env_get ADMIN_PASSWORD)"
 # ---------------------------------------------------------------------------
 log "ddev hostnames: .ddev/config.instances.yaml (all instances)"
 # ddev merges every .ddev/config.*.yaml into config.yaml. The file lists the
-# hostnames of every instance except the project's own <name>.ddev.site;
+# ddev hostnames of every instance except the project's own <name>.ddev.site;
 # *.ddev.site names go to additional_hostnames (suffix stripped), others to
 # additional_fqdns.
 gen_ddev_hostnames() {
@@ -123,7 +148,7 @@ gen_ddev_hostnames() {
         *.ddev.site) names+=("${host%.ddev.site}") ;;
         *) fqdns+=("$host") ;;
       esac
-    done < <(in_web php scripts/lib/instance.php get "$f" hostnames)
+    done < <(in_web php scripts/lib/instance.php get "$f" hostnames.ddev)
   done
   if [ "${#names[@]}" -gt 0 ]; then
     echo "additional_hostnames:"
@@ -146,16 +171,19 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "Multisite map: web/sites/sites.php"
+log "Multisite map: web/sites/sites.php (ddev hostnames of every instance)"
+# Production runs one checkout per instance on sites/default and needs no
+# entry (instances/README.md), so the map carries the ddev hostnames only.
 gen_sites_block() {
   local f sub host
   for f in instances/*/instance.yml; do
     sub="$(in_web php scripts/lib/instance.php get "$f" drupal.sites_subdir)"
-    [ -n "$sub" ] && [ "$sub" != "default" ] || continue
+    [ -n "$sub" ] || die "$f: instance.php returned no drupal.sites_subdir"
+    [ "$sub" != "default" ] || continue
     while IFS= read -r host; do
       [ -n "$host" ] || continue
       printf "\$sites['%s'] = '%s';\n" "$host" "$sub"
-    done < <(in_web php scripts/lib/instance.php get "$f" hostnames)
+    done < <(in_web php scripts/lib/instance.php get "$f" hostnames.ddev)
   done
 }
 begin='// BEGIN taxanotes instances (generated; do not edit inside this block)'
@@ -188,7 +216,7 @@ else
 fi
 marker='Generated by scripts/new-instance.sh'
 tmp="$(mktemp)"
-in_web php scripts/lib/instance.php settings-local "$yml" "$env_file" > "$tmp"
+in_web php scripts/lib/instance.php settings-local "$yml" "$env_file" "$environment" > "$tmp"
 if [ -f "$site_dir/settings.local.php" ] && ! grep -q "$marker" "$site_dir/settings.local.php"; then
   note "settings.local.php exists and was not generated by this script: left alone"
   rm -f "$tmp"
@@ -202,29 +230,62 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+log "Site resolution: $url -> $site_dir"
+# Drush resolves the URL through web/sites/sites.php; a hostname that is not
+# mapped lands on sites/default (another instance). Nothing below writes
+# through drush until the resolved site directory is the instance's own.
+resolved_site="$(in_web drush --uri="$url" core:status --field=site 2> /dev/null || true)"
+[ "$resolved_site" = "sites/$subdir" ] || die "drush resolves $url to '${resolved_site:-?}', not sites/$subdir: check hostnames.$environment and web/sites/sites.php"
+note "drush resolves $url to sites/$subdir"
+
+# ---------------------------------------------------------------------------
 log "Database: $db_name on $db_host"
 if [ "$db_host" = "db" ]; then
   # ddev's db container; its `db` user only owns the `db` database, so the
   # extra database is created and granted as root (ddev's root/root).
   ddev mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS \`$db_name\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci; GRANT ALL ON \`$db_name\`.* TO '$db_user'@'%'; FLUSH PRIVILEGES;"
   note "exists (created if it was missing), granted to $db_user"
+  table_count="$(ddev mysql -uroot -proot -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$db_name'")"
 else
   note "not the ddev db container: expected to exist already"
+  table_count="$(in_web drush --uri="$url" sql:query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()")"
 fi
+table_count="$(printf '%s' "$table_count" | tr -dc '0-9')"
+[ -n "$table_count" ] || die "could not count the tables of database $db_name"
+note "$table_count tables"
 
 # ---------------------------------------------------------------------------
 log "Drupal: $url"
-# Installed = Drupal bootstraps on this site and the installer finished
-# (install_finished() records install_time in state); a partial install from
-# an interrupted run is redone.
-bootstrap="$(in_web drush --uri="$url" core:status --field=bootstrap 2> /dev/null || true)"
-install_time=""
-if [ "$bootstrap" = "Successful" ]; then
-  install_time="$(in_web drush --uri="$url" state:get install_time 2> /dev/null || true)"
-fi
-if [ -n "$install_time" ]; then
-  note "already installed"
+# Installed = the database has tables, Drupal bootstraps on this site and the
+# installer finished (install_finished() records install_time in state).
+# Anything else with tables present is an error, never an install: an empty
+# database is the only state that installs by itself, --reinstall the only
+# way to install over tables (site:install drops them).
+install=0
+if [ "$table_count" -eq 0 ]; then
+  note "database is empty"
+  install=1
 else
+  bootstrap="$(in_web drush --uri="$url" core:status --field=bootstrap 2> /dev/null || true)"
+  install_time=""
+  if [ "$bootstrap" = "Successful" ]; then
+    install_time="$(in_web drush --uri="$url" state:get install_time 2> /dev/null || true)"
+  fi
+  if [ -n "$install_time" ]; then
+    note "already installed"
+  elif [ "$reinstall" -eq 1 ]; then
+    note "database has $table_count tables but no finished install (bootstrap: ${bootstrap:-failed})"
+  elif [ "$bootstrap" = "Successful" ]; then
+    die "database $db_name has $table_count tables and Drupal bootstraps, but the install never finished (no install_time): fix it or pass --reinstall to drop it and install again"
+  else
+    die "database $db_name has $table_count tables but Drupal does not bootstrap on $url (db down? broken settings.local.php? PHP fatal?): fix it, or pass --reinstall to drop it and install again"
+  fi
+  if [ "$reinstall" -eq 1 ]; then
+    note "--reinstall: dropping the $table_count tables of $db_name and installing again"
+    install=1
+  fi
+fi
+if [ "$install" -eq 1 ]; then
   note "installing profile $profile into $site_dir"
   install_args=(site:install "$profile" --sites-subdir="$subdir" --site-name="$site_name" --site-mail="$site_mail" --account-name=admin --yes)
   if [ -n "$admin_pass" ]; then
