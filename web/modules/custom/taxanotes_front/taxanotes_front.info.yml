@@ -1,0 +1,11 @@
+name: 'Taxanotes front'
+description: 'The front page, the About page and the front-page blocks (intro text, taxon search, taxon summary, footer text) of a Taxanotes instance. The texts are site configuration (taxanotes_front.settings), seeded from instances/<slug>/instance.yml through the taxanotes_front recipe and editable at /admin/config/system/taxanotes-front; nothing in this module names an instance.'
+type: module
+package: Taxanotes
+core_version_requirement: ^11
+dependencies:
+  - drupal:block
+  - drupal:node
+  - drupal:views
+  - node_tree:node_tree
+configure: taxanotes_front.settings

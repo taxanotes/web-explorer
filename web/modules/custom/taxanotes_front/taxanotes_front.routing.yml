@@ -1,0 +1,23 @@
+taxanotes_front.front:
+  path: '/front'
+  defaults:
+    _controller: '\Drupal\taxanotes_front\Controller\FrontController::front'
+    _title_callback: '\Drupal\taxanotes_front\Controller\FrontController::frontTitle'
+  requirements:
+    _access: 'TRUE'
+
+taxanotes_front.about:
+  path: '/about'
+  defaults:
+    _controller: '\Drupal\taxanotes_front\Controller\FrontController::about'
+    _title_callback: '\Drupal\taxanotes_front\Controller\FrontController::aboutTitle'
+  requirements:
+    _access: 'TRUE'
+
+taxanotes_front.settings:
+  path: '/admin/config/system/taxanotes-front'
+  defaults:
+    _form: '\Drupal\taxanotes_front\Form\SettingsForm'
+    _title: 'Front page and site texts'
+  requirements:
+    _permission: 'administer site configuration'

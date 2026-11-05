@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_life_cycle
+    - node.type.taxon_description
+  module:
+    - text
+id: node.taxon_description.field_life_cycle
+field_name: field_life_cycle
+entity_type: node
+bundle: taxon_description
+label: 'Life cycle'
+description: ''
+required: false
+translatable: false
+default_value: []
+default_value_callback: ''
+settings: []
+field_type: text_long

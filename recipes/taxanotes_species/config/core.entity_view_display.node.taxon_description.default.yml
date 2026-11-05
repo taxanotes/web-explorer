@@ -1,0 +1,334 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon_description.field_associations
+    - field.field.node.taxon_description.field_behavious
+    - field.field.node.taxon_description.field_biology
+    - field.field.node.taxon_description.field_conservation_status
+    - field.field.node.taxon_description.field_cyclicity
+    - field.field.node.taxon_description.field_cytology
+    - field.field.node.taxon_description.field_diagnostic_description
+    - field.field.node.taxon_description.field_diseases
+    - field.field.node.taxon_description.field_dispersal
+    - field.field.node.taxon_description.field_distribution
+    - field.field.node.taxon_description.field_ecology
+    - field.field.node.taxon_description.field_electric_organ_discharge
+    - field.field.node.taxon_description.field_evolution
+    - field.field.node.taxon_description.field_general_description
+    - field.field.node.taxon_description.field_genetics
+    - field.field.node.taxon_description.field_growth
+    - field.field.node.taxon_description.field_habitat
+    - field.field.node.taxon_description.field_legislation
+    - field.field.node.taxon_description.field_life_cycle
+    - field.field.node.taxon_description.field_life_expectancy
+    - field.field.node.taxon_description.field_look_alikes
+    - field.field.node.taxon_description.field_management
+    - field.field.node.taxon_description.field_media
+    - field.field.node.taxon_description.field_migration
+    - field.field.node.taxon_description.field_molecular_biology
+    - field.field.node.taxon_description.field_morphology
+    - field.field.node.taxon_description.field_phylogeny
+    - field.field.node.taxon_description.field_physiology
+    - field.field.node.taxon_description.field_population_biology
+    - field.field.node.taxon_description.field_procedures
+    - field.field.node.taxon_description.field_reproduction
+    - field.field.node.taxon_description.field_risk_statement
+    - field.field.node.taxon_description.field_size
+    - field.field.node.taxon_description.field_taxon_biology
+    - field.field.node.taxon_description.field_taxonomic_name
+    - field.field.node.taxon_description.field_threats
+    - field.field.node.taxon_description.field_trends
+    - field.field.node.taxon_description.field_trophic_strategy
+    - field.field.node.taxon_description.field_uses
+    - node.type.taxon_description
+    - image.style.taxanotes_gallery
+  module:
+    - media
+    - text
+    - user
+id: node.taxon_description.default
+targetEntityType: node
+bundle: taxon_description
+mode: default
+content:
+  field_general_description:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 10
+    region: content
+  field_biology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 11
+    region: content
+  field_conservation_status:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 12
+    region: content
+  field_legislation:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 13
+    region: content
+  field_management:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 14
+    region: content
+  field_procedures:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 15
+    region: content
+  field_diagnostic_description:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 16
+    region: content
+  field_threats:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 17
+    region: content
+  field_trends:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 18
+    region: content
+  field_behavious:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 19
+    region: content
+  field_cytology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 20
+    region: content
+  field_genetics:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 21
+    region: content
+  field_growth:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 22
+    region: content
+  field_look_alikes:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 23
+    region: content
+  field_dispersal:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 24
+    region: content
+  field_molecular_biology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 25
+    region: content
+  field_morphology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 26
+    region: content
+  field_physiology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 27
+    region: content
+  field_size:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 28
+    region: content
+  field_taxon_biology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 29
+    region: content
+  field_evolution:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 30
+    region: content
+  field_phylogeny:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 31
+    region: content
+  field_associations:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 32
+    region: content
+  field_cyclicity:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 33
+    region: content
+  field_distribution:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 34
+    region: content
+  field_ecology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 35
+    region: content
+  field_habitat:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 36
+    region: content
+  field_life_cycle:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 37
+    region: content
+  field_life_expectancy:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 38
+    region: content
+  field_migration:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 39
+    region: content
+  field_trophic_strategy:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 40
+    region: content
+  field_population_biology:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 41
+    region: content
+  field_reproduction:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 42
+    region: content
+  field_diseases:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 43
+    region: content
+  field_risk_statement:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 44
+    region: content
+  field_uses:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 45
+    region: content
+  field_electric_organ_discharge:
+    type: text_default
+    label: above
+    settings: []
+    third_party_settings: []
+    weight: 46
+    region: content
+  field_taxonomic_name:
+    type: entity_reference_label
+    label: inline
+    settings:
+      link: true
+    third_party_settings: []
+    weight: 0
+    region: content
+  field_media:
+    type: media_thumbnail
+    label: above
+    settings:
+      image_style: taxanotes_gallery
+      image_link: content
+      image_loading:
+        attribute: lazy
+    third_party_settings: []
+    weight: 100
+    region: content
+hidden:
+  links: true

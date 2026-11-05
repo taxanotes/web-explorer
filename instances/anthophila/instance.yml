@@ -1,0 +1,52 @@
+# Instance definition: Anthophila (the World Bee Catalogue Scratchpad,
+# anthophila.taxanotes.net). Committed, no secrets: credentials are in .env
+# next to it (see instances/.env.example). Schema: instances/README.md.
+slug: anthophila
+site:
+  name: 'World Bee Catalogue (Hymenoptera: Apoidea, Anthophila)'
+  slogan: ''
+  theme: olivero
+  admin_theme: claro
+  # Front page, About page and footer texts (HTML), seeded through the
+  # taxanotes_front recipe; see instances/README.md. The welcome text is the
+  # Drupal 7 site's own (front_page_welcome_* variables of the 2022 site).
+  front_title: 'Welcome to World Bee Catalogue'
+  front_intro: |
+    <p>A website dedicated to providing up-to-date information on bee taxonomy since the publication of Michener's "The Bees of the World. Second Edition" (Michener 2007).</p>
+    <p><strong>How to use this site:</strong> Use the search box if you know the name of the taxon you're looking for, or start from the classification tree.</p>
+  about_body: |
+    <p>A Scratchpad of the bees (Hymenoptera: Apoidea, Anthophila): a classification of the bee families, subfamilies, tribes, genera and subgenera, kept current since Michener's "The Bees of the World" (2007).</p>
+    <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history have been carried over from the Scratchpads site; the literature, pages, media and biographies follow with later migrations.</p>
+  footer_text: |
+    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
+# Hostnames per environment; the first of each list is the canonical URL.
+# ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
+# production: one checkout per instance (see instances/README.md); no DNS yet.
+hostnames:
+  ddev:
+    - anthophila.taxanotes-dev.ddev.site
+  production:
+    - anthophila.taxanotes.net
+drupal:
+  # web/sites/<sites_subdir> (default: slug); mapped from the ddev hostnames
+  # in web/sites/sites.php.
+  sites_subdir: anthophila
+  profile: standard
+  # Database name per environment: its own database in the ddev db container,
+  # the hosting toolkit's d<slug>_1 on the server.
+  database:
+    ddev: anthophila
+    production: danthophila_1
+source:
+  type: scratchpads_d7
+  # D7 vocabulary machine name of the taxa ("Bee Family & Genus Groups"), and
+  # the D7 database holding it (per environment: the local Scratchpads stack;
+  # s_<slug> on the server).
+  vocabulary: bee_family_genus_groups
+  database:
+    ddev: anthophila
+    production: s_anthophila
+  # Root terms whose subtree is imported unpublished (Scratchpads convention;
+  # the 2022 dump has none, its one root is Hymenoptera).
+  unpublished_roots:
+    - 'Deleted taxa'

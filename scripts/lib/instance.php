@@ -10,14 +10,25 @@
  * PHP (the vendor/ Symfony Yaml component is used).
  *
  * Usage:
- *   php scripts/lib/instance.php get <instance.yml> <dot.path>
+ *   php scripts/lib/instance.php get <instance.yml> <dot.path> [env]
  *     Prints the value at the dot path of the *effective* definition (the
  *     defaults below applied): a scalar as-is, a list one item per line,
- *     nothing when the key is absent.
- *   php scripts/lib/instance.php settings-local <instance.yml> <.env> [env]
+ *     nothing when the key is absent. A value that is a map keyed by
+ *     environment (see below) prints the entry of the given environment
+ *     (default ddev).
+ *   php scripts/lib/instance.php settings-local <instance.yml> <.env> [env] \
+ *       [migrate-file]
  *     Prints the settings.local.php of the instance site for the given
  *     environment (default ddev): its trusted hosts are that environment's
- *     hostnames.
+ *     hostnames, its database names that environment's. The Scratchpads
+ *     `migrate` connection is inline unless a migrate-file name is given: the
+ *     output then includes that sibling file (written from settings-migrate),
+ *     which keeps the main file to one database block for tools that parse
+ *     it (the hosting toolkit's backup_db/restore_db read the first
+ *     'database'/'username'/'password' they find).
+ *   php scripts/lib/instance.php settings-migrate <instance.yml> <.env> [env]
+ *     Prints the file holding the `migrate` connection alone, or nothing
+ *     when the instance has no Scratchpads source or MIGRATE_DB_USER is empty.
  *
  * Defaults (applied in effective_instance(), the one place that knows them):
  *   drupal.sites_subdir = slug, drupal.database = slug,
@@ -27,8 +38,13 @@
  * production: [...]}`. A plain list is accepted as the ddev list. Only the
  * environment a script runs in reaches the site (trusted_host_patterns); the
  * ddev list also drives the local multisite map (web/sites/sites.php) and
- * .ddev/config.instances.yaml, which are ddev-only artifacts. See
- * instances/README.md.
+ * .ddev/config.instances.yaml, which are ddev-only artifacts. The database
+ * names `drupal.database` and `source.database` take the same shape, a
+ * scalar (the same name everywhere) or `{ddev: ..., production: ...}`, since
+ * the hosting toolkit names databases d<slug>_1 and the Scratchpads sources
+ * s_<slug>; so does `source.files`, the D7 public files directory the
+ * literature attachments and the images are copied from (.env
+ * SOURCE_FILES_DIR overrides it). See instances/README.md.
  */
 
 declare(strict_types=1);
@@ -82,6 +98,20 @@ function effective_instance(array $data): array {
 }
 
 /**
+ * Resolves a value that may be a map keyed by environment.
+ *
+ * A scalar (or a list) is the same in every environment and is returned as
+ * is; an associative array returns its entry for the environment, NULL when
+ * it has none.
+ */
+function env_value(mixed $value, string $environment): mixed {
+  if (is_array($value) && !array_is_list($value)) {
+    return $value[$environment] ?? NULL;
+  }
+  return $value;
+}
+
+/**
  * Parses a KEY=VALUE .env file (comments and blank lines ignored).
  */
 function read_env(string $path): array {
@@ -118,6 +148,25 @@ function dot_get(array $data, string $path): mixed {
 }
 
 /**
+ * The Scratchpads source database name of an environment, NULL for none.
+ *
+ * None: the instance has no source.database, or .env leaves MIGRATE_DB_USER
+ * empty (the script then writes no `migrate` connection and runs no
+ * migration). A source.database map without the environment is an error.
+ */
+function migrate_database(array $instance, array $env, string $environment, string $yml): ?string {
+  $source = $instance['source'] ?? [];
+  if (empty($source['database']) || empty($env['MIGRATE_DB_USER'])) {
+    return NULL;
+  }
+  $name = env_value($source['database'], $environment);
+  if (!is_string($name) || $name === '') {
+    fail("source.database has no name for environment $environment in $yml");
+  }
+  return $name;
+}
+
+/**
  * The database array for $databases from a prefix in .env plus a name.
  */
 function database_settings(array $env, string $prefix, string $name): array {
@@ -140,7 +189,7 @@ $command = $argv[1] ?? '';
 switch ($command) {
   case 'get':
     $instance = read_instance($argv[2] ?? '');
-    $value = dot_get($instance, $argv[3] ?? '');
+    $value = env_value(dot_get($instance, $argv[3] ?? ''), $argv[4] ?? 'ddev');
     if (is_array($value)) {
       foreach ($value as $item) {
         echo is_scalar($item) ? $item : json_encode($item), "\n";
@@ -163,7 +212,11 @@ switch ($command) {
     if (empty($env['HASH_SALT'])) {
       fail("HASH_SALT is empty in {$argv[3]}");
     }
-    $drupal_db = $instance['drupal']['database'];
+    $migrate_file = $argv[5] ?? '';
+    $drupal_db = env_value($instance['drupal']['database'], $environment);
+    if (!is_string($drupal_db) || $drupal_db === '') {
+      fail("drupal.database has no name for environment $environment in {$argv[2]}");
+    }
     $lines = [
       '<?php',
       '',
@@ -177,10 +230,19 @@ switch ($command) {
       '$databases[\'default\'][\'default\'] = ' . var_export(database_settings($env, 'DB_', $drupal_db), TRUE) . ';',
     ];
     $source = $instance['source'] ?? [];
-    if (!empty($source['database']) && !empty($env['MIGRATE_DB_USER'])) {
+    $source_db = migrate_database($instance, $env, $environment, $argv[2]);
+    if ($source_db !== NULL && $migrate_file !== '') {
+      $lines[] = '';
+      $lines[] = '// Scratchpads (Drupal 7) source database, read by taxanotes_import: in a';
+      $lines[] = '// file of its own (instance.php settings-migrate) next to this one.';
+      $lines[] = 'if (file_exists(__DIR__ . ' . var_export('/' . $migrate_file, TRUE) . ')) {';
+      $lines[] = '  include __DIR__ . ' . var_export('/' . $migrate_file, TRUE) . ';';
+      $lines[] = '}';
+    }
+    elseif ($source_db !== NULL) {
       $lines[] = '';
       $lines[] = '// Scratchpads (Drupal 7) source database, read by taxanotes_import.';
-      $lines[] = '$databases[\'migrate\'][\'default\'] = ' . var_export(database_settings($env, 'MIGRATE_DB_', $source['database']), TRUE) . ';';
+      $lines[] = '$databases[\'migrate\'][\'default\'] = ' . var_export(database_settings($env, 'MIGRATE_DB_', $source_db), TRUE) . ';';
     }
     $import = [];
     if (!empty($source['vocabulary'])) {
@@ -188,6 +250,18 @@ switch ($command) {
     }
     if (array_key_exists('unpublished_roots', $source)) {
       $import['unpublished_roots'] = array_values((array) $source['unpublished_roots']);
+    }
+    // The D7 public files directory as this environment's PHP reaches it:
+    // .env SOURCE_FILES_DIR (the server's copy of the referenced subset),
+    // else source.files of instance.yml (per environment). Absent, the
+    // scripts skip the file and media migrations and the references and
+    // species pages import without attachments and images.
+    $files_dir = $env['SOURCE_FILES_DIR'] ?? '';
+    if (!is_string($files_dir) || $files_dir === '') {
+      $files_dir = env_value($source['files'] ?? NULL, $environment);
+    }
+    if (is_string($files_dir) && $files_dir !== '') {
+      $import['source_files_dir'] = $files_dir;
     }
     if ($import) {
       $lines[] = '';
@@ -197,6 +271,26 @@ switch ($command) {
     echo implode("\n", $lines), "\n";
     break;
 
+  case 'settings-migrate':
+    $instance = read_instance($argv[2] ?? '');
+    $env = read_env($argv[3] ?? '');
+    $environment = $argv[4] ?? 'ddev';
+    $source_db = migrate_database($instance, $env, $environment, $argv[2]);
+    if ($source_db === NULL) {
+      break;
+    }
+    $lines = [
+      '<?php',
+      '',
+      '// Generated by scripts/new-instance.sh from instances/' . $instance['slug'] . '/instance.yml',
+      '// and its .env (environment: ' . $environment . '): the Scratchpads (Drupal 7)',
+      '// source database, read by taxanotes_import. Included by settings.local.php.',
+      '',
+      '$databases[\'migrate\'][\'default\'] = ' . var_export(database_settings($env, 'MIGRATE_DB_', $source_db), TRUE) . ';',
+    ];
+    echo implode("\n", $lines), "\n";
+    break;
+
   default:
-    fail("usage: instance.php get <instance.yml> <dot.path> | settings-local <instance.yml> <.env> [environment]");
+    fail("usage: instance.php get <instance.yml> <dot.path> [environment] | settings-local <instance.yml> <.env> [environment] [migrate-file] | settings-migrate <instance.yml> <.env> [environment]");
 }

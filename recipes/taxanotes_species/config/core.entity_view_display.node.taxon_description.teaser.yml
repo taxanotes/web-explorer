@@ -1,0 +1,112 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon_description.field_associations
+    - field.field.node.taxon_description.field_behavious
+    - field.field.node.taxon_description.field_biology
+    - field.field.node.taxon_description.field_conservation_status
+    - field.field.node.taxon_description.field_cyclicity
+    - field.field.node.taxon_description.field_cytology
+    - field.field.node.taxon_description.field_diagnostic_description
+    - field.field.node.taxon_description.field_diseases
+    - field.field.node.taxon_description.field_dispersal
+    - field.field.node.taxon_description.field_distribution
+    - field.field.node.taxon_description.field_ecology
+    - field.field.node.taxon_description.field_electric_organ_discharge
+    - field.field.node.taxon_description.field_evolution
+    - field.field.node.taxon_description.field_general_description
+    - field.field.node.taxon_description.field_genetics
+    - field.field.node.taxon_description.field_growth
+    - field.field.node.taxon_description.field_habitat
+    - field.field.node.taxon_description.field_legislation
+    - field.field.node.taxon_description.field_life_cycle
+    - field.field.node.taxon_description.field_life_expectancy
+    - field.field.node.taxon_description.field_look_alikes
+    - field.field.node.taxon_description.field_management
+    - field.field.node.taxon_description.field_media
+    - field.field.node.taxon_description.field_migration
+    - field.field.node.taxon_description.field_molecular_biology
+    - field.field.node.taxon_description.field_morphology
+    - field.field.node.taxon_description.field_phylogeny
+    - field.field.node.taxon_description.field_physiology
+    - field.field.node.taxon_description.field_population_biology
+    - field.field.node.taxon_description.field_procedures
+    - field.field.node.taxon_description.field_reproduction
+    - field.field.node.taxon_description.field_risk_statement
+    - field.field.node.taxon_description.field_size
+    - field.field.node.taxon_description.field_taxon_biology
+    - field.field.node.taxon_description.field_taxonomic_name
+    - field.field.node.taxon_description.field_threats
+    - field.field.node.taxon_description.field_trends
+    - field.field.node.taxon_description.field_trophic_strategy
+    - field.field.node.taxon_description.field_uses
+    - node.type.taxon_description
+    - core.entity_view_mode.node.teaser
+  module:
+    - text
+    - user
+id: node.taxon_description.teaser
+targetEntityType: node
+bundle: taxon_description
+mode: teaser
+content:
+  field_taxonomic_name:
+    type: entity_reference_label
+    label: inline
+    settings:
+      link: true
+    third_party_settings: []
+    weight: 0
+    region: content
+  field_general_description:
+    type: text_summary_or_trimmed
+    label: hidden
+    settings:
+      trim_length: 600
+    third_party_settings: []
+    weight: 1
+    region: content
+  links:
+    settings: []
+    third_party_settings: []
+    weight: 100
+    region: content
+hidden:
+  field_biology: true
+  field_conservation_status: true
+  field_legislation: true
+  field_management: true
+  field_procedures: true
+  field_diagnostic_description: true
+  field_threats: true
+  field_trends: true
+  field_behavious: true
+  field_cytology: true
+  field_genetics: true
+  field_growth: true
+  field_look_alikes: true
+  field_dispersal: true
+  field_molecular_biology: true
+  field_morphology: true
+  field_physiology: true
+  field_size: true
+  field_taxon_biology: true
+  field_evolution: true
+  field_phylogeny: true
+  field_associations: true
+  field_cyclicity: true
+  field_distribution: true
+  field_ecology: true
+  field_habitat: true
+  field_life_cycle: true
+  field_life_expectancy: true
+  field_migration: true
+  field_trophic_strategy: true
+  field_population_biology: true
+  field_reproduction: true
+  field_diseases: true
+  field_risk_statement: true
+  field_uses: true
+  field_electric_organ_discharge: true
+  field_media: true

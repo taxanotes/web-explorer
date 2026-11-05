@@ -10,12 +10,15 @@
 # when missing) and then, step by step and only where something is missing:
 # registers the hostnames with ddev, maps them in web/sites/sites.php, creates
 # web/sites/<subdir>/ with the generic settings.php and a generated
-# settings.local.php, creates the database, installs Drupal, applies the
-# taxanotes_base recipe (taxon type, roles, tree, import module, site
-# identity), sets the themes, runs the four Scratchpads migrations, rebuilds
-# caches and prints the URL. Re-running it on an existing instance changes
-# nothing that is already in place (migrations only import rows that changed
-# in Drupal 7).
+# settings.local.php, creates the database, installs Drupal, sets the themes,
+# applies the taxanotes_front recipe (which applies taxanotes_base: taxon
+# type, roles, literature, tree, import module, site identity; then the front
+# page, the About page, the menu and the taxon page blocks), installs the instance's
+# logo, runs the eleven Scratchpads migrations (taxa, literature, then the
+# species pages and images), rebuilds caches and prints the URL. Re-running it on an existing instance changes nothing that is already
+# in place (migrations only import rows that changed in Drupal 7; the recipe
+# creates blocks and views only when they are missing and re-seeds the site
+# texts from instance.yml).
 #
 # It never installs over an existing database: Drupal is installed only when
 # the instance's database holds no table at all. A database with tables that
@@ -87,6 +90,10 @@ env_get() {
 log "Instance $slug: reading $yml"
 site_name="$(inst site.name)"
 site_slogan="$(inst site.slogan)"
+front_title="$(inst site.front_title)"
+front_intro="$(inst site.front_intro)"
+about_body="$(inst site.about_body)"
+footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
 subdir="$(inst drupal.sites_subdir)"
@@ -127,6 +134,13 @@ db_host="$(env_get DB_HOST)"
 db_host="${db_host:-db}"
 migrate_user="$(env_get MIGRATE_DB_USER)"
 admin_pass="$(env_get ADMIN_PASSWORD)"
+# The D7 public files directory as PHP reaches it in this environment: .env
+# SOURCE_FILES_DIR, else instance.yml source.files.<environment>. Empty: the
+# files and the images are not on this machine and their migrations are
+# skipped (the references import without attachments, the species pages
+# without images; the taxon pages show no gallery).
+source_files_dir="$(env_get SOURCE_FILES_DIR)"
+[ -n "$source_files_dir" ] || source_files_dir="$(inst source.files)"
 
 # ---------------------------------------------------------------------------
 log "ddev hostnames: .ddev/config.instances.yaml (all instances)"
@@ -188,13 +202,17 @@ gen_sites_block() {
 }
 begin='// BEGIN taxanotes instances (generated; do not edit inside this block)'
 end='// END taxanotes instances'
-block="$(gen_sites_block)"
+# The block goes through a file: macOS awk rejects a newline in a -v value
+# ("newline in string"), which a block of two or more lines has.
+block_file="$(mktemp)"
+gen_sites_block > "$block_file"
 tmp="$(mktemp)"
-awk -v begin="$begin" -v end="$end" -v block="$block" '
-  $0 == begin { print; if (block != "") print block; skip = 1; next }
+awk -v begin="$begin" -v end="$end" -v block_file="$block_file" '
+  $0 == begin { print; while ((getline line < block_file) > 0) print line; close(block_file); skip = 1; next }
   $0 == end { skip = 0 }
   !skip { print }
 ' web/sites/sites.php > "$tmp"
+rm -f "$block_file"
 if cmp -s "$tmp" web/sites/sites.php; then
   note "unchanged"
   rm -f "$tmp"
@@ -206,11 +224,16 @@ fi
 # ---------------------------------------------------------------------------
 log "Site directory: $site_dir"
 mkdir -p "$site_dir/files"
+# shellcheck disable=SC2016  # the grep pattern is a regex, not an expansion
 if [ ! -f "$site_dir/settings.php" ]; then
   cp scripts/templates/settings.php "$site_dir/settings.php"
   note "settings.php copied from scripts/templates/settings.php"
 elif cmp -s scripts/templates/settings.php "$site_dir/settings.php"; then
   note "settings.php is the generic template"
+elif grep -Eq '^\$(databases\[|settings\[.hash_salt.\])' "$site_dir/settings.php"; then
+  # The installer's own writes (see the restore after site:install below): a
+  # credential or salt in a file that is committed. Never carried on with.
+  die "$site_dir/settings.php holds database credentials or a hash salt: restore it with 'cp scripts/templates/settings.php $site_dir/settings.php' (both come from .env through settings.local.php) and run again"
 else
   note "settings.php exists and is not the generic template: left alone"
 fi
@@ -303,15 +326,8 @@ if [ "$install" -eq 1 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-log "Recipe: taxanotes_base (taxon type, roles, tree, import module, site identity)"
-croot="$(in_web pwd)"
-in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_base" \
-  --input="taxanotes_base.site_name=$site_name" \
-  --input="taxanotes_base.site_slogan=$site_slogan" \
-  --input="taxanotes_base.site_mail=$site_mail"
-
-# ---------------------------------------------------------------------------
 log "Themes"
+# Before the recipe: its blocks are placed in the default theme.
 if [ -n "$theme" ]; then
   in_web drush --uri="$url" theme:enable "$theme" --yes
   in_web drush --uri="$url" config:set system.theme default "$theme" --yes
@@ -322,9 +338,62 @@ if [ -n "$admin_theme" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+log "Recipe: taxanotes_front (applies taxanotes_base: taxon type, roles, tree, import module, site identity; then front page, About page, menu, taxon page blocks)"
+croot="$(in_web pwd)"
+recipe_inputs=(
+  --input="taxanotes_base.site_name=$site_name"
+  --input="taxanotes_base.site_slogan=$site_slogan"
+  --input="taxanotes_base.site_mail=$site_mail"
+)
+# A text left out of instance.yml keeps the site's current value (the recipe
+# input defaults to the existing config, or to a generic text on first apply).
+[ -n "$front_title" ] && recipe_inputs+=(--input="taxanotes_front.front_title=$front_title")
+[ -n "$front_intro" ] && recipe_inputs+=(--input="taxanotes_front.front_intro=$front_intro")
+[ -n "$about_body" ] && recipe_inputs+=(--input="taxanotes_front.about_body=$about_body")
+[ -n "$footer_text" ] && recipe_inputs+=(--input="taxanotes_front.footer_text=$footer_text")
+in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_front" "${recipe_inputs[@]}"
+
+# ---------------------------------------------------------------------------
+log "Logo: $inst_dir/assets/logo.png"
+# instances/<slug>/assets/ is gitignored (image rights are not cleared for
+# committing); a logo.png there is copied into the site's files directory and
+# set as the theme's logo. No file: the theme keeps its own logo.
+logo_src="$inst_dir/assets/logo.png"
+if [ -f "$logo_src" ] && [ -n "$theme" ]; then
+  mkdir -p "$site_dir/files/instance"
+  if cmp -s "$logo_src" "$site_dir/files/instance/logo.png"; then
+    note "$site_dir/files/instance/logo.png is up to date"
+  else
+    cp "$logo_src" "$site_dir/files/instance/logo.png"
+    note "copied to $site_dir/files/instance/logo.png"
+  fi
+  in_web drush --uri="$url" config:set "$theme.settings" logo.use_default false --input-format=yaml --yes
+  in_web drush --uri="$url" config:set "$theme.settings" logo.path "sites/$subdir/files/instance/logo.png" --yes
+  note "$theme.settings logo.path = sites/$subdir/files/instance/logo.png"
+else
+  note "no logo file: the theme's own logo stays"
+fi
+
+# ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
+# Taxa first (users, taxa, parents, revisions), then the literature
+# (contributors, keywords, the files, the references with their links to
+# taxa, the pass that points each taxon at its protologue reference entity),
+# then the images as media items and the species pages. The two file-based
+# migrations (files, media) run only when the D7 files directory is
+# configured for this environment (source_files_dir above).
 if [ -n "$migrate_user" ] && [ -n "$(inst source.vocabulary)" ]; then
-  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision; do
+  migrations=(taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision
+    taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword)
+  if [ -n "$source_files_dir" ]; then
+    note "D7 files: $source_files_dir (attachments and images are copied from it)"
+    migrations+=(taxanotes_d7_file taxanotes_d7_biblio taxanotes_d7_taxon_reference taxanotes_d7_media_image)
+  else
+    note "D7 files: not on this machine (no SOURCE_FILES_DIR in .env, no source.files.$environment in instance.yml): the attachments and the images are skipped (taxanotes_d7_file, taxanotes_d7_media_image); references and species pages import without them"
+    migrations+=(taxanotes_d7_biblio taxanotes_d7_taxon_reference)
+  fi
+  migrations+=(taxanotes_d7_spm)
+  for m in "${migrations[@]}"; do
     note "migrate:import $m"
     in_web drush --uri="$url" migrate:import "$m" --feedback=2000
   done

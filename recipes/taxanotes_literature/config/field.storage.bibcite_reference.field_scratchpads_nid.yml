@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - bibcite_entity
+id: bibcite_reference.field_scratchpads_nid
+field_name: field_scratchpads_nid
+entity_type: bibcite_reference
+type: integer
+settings:
+  unsigned: true
+  size: normal
+module: core
+locked: false
+cardinality: 1
+translatable: true
+indexes:
+  value:
+    - value
+persist_with_no_fields: false
+custom_storage: false

@@ -1,0 +1,29 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - custom_field
+    - node
+id: node.field_unit_names
+field_name: field_unit_names
+entity_type: node
+type: custom
+settings:
+  columns:
+    indicator:
+      name: indicator
+      type: string
+      length: 32
+    name:
+      name: name
+      type: string
+      length: 255
+module: custom_field
+locked: false
+# One item per ITIS unit (Scratchpads unit_name1..4 / unit_indicator1..4),
+# in name order: genus, species, infraspecific units.
+cardinality: 4
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

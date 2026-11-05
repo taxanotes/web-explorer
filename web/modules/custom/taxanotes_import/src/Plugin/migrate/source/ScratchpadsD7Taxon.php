@@ -30,6 +30,8 @@ use Drupal\migrate\Row;
  *   fetched per row, so a 30k-term vocabulary needs one SQL statement; one
  *   row per field and term even when the D7 field holds a row per language
  *   (see ScratchpadsD7Base::joinFieldTable() for which one);
+ * - unit_names: the four unit name/indicator pairs folded into the items of
+ *   field_unit_names (ScratchpadsD7Base::unitNames());
  * - page_url / page_url_title (link field), reference_nid / reference_title /
  *   reference_guid (node_reference to a biblio node);
  * - created / changed: min and max taxonomy_term_data_revision.timestamp;
@@ -48,6 +50,10 @@ use Drupal\migrate\Row;
  *   imported unpublished (Scratchpads parks removed names under a root called
  *   "Deleted taxa", which is the default). Overridable per instance with
  *   $settings['taxanotes_import']['unpublished_roots'].
+ * - with_reference_only: TRUE restricts the rows to the terms whose
+ *   protologue reference (field_reference) is set, for the pass that links
+ *   the taxon to the migrated reference entity (taxanotes_d7_taxon_reference)
+ *   after the literature import; it saves only those nodes.
  * - key / database_state_key, track_changes, ignore_map, constants: see
  *   SqlBase and SourcePluginBase.
  *
@@ -168,6 +174,16 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     // source).
     $this->joinItisFields($query, 'td');
 
+    if (!empty($this->configuration['with_reference_only'])) {
+      if (!$schema->tableExists('field_data_field_reference')) {
+        // No reference field on the D7 site: no term has a reference.
+        $query->alwaysFalse();
+      }
+      else {
+        $query->isNotNull('ref.field_reference_nid');
+      }
+    }
+
     return $query;
   }
 
@@ -201,6 +217,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
       'page_url' => $this->t('Protologue page URL.'),
       'page_url_title' => $this->t('Protologue page URL title.'),
       'vernacular' => $this->t('Vernacular names: array of name, language, area, remarks.'),
+      'unit_names' => $this->t('Unit names: array of indicator, name, one per non-empty unit position (1-4), in order.'),
       'published' => $this->t('1, or 0 when the term is, or descends from, an unpublished root.'),
     ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value', ['@field' => $f]), static::SCALAR_FIELDS));
   }
@@ -223,6 +240,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
   public function prepareRow(Row $row) {
     $tid = (int) $row->getSourceProperty('tid');
     $row->setSourceProperty('vernacular', $this->vernacularNames()[$tid] ?? []);
+    $row->setSourceProperty('unit_names', $this->unitNames($row));
     $row->setSourceProperty('parent', array_filter([(int) $row->getSourceProperty('parent_tid')]));
     $row->setSourceProperty('published', $this->isUnderUnpublishedRoot($tid) ? 0 : 1);
     return parent::prepareRow($row);
@@ -236,6 +254,11 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
    * number of terms in the vocabulary, which is one indexed lookup.
    */
   protected function doCount() {
+    if (!empty($this->configuration['with_reference_only'])) {
+      // The restricted set is small (one row per term with a protologue);
+      // the full query's count is affordable and the only exact one.
+      return (int) $this->query()->countQuery()->execute()->fetchField();
+    }
     $query = $this->select('taxonomy_term_data', 'td');
     $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
     $this->addBundleCondition($query);

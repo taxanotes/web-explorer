@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_population_biology
+    - node.type.taxon_description
+  module:
+    - text
+id: node.taxon_description.field_population_biology
+field_name: field_population_biology
+entity_type: node
+bundle: taxon_description
+label: 'Population biology'
+description: ''
+required: false
+translatable: false
+default_value: []
+default_value_callback: ''
+settings: []
+field_type: text_long

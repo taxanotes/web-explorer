@@ -24,10 +24,11 @@ use Drupal\migrate\Row;
  * - the same scalar ITIS fields, accepted name (guid/tid/name), protologue
  *   reference and page URL as the taxon source, read from the revision
  *   tables, one row per field and revision even when the revision holds a
- *   row per language (ScratchpadsD7Base::joinFieldTable()); unit names are
- *   trimmed here (not in the pipeline) so NULL stays NULL. For the current
- *   revision (is_current) every one of these values, the name, description
- *   and vernacular names included, is taken from the *current* tables
+ *   row per language (ScratchpadsD7Base::joinFieldTable()), and unit_names,
+ *   the unit name/indicator pairs as the items of field_unit_names
+ *   (ScratchpadsD7Base::unitNames()). For the current revision (is_current)
+ *   every one of these values, the name, description, unit names and
+ *   vernacular names included, is taken from the *current* tables
  *   (taxonomy_term_data, field_data_*) instead of the revision tables: a
  *   Scratchpads term can be saved without a new revision (an import, a
  *   drag-and-drop, a bulk edit), after which field_data_* holds a newer
@@ -62,11 +63,6 @@ use Drupal\migrate\Row;
   id: 'scratchpads_d7_taxon_revision',
 )]
 final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
-
-  /**
-   * Unit-name source properties trimmed in prepareRow().
-   */
-  protected const TRIMMED = ['field_unit_name1', 'field_unit_name2', 'field_unit_name3', 'field_unit_name4'];
 
   /**
    * Vernacular names keyed by term revision id, loaded once.
@@ -161,6 +157,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
       'term_changed' => $this->t('Timestamp of the latest revision of the term.'),
       'changed' => $this->t('The revision timestamp, or term_changed for the current revision (what the node revision stores as changed).'),
       'vernacular' => $this->t('Vernacular names of the revision: array of name, language, area, remarks.'),
+      'unit_names' => $this->t('Unit names of the revision: array of indicator, name, one per non-empty unit position (1-4), in order.'),
     ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value as of this revision', ['@field' => $f]), static::SCALAR_FIELDS));
   }
 
@@ -202,12 +199,9 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $timestamp = (int) $row->getSourceProperty('timestamp');
     $term_changed = $row->getSourceProperty('term_changed');
     $row->setSourceProperty('changed', $is_current && $term_changed ? (int) $term_changed : $timestamp);
-    foreach (static::TRIMMED as $property) {
-      $value = $row->getSourceProperty($property);
-      if (is_string($value)) {
-        $row->setSourceProperty($property, trim($value));
-      }
-    }
+    // After the live override: the current revision's units are the current
+    // ones.
+    $row->setSourceProperty('unit_names', $this->unitNames($row));
     return parent::prepareRow($row);
   }
 

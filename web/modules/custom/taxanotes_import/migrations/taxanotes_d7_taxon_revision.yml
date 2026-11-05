@@ -67,14 +67,12 @@ process:
   field_rank: field_rank
   field_usage: field_usage
   field_unacceptability_reason: field_unacceptability_reason
-  field_unit_indicator_1: field_unit_indicator1
-  field_unit_indicator_2: field_unit_indicator2
-  field_unit_indicator_3: field_unit_indicator3
-  field_unit_indicator_4: field_unit_indicator4
-  field_unit_name_1: field_unit_name1
-  field_unit_name_2: field_unit_name2
-  field_unit_name_3: field_unit_name3
-  field_unit_name_4: field_unit_name4
+  field_unit_names:
+    plugin: sub_process
+    source: unit_names
+    process:
+      indicator: indicator
+      name: name
   field_authors: field_authors
   field_page_number: field_page_number
   field_accepted_guid: accepted_guid

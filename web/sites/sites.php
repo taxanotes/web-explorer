@@ -16,5 +16,6 @@
  */
 
 // BEGIN taxanotes instances (generated; do not edit inside this block)
+$sites['anthophila.taxanotes-dev.ddev.site'] = 'anthophila';
 $sites['mormyrids.taxanotes-dev.ddev.site'] = 'mormyrids';
 // END taxanotes instances

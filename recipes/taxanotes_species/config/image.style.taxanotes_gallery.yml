@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: {  }
+name: taxanotes_gallery
+label: 'Gallery tile (240x240, cropped)'
+effects:
+  5e1f6a3e-6d2f-4f6c-9c9e-2a7d8b1c4f01:
+    uuid: 5e1f6a3e-6d2f-4f6c-9c9e-2a7d8b1c4f01
+    id: image_scale_and_crop
+    weight: 1
+    data:
+      width: 240
+      height: 240
+      anchor: center-center

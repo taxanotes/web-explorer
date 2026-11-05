@@ -68,6 +68,12 @@
         // The permalink load selects the node the URL already names; do not
         // push a second, identical history entry for it (compare decoded, a
         // typed LSID keeps its colons while the pushed one is encoded).
+        // Outside the tree page (the block in a sidebar, say) there is no
+        // taxon panel: selecting a taxon opens its tree permalink instead.
+        if (!$('.node_treecontentdisplay').length) {
+          window.location.assign(path);
+          return;
+        }
         if (decodeURIComponent(window.location.pathname) !== decodeURIComponent(path)) {
           window.history.pushState('permalink-to-' + node.id, node.name, path);
         }

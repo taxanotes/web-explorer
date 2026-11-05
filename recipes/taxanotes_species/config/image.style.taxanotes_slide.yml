@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: {  }
+name: taxanotes_slide
+label: 'Slide (1200x900, scaled)'
+effects:
+  9b4c2d7a-1e3f-4a5b-8c6d-7e8f9a0b1c02:
+    uuid: 9b4c2d7a-1e3f-4a5b-8c6d-7e8f9a0b1c02
+    id: image_scale
+    weight: 1
+    data:
+      width: 1200
+      height: 900
+      upscale: false

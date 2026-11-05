@@ -1,0 +1,94 @@
+id: taxanotes_d7_media_image
+label: 'Scratchpads (Drupal 7) image files to Image media items'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_image
+  # The image files the instance uses (placed on an spm node, or tagged with
+  # a taxon of the instance vocabulary): the same rule as taxanotes_d7_file,
+  # which must have imported the file entity first; an image whose file was
+  # skipped there (not on this machine, not renderable) is skipped here with
+  # a message.
+  track_changes: true
+process:
+  # The D7 fid is kept as the media id (one database per instance).
+  mid: fid
+  bundle:
+    plugin: default_value
+    default_value: image
+  langcode:
+    plugin: default_value
+    default_value: en
+  name: filename
+  uid:
+    plugin: default_value
+    default_value: 1
+  status: status
+  created: timestamp
+  changed: timestamp
+  field_media_image/target_id:
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_file
+      source: fid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'The image file was not imported (not available locally, or not renderable)'
+  # The alt text: the D7 description as plain text, else the file name.
+  field_media_image/alt: alt
+  # The taxa the image shows (Scratchpads field_taxonomic_name on the file),
+  # linked through the taxon migration by GUID; a term that was not migrated
+  # gives an empty item, which the entity drops on save.
+  field_taxonomic_name:
+    plugin: sub_process
+    source: taxa
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_taxon
+        source: guid
+        no_stub: true
+  # The Scratchpads creative_commons licence numbers (CC_NONE 1 ... CC_PD 9).
+  field_cc_licence:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: licence
+    -
+      plugin: static_map
+      map:
+        1: all_rights_reserved
+        2: cc_by
+        3: cc_by_sa
+        4: cc_by_nd
+        5: cc_by_nc
+        6: cc_by_nc_sa
+        7: cc_by_nc_nd
+        8: cc0
+        9: public_domain
+      default_value: null
+  field_credit: creator
+  field_description/value:
+    plugin: skip_on_empty
+    method: process
+    source: description
+  field_description/format:
+    plugin: static_map
+    source: description_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+destination:
+  plugin: 'entity:media'
+  default_bundle: image
+migration_dependencies:
+  required:
+    - taxanotes_d7_file
+    - taxanotes_d7_taxon
+  optional: {  }

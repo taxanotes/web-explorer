@@ -4,8 +4,60 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d385d236bc1f3f64b134b2b15899164a",
+    "content-hash": "43b8bc6f00d9cb7675985b98320de028",
     "packages": [
+        {
+            "name": "adci/full-name-parser",
+            "version": "0.2.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/ADCI/full-name-parser.git",
+                "reference": "2c59942d97195bbdc101e3d1a0ad01519577edb0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/ADCI/full-name-parser/zipball/2c59942d97195bbdc101e3d1a0ad01519577edb0",
+                "reference": "2c59942d97195bbdc101e3d1a0ad01519577edb0",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": ">=5.6"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">=4.8.28 <5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "ADCI\\FullNameParser\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "ADCI Solutions",
+                    "homepage": "https://www.adcisolutions.com"
+                }
+            ],
+            "description": "Parses a human name",
+            "keywords": [
+                "full name",
+                "name",
+                "parse",
+                "parser",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/adci/full-name-parser/issues",
+                "source": "https://github.com/adci/full-name-parser"
+            },
+            "time": "2019-11-05T05:32:16+00:00",
+            "published-time": "2019-11-05T05:35:45+00:00"
+        },
         {
             "name": "asm89/stack-cors",
             "version": "v2.4.0",
@@ -62,6 +114,64 @@
             },
             "time": "2026-01-28T13:08:04+00:00",
             "published-time": "2026-01-28T13:08:38+00:00"
+        },
+        {
+            "name": "caseyamcl/php-marc21",
+            "version": "v2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/caseyamcl/php-marc21.git",
+                "reference": "44be748f6407683f3399594f0c8b81d3f445b138"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/caseyamcl/php-marc21/zipball/44be748f6407683f3399594f0c8b81d3f445b138",
+                "reference": "44be748f6407683f3399594f0c8b81d3f445b138",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.6.34"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "PhpMarc": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Casey McLaughlin",
+                    "email": "caseyamcl@gmail.com",
+                    "homepage": "https://caseymclaughlin.com",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Grant Gingell",
+                    "homepage": "http://www.grantgingell.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "MARC Record handling tool for PHP",
+            "homepage": "https://github.com/caseyamc/php-marc21",
+            "keywords": [
+                "conversion",
+                "format",
+                "library",
+                "marc"
+            ],
+            "support": {
+                "issues": "https://github.com/caseyamcl/php-marc21/issues",
+                "source": "https://github.com/caseyamcl/php-marc21/tree/v2.0"
+            },
+            "time": "2026-02-05T16:12:45+00:00",
+            "published-time": "2026-02-05T16:14:23+00:00"
         },
         {
             "name": "chi-teck/drupal-code-generator",
@@ -124,6 +234,91 @@
             },
             "time": "2025-06-01T13:48:30+00:00",
             "published-time": "2025-06-01T13:59:00+00:00"
+        },
+        {
+            "name": "citation-style-language/locales",
+            "version": "v0.0.106",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/citation-style-language/locales.git",
+                "reference": "8bef426f89f38c0789223c50e53ec2197bc50bb3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/citation-style-language/locales/zipball/8bef426f89f38c0789223c50e53ec2197bc50bb3",
+                "reference": "8bef426f89f38c0789223c50e53ec2197bc50bb3",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "CC-BY-SA-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "Citation Style Language (CSL) Team",
+                    "homepage": "http://citationstyles.org/about/#Credits"
+                }
+            ],
+            "description": "Citation Style Language (CSL) Locales",
+            "homepage": "http://citationstyles.org/",
+            "support": {
+                "issues": "https://github.com/citation-style-language/locales/issues",
+                "source": "https://github.com/citation-style-language/locales/tree/v0.0.106"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/adam3smith",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-10-20T06:23:15+00:00",
+            "published-time": "2026-10-31T14:32:23+00:00"
+        },
+        {
+            "name": "citation-style-language/styles",
+            "version": "v0.0.772",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/citation-style-language/styles.git",
+                "reference": "5c1e6ba17b0c0127bf737bcf36355982ecbb6ff0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/citation-style-language/styles/zipball/5c1e6ba17b0c0127bf737bcf36355982ecbb6ff0",
+                "reference": "5c1e6ba17b0c0127bf737bcf36355982ecbb6ff0",
+                "shasum": ""
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "CC-BY-SA-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "Citation Style Language (CSL) Team",
+                    "homepage": "http://citationstyles.org/about/#Credits"
+                }
+            ],
+            "description": "Citation Style Language (CSL) Styless",
+            "homepage": "http://citationstyles.org/",
+            "support": {
+                "issues": "https://github.com/citation-style-language/styles/issues",
+                "source": "https://github.com/citation-style-language/styles/tree/v0.0.772"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/adam3smith",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-08-22T17:23:31+00:00",
+            "published-time": "2025-08-23T09:02:14+00:00"
         },
         {
             "name": "composer/installers",
@@ -971,6 +1166,87 @@
             "published-time": "2026-10-01T07:01:28+00:00"
         },
         {
+            "name": "drupal/bibcite",
+            "version": "3.1.2",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/bibcite.git",
+                "reference": "3.1.2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/bibcite-3.1.2.zip",
+                "reference": "3.1.2",
+                "shasum": "c08ba0570fde22463ce28b943e3ee6afd82e09eb"
+            },
+            "require": {
+                "adci/full-name-parser": "^0.2.4",
+                "caseyamcl/php-marc21": "^2.0",
+                "drupal/core": "^10.1 || ^11 || ^12",
+                "drupal/entity": "^1.0",
+                "drupal/token": "^1.0",
+                "renanbr/bibtex-parser": "^2.2.0",
+                "researchgate/libris": "~2.0",
+                "seboettg/citeproc-php": "^2.6"
+            },
+            "require-dev": {
+                "drupal/bibcite_entity": "*",
+                "drupal/entity": "*",
+                "drupal/token": "*"
+            },
+            "suggest": {
+                "drupal/bibcite_altmetric": "Adds Altmetric badges to BibCite reference entities",
+                "drupal/bibcite_crossref": "Provides DOI lookup functionality",
+                "drupal/bibcite_migrate": "Migrate your bibliographic data from the Bibliography (biblio) module",
+                "drupal/bibcite_pubmed": "Provides PubMed import and lookup functionality",
+                "drupal/metatag_google_scholar": "Provides number of meta tags to help with indexing of scholarly content/articles in Google Scholar"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "3.1.2",
+                    "datestamp": "1784152532",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0+"
+            ],
+            "authors": [
+                {
+                    "name": "adcillc",
+                    "homepage": "https://www.drupal.org/user/366450"
+                },
+                {
+                    "name": "adci_contributor",
+                    "homepage": "https://www.drupal.org/user/1830536"
+                },
+                {
+                    "name": "bkosborne",
+                    "homepage": "https://www.drupal.org/user/788032"
+                },
+                {
+                    "name": "mark_fullmer",
+                    "homepage": "https://www.drupal.org/user/2612816"
+                }
+            ],
+            "description": "Working with bibliographic data",
+            "homepage": "https://www.drupal.org/project/bibcite",
+            "keywords": [
+                "Bibliography",
+                "Drupal"
+            ],
+            "support": {
+                "source": "https://git.drupalcode.org/project/bibcite",
+                "issues": "https://www.drupal.org/project/issues/bibcite"
+            },
+            "published-time": "2026-07-15T21:55:11+00:00"
+        },
+        {
             "name": "drupal/core",
             "version": "11.4.11",
             "source": {
@@ -1403,6 +1679,84 @@
                 "docs": "https://www.drupal.org/docs/extending-drupal/contributed-modules/contributed-module-documentation/custom-field"
             },
             "published-time": "2026-05-23T04:59:37+00:00"
+        },
+        {
+            "name": "drupal/entity",
+            "version": "1.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/entity.git",
+                "reference": "8.x-1.8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/entity-8.x-1.8.zip",
+                "reference": "8.x-1.8",
+                "shasum": "61349682d0db8dead9d6b571ac6b4aeae08abb0f"
+            },
+            "require": {
+                "drupal/core": "^10.1 || ^11"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "8.x-1.8",
+                    "datestamp": "1787858234",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "berdir",
+                    "homepage": "https://www.drupal.org/user/214652"
+                },
+                {
+                    "name": "bojanz",
+                    "homepage": "https://www.drupal.org/user/86106"
+                },
+                {
+                    "name": "dawehner",
+                    "homepage": "https://www.drupal.org/user/99340"
+                },
+                {
+                    "name": "dixon_",
+                    "homepage": "https://www.drupal.org/user/239911"
+                },
+                {
+                    "name": "fago",
+                    "homepage": "https://www.drupal.org/user/16747"
+                },
+                {
+                    "name": "klausi",
+                    "homepage": "https://www.drupal.org/user/262198"
+                },
+                {
+                    "name": "mglaman",
+                    "homepage": "https://www.drupal.org/user/2416470"
+                },
+                {
+                    "name": "tr",
+                    "homepage": "https://www.drupal.org/user/202830"
+                },
+                {
+                    "name": "tstoeckler",
+                    "homepage": "https://www.drupal.org/user/107158"
+                }
+            ],
+            "description": "Provides expanded entity APIs, which will be moved to Drupal core one day.",
+            "homepage": "https://www.drupal.org/project/entity",
+            "support": {
+                "source": "https://git.drupalcode.org/project/entity",
+                "issues": "https://www.drupal.org/project/issues/entity"
+            },
+            "published-time": "2026-08-26T14:49:46+00:00"
         },
         {
             "name": "drupal/gin",
@@ -1875,6 +2229,76 @@
                 "documentation": "https://www.drupal.org/project/taxonomy_import"
             },
             "published-time": "2025-09-20T19:30:38+00:00"
+        },
+        {
+            "name": "drupal/token",
+            "version": "1.18.0",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/token.git",
+                "reference": "8.x-1.18"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/token-8.x-1.18.zip",
+                "reference": "8.x-1.18",
+                "shasum": "7db67f644c83136cac78c7c5dbaef29599e7a7d7"
+            },
+            "require": {
+                "drupal/core": "^10.3 || ^11 || ^12"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "8.x-1.18",
+                    "datestamp": "1793355985",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                },
+                "drush": {
+                    "services": {
+                        "drush.services.yml": ">=9"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "berdir",
+                    "homepage": "https://www.drupal.org/user/214652"
+                },
+                {
+                    "name": "dave reid",
+                    "homepage": "https://www.drupal.org/user/53892"
+                },
+                {
+                    "name": "eaton",
+                    "homepage": "https://www.drupal.org/user/16496"
+                },
+                {
+                    "name": "fago",
+                    "homepage": "https://www.drupal.org/user/16747"
+                },
+                {
+                    "name": "greggles",
+                    "homepage": "https://www.drupal.org/user/36762"
+                },
+                {
+                    "name": "mikeryan",
+                    "homepage": "https://www.drupal.org/user/4420"
+                }
+            ],
+            "description": "Provides a user interface for the Token API, some missing core tokens.",
+            "homepage": "https://www.drupal.org/project/token",
+            "support": {
+                "source": "https://git.drupalcode.org/project/token"
+            },
+            "published-time": "2026-10-30T10:26:03+00:00"
         },
         {
             "name": "drupal/tour",
@@ -3104,6 +3528,70 @@
             "published-time": "2026-07-21T11:56:54+00:00"
         },
         {
+            "name": "myclabs/php-enum",
+            "version": "1.8.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/myclabs/php-enum.git",
+                "reference": "e7be26966b7398204a234f8673fdad5ac6277802"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/myclabs/php-enum/zipball/e7be26966b7398204a234f8673fdad5ac6277802",
+                "reference": "e7be26966b7398204a234f8673fdad5ac6277802",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": "^7.3 || ^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5",
+                "squizlabs/php_codesniffer": "1.*",
+                "vimeo/psalm": "^4.6.2 || ^5.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MyCLabs\\Enum\\": "src/"
+                },
+                "classmap": [
+                    "stubs/Stringable.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP Enum contributors",
+                    "homepage": "https://github.com/myclabs/php-enum/graphs/contributors"
+                }
+            ],
+            "description": "PHP Enum implementation",
+            "homepage": "https://github.com/myclabs/php-enum",
+            "keywords": [
+                "enum"
+            ],
+            "support": {
+                "issues": "https://github.com/myclabs/php-enum/issues",
+                "source": "https://github.com/myclabs/php-enum/tree/1.8.5"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/myclabs/php-enum",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2025-01-14T11:49:03+00:00",
+            "published-time": "2025-01-14T11:49:50+00:00"
+        },
+        {
             "name": "nikic/php-parser",
             "version": "v5.9.0",
             "source": {
@@ -4073,6 +4561,124 @@
             "published-time": "2019-03-08T09:01:32+00:00"
         },
         {
+            "name": "renanbr/bibtex-parser",
+            "version": "2.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/renanbr/bibtex-parser.git",
+                "reference": "b22eed997975d763ed055b7eff69b4b6d83191f0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/renanbr/bibtex-parser/zipball/b22eed997975d763ed055b7eff69b4b6d83191f0",
+                "reference": "b22eed997975d763ed055b7eff69b4b6d83191f0",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2 | ^8.3 | ^8.4 | ^8.5"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.95.24",
+                "phpstan/phpstan": "^2.2.13",
+                "phpunit/phpunit": "^10.5.47 | ^11.5.26 | ^12.5.34",
+                "ueberdosis/pandoc": "^0.9"
+            },
+            "suggest": {
+                "ueberdosis/pandoc": "Needed to support LaTeX decoder in class RenanBr\\BibTexParser\\Processor\\LatexToUnicodeProcessor"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "RenanBr\\BibTexParser\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Renan de Lima Barbosa",
+                    "email": "renandelima@gmail.com"
+                }
+            ],
+            "description": "BibTex Parser provides an API to read .bib files programmatically",
+            "keywords": [
+                "Bibliography",
+                "bib",
+                "bibtex",
+                "citation",
+                "cite",
+                "latex",
+                "parser"
+            ],
+            "support": {
+                "issues": "https://github.com/renanbr/bibtex-parser/issues",
+                "source": "https://github.com/renanbr/bibtex-parser/tree/2.3.1"
+            },
+            "time": "2026-10-24T09:52:08+00:00",
+            "published-time": "2026-10-24T09:53:26+00:00"
+        },
+        {
+            "name": "researchgate/libris",
+            "version": "2.4.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/researchgate/libris.git",
+                "reference": "b8236b0ee240fadfb0fee6d3be81c4504db193ac"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/researchgate/libris/zipball/b8236b0ee240fadfb0fee6d3be81c4504db193ac",
+                "reference": "b8236b0ee240fadfb0fee6d3be81c4504db193ac",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">= 7.4"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.1",
+                "phan/phan": "^5.2",
+                "phpstan/phpstan": "^1.7",
+                "phpunit/phpunit": "^9.5",
+                "vimeo/psalm": "^4.23"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "LibRIS\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "(MIT or GPL-2.0-only)"
+            ],
+            "authors": [
+                {
+                    "name": "M Butcher",
+                    "homepage": "http://technosophos.com"
+                }
+            ],
+            "description": "An RIS parser. RIS is a format for reference metadata. A fork of technosophos/LibRIS.",
+            "homepage": "https://github.com/thompsonsj/LibRIS",
+            "keywords": [
+                "Bibliography",
+                "File parser",
+                "RIS",
+                "Reference"
+            ],
+            "support": {
+                "source": "https://github.com/researchgate/libris/tree/2.4.1"
+            },
+            "time": "2025-04-02T10:44:09+00:00",
+            "published-time": "2025-04-15T15:13:47+00:00"
+        },
+        {
             "name": "revolt/event-loop",
             "version": "v1.0.9",
             "source": {
@@ -4212,6 +4818,133 @@
             ],
             "time": "2024-07-03T04:53:05+00:00",
             "published-time": "2024-07-03T04:53:18+00:00"
+        },
+        {
+            "name": "seboettg/citeproc-php",
+            "version": "v2.7.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pkp/citeproc-php.git",
+                "reference": "a7200e4ac0ec4265442a41aa82fb574d22af21a2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/pkp/citeproc-php/zipball/a7200e4ac0ec4265442a41aa82fb574d22af21a2",
+                "reference": "a7200e4ac0ec4265442a41aa82fb574d22af21a2",
+                "shasum": ""
+            },
+            "require": {
+                "citation-style-language/locales": "v0.0.*",
+                "citation-style-language/styles": "v0.0.*",
+                "ext-intl": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "ext-simplexml": "*",
+                "myclabs/php-enum": "^1.8",
+                "php": ">=7.3",
+                "seboettg/collection": "^3.1"
+            },
+            "require-dev": {
+                "php-coveralls/php-coveralls": "^1",
+                "phpmd/phpmd": "^2.8",
+                "phpunit/phpunit": "^8.5",
+                "squizlabs/php_codesniffer": "^3.5"
+            },
+            "suggest": {
+                "symfony/polyfill-mbstring": "^1.10"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "Seboettg\\CiteProc\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sebastian Böttger",
+                    "email": "seboettg@gmail.com",
+                    "homepage": "https://sebastianboettger.net",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Full-featured CSL processor (https://citationstyles.org)",
+            "support": {
+                "issues": "https://github.com/seboettg/citeproc-php/issues",
+                "source": "https://github.com/pkp/citeproc-php/tree/v2.7.1"
+            },
+            "time": "2026-02-05T11:15:32+00:00",
+            "published-time": "2026-02-05T11:16:57+00:00"
+        },
+        {
+            "name": "seboettg/collection",
+            "version": "v3.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/seboettg/Collection.git",
+                "reference": "6f753aef75923965173dcb11696e5dece0533f45"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/seboettg/Collection/zipball/6f753aef75923965173dcb11696e5dece0533f45",
+                "reference": "6f753aef75923965173dcb11696e5dece0533f45",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.3"
+            },
+            "require-dev": {
+                "php-coveralls/php-coveralls": "^1",
+                "phpunit/phpunit": "8.5.*"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/ArrayList/Functions.php"
+                ],
+                "psr-4": {
+                    "Seboettg\\Collection\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sebastian Böttger",
+                    "email": "seboettg@gmail.com"
+                }
+            ],
+            "description": "Collection is a set of useful PHP wrapper classes for arrays, similar to Java Collection. Contains ArrayList, Stack, Queue.",
+            "keywords": [
+                "OOP",
+                "array",
+                "arraylist",
+                "basic-data-structures",
+                "collections",
+                "comparable",
+                "comparable-interface",
+                "comparator",
+                "datastructures",
+                "filter",
+                "map",
+                "queue",
+                "sort",
+                "stack"
+            ],
+            "support": {
+                "issues": "https://github.com/seboettg/Collection/issues",
+                "source": "https://github.com/seboettg/Collection/tree/v3.1.0"
+            },
+            "time": "2022-07-09T19:47:27+00:00",
+            "published-time": "2022-07-09T19:51:18+00:00"
         },
         {
             "name": "symfony/console",

@@ -1,10 +1,14 @@
 name: 'Taxanotes import'
-description: 'Migrations and source plugins that bring taxa into Taxanotes: the live Scratchpads (Drupal 7) database track. Instance-specific values (which vocabulary, which database) come from settings, not from this module.'
+description: 'Migrations and source plugins that bring taxa and literature into Taxanotes: the live Scratchpads (Drupal 7) database track. Instance-specific values (which vocabulary, which database, where the files are) come from settings, not from this module.'
 type: module
 package: Taxanotes
 # FetchAs (Drupal\Core\Database\Statement\FetchAs) and the #[MigrateSource]
 # attribute exist from core 11.2.
 core_version_requirement: ^11.2
+# The literature migrations need bibcite_entity (installed by the
+# taxanotes_literature recipe, which taxanotes_base applies); it is not a
+# module dependency so a recipe that fails can still roll bibcite back.
 dependencies:
   - drupal:migrate
   - drupal:node
+  - drupal:file

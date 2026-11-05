@@ -2,4 +2,5 @@
 # hostnames of every instance besides the project's primary one. ddev merges
 # this file into config.yaml; re-run the script instead of editing it.
 additional_hostnames:
+  - anthophila.taxanotes-dev
   - mormyrids.taxanotes-dev
