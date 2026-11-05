@@ -590,8 +590,14 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
+# Taxa first, then the literature (contributors, keywords, attachments,
+# references), then the pass that points each taxon at its protologue
+# reference entity; the attachments need source.files for this environment in
+# instance.yml, else they are skipped with a message and imported later.
 if [ "$source_ready" -eq 1 ] && [ -n "$source_vocabulary" ]; then
-  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision; do
+  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision \
+      taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword taxanotes_d7_file taxanotes_d7_biblio \
+      taxanotes_d7_taxon_reference; do
     note "migrate:import $m ($(date -u +%H:%M:%S))"
     drush migrate:import "$m" --feedback=2000
   done

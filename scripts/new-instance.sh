@@ -12,10 +12,10 @@
 # web/sites/<subdir>/ with the generic settings.php and a generated
 # settings.local.php, creates the database, installs Drupal, sets the themes,
 # applies the taxanotes_front recipe (which applies taxanotes_base: taxon
-# type, roles, tree, import module, site identity; then the front page, the
-# About page, the menu and the taxon page blocks), installs the instance's
-# logo, runs the four Scratchpads migrations, rebuilds caches and prints the
-# URL. Re-running it on an existing instance changes nothing that is already
+# type, roles, literature, tree, import module, site identity; then the front
+# page, the About page, the menu and the taxon page blocks), installs the instance's
+# logo, runs the nine Scratchpads migrations (taxa, then literature), rebuilds
+# caches and prints the URL. Re-running it on an existing instance changes nothing that is already
 # in place (migrations only import rows that changed in Drupal 7; the recipe
 # creates blocks and views only when they are missing and re-seeds the site
 # texts from instance.yml).
@@ -364,8 +364,14 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
+# Taxa first (users, taxa, parents, revisions), then the literature
+# (contributors, keywords, the attachments that exist locally, the references
+# with their links to taxa), then the pass that points each taxon at its
+# protologue reference entity (it needs both the taxa and the references).
 if [ -n "$migrate_user" ] && [ -n "$(inst source.vocabulary)" ]; then
-  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision; do
+  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision \
+      taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword taxanotes_d7_file taxanotes_d7_biblio \
+      taxanotes_d7_taxon_reference; do
     note "migrate:import $m"
     in_web drush --uri="$url" migrate:import "$m" --feedback=2000
   done

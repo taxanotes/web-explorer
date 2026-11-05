@@ -41,5 +41,11 @@ source:
   database:
     ddev: myriatrix
     production: s_myriatrix
+  # D7 public files directory (the literature attachments are copied from
+  # it), per environment, as PHP reaches it: under ddev the Scratchpads files
+  # directory bind-mounted into the web container by
+  # .ddev/docker-compose.scratchpads-files.yaml. Not on the server yet.
+  files:
+    ddev: /mnt/scratchpads/myriatrix/files
   unpublished_roots:
     - 'Deleted taxa'

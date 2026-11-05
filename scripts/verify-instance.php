@@ -20,7 +20,12 @@
  *   with the argument "nochanged", without changed; every node__field_*
  *   table without revision_id) to compare an instance before and after a
  *   platform change, e.g. the Myriatrix control while another instance is
- *   built.
+ *   built;
+ * - literature (when the literature recipe is applied and the D7 site has
+ *   biblio): the D7 and D11 counts of references, contributors, keywords,
+ *   author rows, taxon links, protologue links and attachments, and a
+ *   reference-by-reference comparison of title, year, type and authors for
+ *   every D7 biblio node.
  */
 
 use Drupal\Core\Database\Database;
@@ -289,4 +294,132 @@ foreach ($tables as $t) {
   $sums[$t] = "$n " . hash_final($h);
 }
 
-echo json_encode(['counts' => $c, 'fields' => $f, 'checksums' => $sums], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
+// ---------------------------------------------------------------------------
+// Literature: bibcite references against the D7 biblio nodes.
+$lit = NULL;
+if ($d11->schema()->tableExists('bibcite_reference') && $d7->schema()->tableExists('biblio')) {
+  $lit = [];
+  // The same D7 biblio type -> bibcite type map as taxanotes_d7_biblio.yml.
+  $type_map = [
+    100 => 'book',
+    101 => 'book_chapter',
+    102 => 'journal_article',
+    103 => 'conference_paper',
+    104 => 'conference_proceedings',
+    105 => 'newspaper_article',
+    106 => 'magazine_article',
+    108 => 'thesis',
+    109 => 'report',
+    120 => 'personal',
+    121 => 'manuscript',
+    124 => 'unpublished',
+    125 => 'database',
+    129 => 'miscellaneous',
+  ];
+  $lit['d7 biblio nodes'] = (int) $d7->query("SELECT COUNT(*) FROM {node} WHERE type = 'biblio'")->fetchField();
+  $lit['d11 references'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_reference}')->fetchField();
+  $lit['d11 references by type'] = $d11->query('SELECT type, COUNT(*) c FROM {bibcite_reference} GROUP BY type ORDER BY type')->fetchAllKeyed();
+  $lit['d7 biblio nodes by type'] = $d7->query('SELECT b.biblio_type, COUNT(*) c FROM {biblio} b JOIN {node} n ON n.vid = b.vid GROUP BY b.biblio_type ORDER BY b.biblio_type')->fetchAllKeyed();
+  $lit['d7 contributors (biblio_contributor_data)'] = (int) $d7->query('SELECT COUNT(*) FROM {biblio_contributor_data}')->fetchField();
+  $lit['d11 contributors'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_contributor}')->fetchField();
+  $lit['d7 keywords (biblio_keyword_data)'] = $d7->schema()->tableExists('biblio_keyword_data')
+    ? (int) $d7->query('SELECT COUNT(*) FROM {biblio_keyword_data}')->fetchField() : 0;
+  $lit['d11 keywords'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_keyword}')->fetchField();
+  $lit['d7 author rows (current revisions)'] = (int) $d7->query('SELECT COUNT(*) FROM {biblio_contributor} c JOIN {node} n ON n.vid = c.vid')->fetchField();
+  $lit['d11 author rows'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_reference__author}')->fetchField();
+  $lit['d11 author rows by role'] = $d11->query('SELECT author_role, COUNT(*) c FROM {bibcite_reference__author} GROUP BY author_role ORDER BY author_role')->fetchAllKeyed();
+  $lit['d7 keyword rows (current revisions)'] = $d7->schema()->tableExists('biblio_keyword')
+    ? (int) $d7->query('SELECT COUNT(DISTINCT k.nid, k.kid) FROM {biblio_keyword} k JOIN {node} n ON n.vid = k.vid')->fetchField() : 0;
+  $lit['d11 keyword rows'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_reference__keywords}')->fetchField();
+  // Taxon links: field_taxonomic_name rows of biblio nodes whose term is in
+  // the vocabulary, one row set per language (entity_translation) of which
+  // the node's own, else und, else the first is taken (as the source plugin
+  // does), one link per distinct (node, term).
+  $lit['d7 taxon link rows (all languages, vocabulary terms)'] = 0;
+  $lit['d7 taxon links (node language rule, distinct)'] = 0;
+  if ($d7->schema()->tableExists('field_data_field_taxonomic_name')) {
+    $lit['d7 taxon link rows (all languages, vocabulary terms)'] = (int) $d7->query("SELECT COUNT(*) FROM {field_data_field_taxonomic_name} f JOIN {taxonomy_term_data} t ON t.tid = f.field_taxonomic_name_tid WHERE f.entity_type = 'node' AND f.bundle = 'biblio' AND f.deleted = 0 AND t.vid = :v", [':v' => $vid])->fetchField();
+    $lit['d7 taxon links (node language rule, distinct)'] = (int) $d7->query("SELECT COUNT(DISTINCT f.entity_id, f.field_taxonomic_name_tid) FROM {field_data_field_taxonomic_name} f JOIN (SELECT f2.entity_id, SUBSTRING(MIN(CONCAT(CASE WHEN f2.language = n2.language THEN '0' WHEN f2.language = 'und' THEN '1' ELSE '2' END, f2.language)), 2) lang FROM {field_data_field_taxonomic_name} f2 JOIN {node} n2 ON n2.nid = f2.entity_id WHERE f2.entity_type = 'node' AND f2.bundle = 'biblio' AND f2.deleted = 0 GROUP BY f2.entity_id) best ON best.entity_id = f.entity_id AND best.lang = f.language JOIN {taxonomy_term_data} t ON t.tid = f.field_taxonomic_name_tid WHERE f.entity_type = 'node' AND f.bundle = 'biblio' AND f.deleted = 0 AND t.vid = :v", [':v' => $vid])->fetchField();
+  }
+  $lit['d11 taxon links'] = (int) $d11->query('SELECT COUNT(*) FROM {bibcite_reference__field_taxonomic_name}')->fetchField();
+  $lit['d11 references with taxa'] = (int) $d11->query('SELECT COUNT(DISTINCT entity_id) FROM {bibcite_reference__field_taxonomic_name}')->fetchField();
+  // Protologue: the taxon's field_reference against the D7 field_reference
+  // of its term (the language rule of the taxon import), counted where the
+  // D7 nid is a biblio node; and every link must point at the reference
+  // imported from the shadow GUID.
+  $ref_nids = $d7_field('field_reference', 'field_reference_nid');
+  $biblio_nids = $d7->query("SELECT nid FROM {node} WHERE type = 'biblio'")->fetchCol();
+  $biblio_nids = array_flip(array_map('intval', $biblio_nids));
+  $lit['d7 terms with a protologue reference (existing biblio node)'] = count(array_filter($ref_nids, fn($nid) => isset($biblio_nids[(int) $nid])));
+  $lit['d11 taxa with field_reference'] = $d11->schema()->tableExists('node__field_reference')
+    ? (int) $d11->query('SELECT COUNT(*) FROM {node__field_reference}')->fetchField() : 0;
+  $lit['d11 field_reference not matching the shadow GUID'] = $d11->schema()->tableExists('node__field_reference')
+    ? (int) $d11->query('SELECT COUNT(*) FROM {node__field_reference} r JOIN {node__field_reference_guid} g ON g.entity_id = r.entity_id LEFT JOIN {bibcite_reference__field_scratchpads_uuid} u ON u.entity_id = r.field_reference_target_id WHERE u.field_scratchpads_uuid_value IS NULL OR u.field_scratchpads_uuid_value <> g.field_reference_guid_value')->fetchField() : 0;
+  // Attachments.
+  $lit['d7 attachment rows (current, file exists in file_managed, node language rule)'] = 0;
+  if ($d7->schema()->tableExists('field_data_field_file')) {
+    $lit['d7 attachment rows (current, file exists in file_managed, node language rule)'] = (int) $d7->query("SELECT COUNT(*) FROM {field_data_field_file} f JOIN (SELECT f2.entity_id, SUBSTRING(MIN(CONCAT(CASE WHEN f2.language = n2.language THEN '0' WHEN f2.language = 'und' THEN '1' ELSE '2' END, f2.language)), 2) lang FROM {field_data_field_file} f2 JOIN {node} n2 ON n2.nid = f2.entity_id WHERE f2.entity_type = 'node' AND f2.bundle = 'biblio' AND f2.deleted = 0 GROUP BY f2.entity_id) best ON best.entity_id = f.entity_id AND best.lang = f.language JOIN {file_managed} fm ON fm.fid = f.field_file_fid WHERE f.entity_type = 'node' AND f.bundle = 'biblio' AND f.deleted = 0")->fetchField();
+  }
+  $lit['d11 attachment rows'] = $d11->schema()->tableExists('bibcite_reference__field_file')
+    ? (int) $d11->query('SELECT COUNT(*) FROM {bibcite_reference__field_file}')->fetchField() : 0;
+  $lit['d11 file entities under public://scratchpads/'] = (int) $d11->query("SELECT COUNT(*) FROM {file_managed} WHERE uri LIKE 'public://scratchpads/%'")->fetchField();
+  $lit['d11 attachment rows whose file is missing on disk'] = 0;
+  if ($d11->schema()->tableExists('bibcite_reference__field_file')) {
+    foreach ($d11->query('SELECT DISTINCT fm.uri FROM {bibcite_reference__field_file} f JOIN {file_managed} fm ON fm.fid = f.field_file_target_id') as $r) {
+      if (!is_file(\Drupal::service('file_system')->realpath($r->uri))) {
+        $lit['d11 attachment rows whose file is missing on disk']++;
+      }
+    }
+  }
+  $lit['files skipped by taxanotes_d7_file (not available locally)'] = $d11->schema()->tableExists('migrate_message_taxanotes_d7_file')
+    ? (int) $d11->query('SELECT COUNT(*) FROM {migrate_message_taxanotes_d7_file}')->fetchField() : 0;
+
+  // Reference by reference: title (D7 HTML tags stripped), year (9999 ->
+  // NULL), type and the author list (last name|first name in rank order)
+  // of every D7 biblio node against the reference imported from its uuid.
+  $d7_refs = $d7->query('SELECT n.nid, n.uuid, n.title, b.biblio_type, b.biblio_year FROM {node} n JOIN {biblio} b ON b.vid = n.vid WHERE n.type = :t', [':t' => 'biblio'])->fetchAllAssoc('uuid');
+  $d7_authors = [];
+  foreach ($d7->query('SELECT n.uuid, d.lastname, d.firstname FROM {biblio_contributor} c JOIN {node} n ON n.vid = c.vid JOIN {biblio_contributor_data} d ON d.cid = c.cid ORDER BY n.nid, c.rank, c.cid') as $r) {
+    $d7_authors[$r->uuid][] = trim((string) $r->lastname) . '|' . trim((string) $r->firstname);
+  }
+  $d11_refs = $d11->query('SELECT u.field_scratchpads_uuid_value uuid, r.id, r.title, r.type, r.bibcite_year FROM {bibcite_reference} r JOIN {bibcite_reference__field_scratchpads_uuid} u ON u.entity_id = r.id')->fetchAllAssoc('uuid');
+  $d11_authors = [];
+  foreach ($d11->query('SELECT u.field_scratchpads_uuid_value uuid, c.last_name, c.first_name FROM {bibcite_reference__author} a JOIN {bibcite_reference__field_scratchpads_uuid} u ON u.entity_id = a.entity_id JOIN {bibcite_contributor} c ON c.id = a.author_target_id ORDER BY a.entity_id, a.delta') as $r) {
+    $d11_authors[$r->uuid][] = trim((string) $r->last_name) . '|' . trim((string) $r->first_name);
+  }
+  $lit_mismatches = [];
+  $lit_compared = 0;
+  foreach ($d7_refs as $uuid => $ref) {
+    $expected = [
+      'title' => strip_tags((string) $ref->title),
+      'year' => ((int) $ref->biblio_year === 9999 || (int) $ref->biblio_year === 0) ? NULL : (int) $ref->biblio_year,
+      'type' => $type_map[(int) $ref->biblio_type] ?? 'miscellaneous',
+      'authors' => implode(';', $d7_authors[$uuid] ?? []),
+    ];
+    $got = isset($d11_refs[$uuid]) ? [
+      'title' => (string) $d11_refs[$uuid]->title,
+      'year' => $d11_refs[$uuid]->bibcite_year === NULL ? NULL : (int) $d11_refs[$uuid]->bibcite_year,
+      'type' => (string) $d11_refs[$uuid]->type,
+      'authors' => implode(';', $d11_authors[$uuid] ?? []),
+    ] : NULL;
+    foreach ($expected as $what => $e) {
+      $lit_compared++;
+      $a = $got[$what] ?? NULL;
+      if ($got === NULL || (string) $e !== (string) $a) {
+        $lit_mismatches[] = [
+          'nid' => (int) $ref->nid,
+          'reference id' => isset($d11_refs[$uuid]) ? (int) $d11_refs[$uuid]->id : NULL,
+          'field' => $what,
+          'd7' => $e,
+          'd11' => $a,
+        ];
+      }
+    }
+  }
+  $lit['references compared'] = count($d7_refs);
+  $lit['comparisons (reference x value)'] = $lit_compared;
+  $lit['mismatches'] = count($lit_mismatches);
+  $lit['mismatch list'] = $lit_mismatches;
+}
+
+echo json_encode(['counts' => $c, 'fields' => $f, 'checksums' => $sums, 'literature' => $lit], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";

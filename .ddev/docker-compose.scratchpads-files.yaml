@@ -1,0 +1,13 @@
+# Mount the local Scratchpads (Drupal 7) files directory of Myriatrix into the
+# web container, read-only, so the taxanotes_d7_file migration can copy the
+# literature attachments (instances/myriatrix/instance.yml source.files.ddev
+# = /mnt/scratchpads/myriatrix/files, which becomes
+# $settings['taxanotes_import']['source_files_dir']). The source is the
+# sibling checkout ../scratchpads-d7/data/files (7.4 GB, not in git; see the
+# restore notes in docs/planning). Mounted outside the project directory, so
+# mutagen never syncs it. Instances without a local D7 stack delete this file;
+# a second instance with local files adds its own service entry.
+services:
+  web:
+    volumes:
+      - ../../scratchpads-d7/data/files:/mnt/scratchpads/myriatrix/files:ro

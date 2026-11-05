@@ -42,7 +42,8 @@
  * names `drupal.database` and `source.database` take the same shape, a
  * scalar (the same name everywhere) or `{ddev: ..., production: ...}`, since
  * the hosting toolkit names databases d<slug>_1 and the Scratchpads sources
- * s_<slug>. See instances/README.md.
+ * s_<slug>; so does `source.files`, the D7 public files directory the
+ * literature attachments are copied from. See instances/README.md.
  */
 
 declare(strict_types=1);
@@ -248,6 +249,13 @@ switch ($command) {
     }
     if (array_key_exists('unpublished_roots', $source)) {
       $import['unpublished_roots'] = array_values((array) $source['unpublished_roots']);
+    }
+    // The D7 public files directory as this environment's PHP reaches it
+    // (source.files, per environment); absent, the file migration skips
+    // every attachment with a message and the references import without.
+    $files_dir = env_value($source['files'] ?? NULL, $environment);
+    if (is_string($files_dir) && $files_dir !== '') {
+      $import['source_files_dir'] = $files_dir;
     }
     if ($import) {
       $lines[] = '';

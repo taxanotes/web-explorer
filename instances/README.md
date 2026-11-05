@@ -31,11 +31,13 @@ with the generic `settings.php` (a verbatim copy of
 `settings.local.php` generated from `instance.yml` + `.env`, creates the
 database in the ddev db container, installs Drupal, sets the themes, applies
 `recipes/taxanotes_front` (which pulls in `taxanotes_base`, and through it
-`taxanotes_taxon` and `taxanotes_users`: the taxon type, the roles, the tree,
-the import module, the site identity, then the front page, the About page,
-the main menu and the taxon page blocks), installs the logo, runs the four
-`taxanotes_import` migrations when `.env` names a Scratchpads database,
-rebuilds caches and prints the URL. A second run on the same instance changes
+`taxanotes_taxon`, `taxanotes_users` and `taxanotes_literature`: the taxon
+type, the roles, the literature (bibcite references linked to taxa, the
+Literature page and blocks), the tree, the import module, the site identity,
+then the front page, the About page, the main menu and the taxon page
+blocks), installs the logo, runs the nine `taxanotes_import` migrations
+(taxa, then literature) when `.env` names a Scratchpads database, rebuilds
+caches and prints the URL. A second run on the same instance changes
 nothing that is already in place: blocks and views are created only when
 missing (an instance may move or edit them), the site texts are seeded again
 from `instance.yml` (a key left out keeps what the site has); a changed
@@ -87,6 +89,10 @@ source:                            # omit for an instance without a Scratchpads 
     production: s_mormyrids        # server, loaded by scripts/hosting/load-source-db.sh)
   unpublished_roots:               # root terms imported unpublished with their subtree
     - 'Deleted taxa'               #   -> $settings['taxanotes_import']['unpublished_roots']
+  files:                           # optional: the D7 public files directory as PHP reaches it in
+    ddev: /mnt/scratchpads/myriatrix/files   # this environment -> $settings['taxanotes_import']['source_files_dir'];
+                                   # the literature attachments are copied from it (taxanotes_d7_file).
+                                   # Absent: every attachment is skipped with a message, nothing fails.
 ```
 
 Defaults are applied in one place, `scripts/lib/instance.php` (`get` prints
@@ -144,7 +150,7 @@ site, HSTS) with a self-signed certificate that certbot replaces, the
 htpasswd file with one user `<slug>` (password printed once), Drupal (only
 into an empty database; `--reinstall` dumps with `backup_db` and installs
 again), the themes, the recipe with the instance texts, the logo from
-`settings/assets/logo.png`, the four migrations, `deploy <domain> live
+`settings/assets/logo.png`, the nine migrations, `deploy <domain> live
 <version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
 Scratchpads dump as `s_<slug>` beforehand (keep the dump 0600 and delete it
 afterwards: it holds the users table). The headers of both scripts have the
@@ -184,12 +190,13 @@ instance's values:
 | below the content, front page only | *Recently added taxa*, *Recently updated taxa* (10 each, with a link to `/taxa`) | view `taxanotes_recent` |
 | footer | `footer_text` | block `taxanotes_front_text` |
 | main menu | Home (standard profile), Taxa (view `taxa`), Classification (`/taxonomy-tree`), About (`/about`, `about_body`) | static links of `taxanotes_front` |
-| taxon page (`/node/<nid>`) | authors under the name, rank, status, parent, vernacular names, protologue, description; then *Classification*: a link to the taxon in the tree and its child taxa | view display `node.taxon.default` (taxanotes_taxon), view `taxanotes_taxon_page` |
+| taxon page (`/node/<nid>`) | authors under the name, rank, status, parent, vernacular names, protologue (a link to the reference entity), description; then *Classification*: a link to the taxon in the tree and its child taxa; then *Literature*: the references that name the taxon | view display `node.taxon.default` (taxanotes_taxon, taxanotes_literature), views `taxanotes_taxon_page`, `taxanotes_literature` |
+| literature (`/literature`, main menu *Literature*) | the references of the instance: title, authors, year, type, taxa; filters on title, year, type, taxon and author (autocompletes) | view `taxanotes_literature` (recipe `taxanotes_literature`) |
+| front page, below | *Recently added literature* beside the recent taxa | block `views_block:taxanotes_literature-recent` |
 
 Blocks are placed in the instance's default theme (`site.theme`); the
-regions above are Olivero's, any other theme gets them in `content`.
-Literature, pages, media and biographies have no blocks yet: they come with
-their migrations.
+regions above are Olivero's, any other theme gets them in `content`. Pages,
+media and biographies have no blocks yet: they come with their migrations.
 
 The script never installs over data: Drupal is installed only into an
 **empty** database. A database with tables that does not bootstrap (db
@@ -207,10 +214,15 @@ orphans, roots, users, roles, revisions per node, accepted and vernacular
 names, weights, ranks, usages); a **full comparison of every term's current
 values** (name, weight, parent, the ITIS fields, accepted name, reference,
 page URL, description, vernacular-name count) against the D7 `field_data_*`
-tables, the ones the Scratchpads site renders, listing every mismatch; and a
+tables, the ones the Scratchpads site renders, listing every mismatch; a
 sha256 per content table (`node_field_data` without `vid`/`changed`, every
 `node__field_*` table without `revision_id`) so a before/after of the Myriatrix
-control is a checksum, not a count.
+control is a checksum, not a count; and, once the literature recipe is
+applied, the literature: D7/D11 counts of references (per type),
+contributors, keywords, author and keyword rows, taxon links, protologue
+links and attachments (with the number of files the import could not find
+locally), and a **comparison of every reference's** title, year, type and
+author list against its D7 biblio node.
 
 ## Instances
 
