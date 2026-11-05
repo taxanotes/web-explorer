@@ -28,10 +28,18 @@ hostnames:
 drupal:
   sites_subdir: default
   profile: standard
-  database: db
+  # Database name per environment: ddev's own database locally, the hosting
+  # toolkit's d<slug>_1 on the server (credentials in .env / instance.env).
+  database:
+    ddev: db
+    production: dmyriatrix_1
 source:
   type: scratchpads_d7
   vocabulary: myriatrix
-  database: myriatrix
+  # D7 database per environment (the local Scratchpads stack; s_<slug> on
+  # the server, loaded by scripts/hosting/load-source-db.sh).
+  database:
+    ddev: myriatrix
+    production: s_myriatrix
   unpublished_roots:
     - 'Deleted taxa'

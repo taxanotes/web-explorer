@@ -32,12 +32,19 @@ drupal:
   # in web/sites/sites.php.
   sites_subdir: mormyrids
   profile: standard
-  database: mormyrids
+  # Database name per environment: its own database in the ddev db container,
+  # the hosting toolkit's d<slug>_1 on the server.
+  database:
+    ddev: mormyrids
+    production: dmormyrids_1
 source:
   type: scratchpads_d7
-  # D7 vocabulary machine name of the taxa, and the D7 database holding it.
+  # D7 vocabulary machine name of the taxa, and the D7 database holding it
+  # (per environment: the local Scratchpads stack; s_<slug> on the server).
   vocabulary: mormyridae
-  database: mormyrids
+  database:
+    ddev: mormyrids
+    production: s_mormyrids
   # Root terms whose subtree is imported unpublished (Scratchpads convention).
   unpublished_roots:
     - 'Deleted taxa'

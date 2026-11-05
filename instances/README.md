@@ -76,18 +76,23 @@ hostnames:                         # per environment; the first of each list is 
 drupal:
   sites_subdir: mormyrids          # web/sites/<subdir> (default: slug); "default" = the ddev project's own site
   profile: standard                # install profile (default: standard)
-  database: mormyrids              # the instance's own database name (default: slug; credentials in .env)
+  database:                        # the instance's own database name (default: slug; credentials in .env);
+    ddev: mormyrids                # a scalar means the same name in every environment, a map one
+    production: dmormyrids_1       # per environment (the hosting toolkit names them d<slug>_1)
 source:                            # omit for an instance without a Scratchpads database
   type: scratchpads_d7
   vocabulary: mormyridae           # D7 vocabulary machine name -> $settings['taxanotes_import']['source_vocabulary']
-  database: mormyrids              # D7 database name (credentials MIGRATE_DB_* in .env)
+  database:                        # D7 database name (credentials MIGRATE_DB_* in .env); scalar or
+    ddev: mormyrids                # per environment like drupal.database (s_<slug> on the hosting
+    production: s_mormyrids        # server, loaded by scripts/hosting/load-source-db.sh)
   unpublished_roots:               # root terms imported unpublished with their subtree
     - 'Deleted taxa'               #   -> $settings['taxanotes_import']['unpublished_roots']
 ```
 
 Defaults are applied in one place, `scripts/lib/instance.php` (`get` prints
-the effective value), so every consumer, the script and the generated files
-alike, sees the same instance.
+the effective value, for the ddev environment unless another is named), so
+every consumer, the scripts and the generated files alike, sees the same
+instance.
 
 `site.mail` is deliberately not here: addresses are not committed; `.env`
 `SITE_MAIL` carries it (default `webmaster@example.com`).
@@ -101,14 +106,45 @@ hostnames:
 |---|---|---|
 | layout | one checkout, one ddev project, Drupal multisite: `web/sites/<sites_subdir>/` per instance, routed by `web/sites/sites.php` | **one checkout per instance** under `/var/www/<category>/<domain>/` (plan decision D7), each on its own `sites/default`, an Apache vhost per domain |
 | hostnames | `hostnames.ddev` | `hostnames.production` |
+| database names | `drupal.database.ddev`, `source.database.ddev` (a scalar counts for both) | `drupal.database.production` = `d<slug>_1`, `source.database.production` = `s_<slug>` (the toolkit's naming; the hosting script checks it) |
 | `web/sites/sites.php`, `.ddev/config.instances.yaml` | generated from `hostnames.ddev` of every instance | **not used**: a single-site checkout needs no map; both files are ddev-only artifacts and stay committed for the local project |
-| `settings.local.php` | `instance.php settings-local <yml> <.env> ddev` | `instance.php settings-local <yml> <.env> production` (the hosting script's job; same template `settings.php`, same `.env` keys) |
+| secrets | `instances/<slug>/.env` | `/var/www/<category>/<domain>/settings/instance.env`, same keys, created by the hosting script with random passwords |
+| `settings.local.php` | `instance.php settings-local <yml> <.env> ddev`, one file | `instance.php settings-local <yml> <env> production settings.migrate.php` plus a hosting block (file paths, READ COMMITTED), with the `migrate` connection in `settings.migrate.php` from `instance.php settings-migrate` (the toolkit's `backup_db`/`restore_db` grep the credentials and expect one connection per file); the committed `web/sites/default/settings.php` is the site's `settings.php` |
 | `trusted_host_patterns` | the ddev list | the production list; a dev hostname never reaches a production site |
 
-So `hostnames.production` is schema (the hosting script and the vhost
-template read it), while the generated multisite map is a convenience of the
-local setup. A third instance copies this shape: both lists, its own
-`sites_subdir`.
+So `hostnames.production` and the production database names are schema (the
+hosting script reads them), while the generated multisite map is a
+convenience of the local setup. A third instance copies this shape: both
+lists, its own `sites_subdir`.
+
+## Creating or updating a hosted instance
+
+```
+scripts/hosting/new-instance.sh <slug> <version> [--tarball FILE | --git URL [--ref REF]] [--category NN] [--reinstall]
+scripts/hosting/load-source-db.sh <slug> <dump.sql.gz> [--replace]
+```
+
+Both run on the server (Rob's provision-site toolkit layout under
+`/var/www/<category>/<domain>/`, commands `create_site_structure`,
+`create_release`, `backup_db`, `deploy` on PATH). `new-instance.sh` is the
+production counterpart of `scripts/new-instance.sh`: the same definition,
+recipes and migrations, applied step by step and only where something is
+missing. It creates the release from a `git archive` tarball (until the
+repository has a remote the server can reach; `--git`/`--ref` go through the
+toolkit's `create_release`), the site structure, `settings/instance.env`, the
+database `d<slug>_1` and user `u<slug>_1`, a SELECT-only user on `s_<slug>`,
+the two settings files, the vhost (HTTP to HTTPS, basic auth on the whole
+site, HSTS) with a self-signed certificate that certbot replaces, the
+htpasswd file with one user `<slug>` (password printed once), Drupal (only
+into an empty database; `--reinstall` dumps with `backup_db` and installs
+again), the themes, the recipe with the instance texts, the logo from
+`settings/assets/logo.png`, the four migrations, `deploy <domain> live
+<version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
+Scratchpads dump as `s_<slug>` beforehand (keep the dump 0600 and delete it
+afterwards: it holds the users table). The headers of both scripts have the
+details; the next release of an existing site is the same command with the
+new version (the release step, `composer install`, `deploy`), everything
+else is a no-op.
 
 ## Adding an instance
 
@@ -174,5 +210,5 @@ control is a checksum, not a count.
 
 | slug | site directory | hostnames (ddev / production) | source |
 |---|---|---|---|
-| `myriatrix` | `web/sites/default` (built by hand before this script; its `settings.local.php` is hand-written) | taxanotes-dev.ddev.site / myriatrix.taxanotes.net | D7 vocabulary `myriatrix`, database `myriatrix` |
-| `mormyrids` | `web/sites/mormyrids` | mormyrids.taxanotes-dev.ddev.site / mormyrids.taxanotes.net | D7 vocabulary `mormyridae`, database `mormyrids` |
+| `myriatrix` | `web/sites/default` (built by hand before this script; its `settings.local.php` is hand-written) | taxanotes-dev.ddev.site / myriatrix.taxanotes.net | D7 vocabulary `myriatrix`, database `myriatrix` (ddev) / `s_myriatrix` (production) |
+| `mormyrids` | `web/sites/mormyrids` | mormyrids.taxanotes-dev.ddev.site / mormyrids.taxanotes.net | D7 vocabulary `mormyridae`, database `mormyrids` (ddev) / `s_mormyrids` (production) |
