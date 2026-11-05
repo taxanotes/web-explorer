@@ -36,14 +36,18 @@
 #              HSTS, install.php denied) when missing, a self-signed
 #              certificate until certbot replaces it, the htpasswd file with
 #              one user <slug> and a random password printed once, certbot
-#   drupal     drush site:install only into an EMPTY database, the themes,
-#              recipes/taxanotes_front with the instance inputs, the logo
-#              (settings/assets/logo.png, outside git), the eleven Scratchpads
-#              migrations (the files and images only when instance.env
-#              SOURCE_FILES_DIR names the D7 files directory), cache rebuild
-#   live       `deploy <domain> live <version>` (backup, composer, docroot
+#   drupal     drush site:install only into an EMPTY database
+#   live       `deploy <domain> live <version>` (backup_db, composer, docroot
 #              symlink flip, php-fpm reload, updb, cr) when live does not
-#              point at this release yet; the drush cron crontab line
+#              point at this release yet. Before the content steps, so the
+#              dump holds the pre-upgrade state and the live code has the
+#              modules the recipe installs (an in-place upgrade, 0.2.0 ->
+#              0.3.0, keeps users, revisions, everything)
+#   content    the themes, recipes/taxanotes_front with the instance inputs,
+#              the logo (settings/assets/logo.png, outside git), the eleven
+#              Scratchpads migrations (the files and images only when
+#              instance.env SOURCE_FILES_DIR names the D7 files directory),
+#              cache rebuild; the drush cron crontab line
 #
 # Re-running it changes nothing that is already in place (the recipe creates
 # blocks and views only when missing and re-seeds the site texts; the
@@ -552,6 +556,26 @@ if [ "$install" -eq 1 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+log "Live: $docroot"
+# The release goes live BEFORE the recipe and the migrations touch the
+# database: `deploy` first takes the toolkit's backup_db dump (what restore_db
+# puts back on a rollback to the previous release) and then flips the
+# docroot, so the site serves the code that holds the modules the recipe
+# installs below. The other order (recipe, migrations, then deploy) broke the
+# live site for the length of the import on an upgrade (the previous
+# release's code, a database whose enabled modules it did not have) and left
+# no dump of the pre-upgrade state. `deploy` also runs composer install,
+# reloads php-fpm (OPcache), updb and cr; the cache rebuild after the
+# migrations below is the one that matters for the new content.
+target="../../releases/$version/code/web"
+if [ "$(readlink "$docroot" 2> /dev/null || true)" = "$target" ]; then
+  note "already serves release $version"
+else
+  note "deploy $domain live $version (backup_db, composer install, symlink flip, php-fpm reload, updb, cr)"
+  deploy "$domain" live "$version"
+fi
+
+# ---------------------------------------------------------------------------
 log "Themes"
 if [ -n "$theme" ]; then
   drush theme:enable "$theme" --yes
@@ -625,15 +649,8 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "Live: $docroot"
-target="../../releases/$version/code/web"
-if [ "$(readlink "$docroot" 2> /dev/null || true)" = "$target" ]; then
-  note "already serves release $version; cache rebuild only"
-  drush cache:rebuild
-else
-  note "deploy $domain live $version (backup_db, composer install, symlink flip, php-fpm reload, updb, cr)"
-  deploy "$domain" live "$version"
-fi
+log "Cache rebuild"
+drush cache:rebuild
 
 # ---------------------------------------------------------------------------
 log "Cron: drush cron every 30 minutes (rob's crontab)"

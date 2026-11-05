@@ -161,15 +161,20 @@ the two settings files, the vhost (HTTP to HTTPS, basic auth on the whole
 site, HSTS) with a self-signed certificate that certbot replaces, the
 htpasswd file with one user `<slug>` (password printed once), Drupal (only
 into an empty database; `--reinstall` dumps with `backup_db` and installs
-again), the themes, the recipe with the instance texts, the logo from
-`settings/assets/logo.png`, the eleven migrations (files and images only when `instance.env`
-`SOURCE_FILES_DIR` names the server's copy of the D7 files), `deploy <domain>
-live <version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
-Scratchpads dump as `s_<slug>` beforehand (keep the dump 0600 and delete it
-afterwards: it holds the users table). The headers of both scripts have the
-details; the next release of an existing site is the same command with the
-new version (the release step, `composer install`, `deploy`), everything
-else is a no-op.
+again), `deploy <domain> live <version>` (the toolkit's `backup_db` dump,
+docroot flip, php-fpm reload, `updb`, `cr`), then the themes, the recipe
+with the instance texts, the logo from `settings/assets/logo.png`, the
+eleven migrations (files and images only when `instance.env`
+`SOURCE_FILES_DIR` names the server's copy of the D7 files), a cache rebuild
+and the `drush cron` crontab line. `load-source-db.sh` loads the Scratchpads
+dump as `s_<slug>` beforehand (keep the dump 0600 and delete it afterwards:
+it holds the users table). The headers of both scripts have the details.
+The next release of an existing site is the same command with the new
+version: the release step, `composer install`, `deploy` (its dump is the
+pre-upgrade state, the one to `restore_db` with a rollback to the previous
+release), then the recipe installs what the new release adds and the new
+migrations run, with the site serving the new code throughout; everything
+already in place is a no-op.
 
 ## Adding an instance
 
