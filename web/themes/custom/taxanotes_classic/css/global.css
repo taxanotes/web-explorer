@@ -800,17 +800,57 @@ input[type="submit"]:hover, button:hover, .button:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0 1em;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .views-exposed-form .form-item, .views-exposed-form .form-actions {
   max-width: 100%;
   min-width: 0;
+  margin: 0 0 10px;
+}
+
+.views-exposed-form .form-item label {
+  display: block;
+  margin-bottom: 2px;
 }
 
 .views-exposed-form .form-item input, .views-exposed-form .form-item select {
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* The Literature page's filters as one tidy row: a wide title box, a short
+   year box, the type, taxon and author boxes, then Apply and Reset. */
+.view-taxanotes-literature .views-exposed-form .form-item-title input {
+  width: 16em;
+}
+
+.view-taxanotes-literature .views-exposed-form .form-item-bibcite-year input {
+  width: 5em;
+}
+
+.view-taxanotes-literature .views-exposed-form .form-item-taxon input,
+.view-taxanotes-literature .views-exposed-form .form-item-author input {
+  width: 14em;
+}
+
+/* The autocomplete hints sit under their boxes, small, and do not widen
+   the row. */
+.view-taxanotes-literature .views-exposed-form .form-item .description {
+  font-size: 0.85em;
+  max-width: 14em;
+  margin-top: 2px;
+}
+
+.view-taxanotes-literature .views-exposed-form .form-actions {
+  display: flex;
+  gap: 0.5em;
+  /* Level with the boxes, under the labels' line. */
+  margin-top: 1.55em;
+}
+
+.view-taxanotes-literature .views-exposed-form .form-actions .button {
+  margin: 0;
 }
 
 @media (max-width: 739px) {

@@ -143,3 +143,139 @@
   height: 150px;
   object-fit: cover;
 }
+
+/* The Nomenclature section (block taxanotes_taxon_nomenclature): its rows
+   continue the taxon's field group. The synonyms row is a list. */
+.taxanotes-nomenclature__rows > .field {
+  display: flex;
+  border: 1px solid var(--sp-rule);
+  border-top: none;
+  margin: 0;
+  background: #fff;
+}
+
+.taxanotes-nomenclature__rows {
+  border-top: 1px solid var(--sp-rule);
+}
+
+.taxanotes-nomenclature__rows > .field:nth-child(odd) {
+  background: var(--sp-stripe);
+}
+
+.taxanotes-nomenclature__rows > .field > .field__label {
+  flex: 0 0 200px;
+  width: 200px;
+  text-align: right;
+  font-weight: bold;
+  padding: 5px 5px 10px;
+  border-right: 1px solid var(--sp-rule);
+  box-sizing: border-box;
+}
+
+.taxanotes-nomenclature__rows > .field > .field__item,
+.taxanotes-nomenclature__rows > .field > .field__items {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 5px 10px;
+  overflow-wrap: anywhere;
+}
+
+.taxanotes-nomenclature__rows > .field > .field__items .field__item {
+  padding: 0 0 4px;
+}
+
+.taxanotes-nomenclature__rows > .field p {
+  margin-bottom: 0;
+}
+
+@media (max-width: 739px) {
+  .taxanotes-nomenclature__rows > .field {
+    flex-direction: column;
+  }
+
+  .taxanotes-nomenclature__rows > .field > .field__label {
+    flex-basis: auto;
+    width: auto;
+    text-align: left;
+    border-right: none;
+    padding-bottom: 0;
+  }
+}
+
+/* The classification tree in the sidebar opens at the current taxon: the
+   block scrolls within itself (js/node_tree.js scrolls the selected taxon
+   into this box, never the page). */
+#region-sidebar .node-tree-block {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+/* A reference page (bibcite_reference): the citation line, then labelled
+   rows like the taxon's field group. */
+.bibcite-reference .citation,
+.bibcite-reference .bibcite-citation {
+  margin: 0 0 15px;
+  font-size: 1.1em;
+  line-height: 1.5;
+}
+
+.bibcite-reference > .field {
+  display: flex;
+  border: 1px solid var(--sp-rule);
+  border-top: none;
+  margin: 0;
+  background: #fff;
+}
+
+.bibcite-reference > .bibcite-citation + .field,
+.bibcite-reference > .field:first-child {
+  border-top: 1px solid var(--sp-rule);
+}
+
+.bibcite-reference > .field:nth-of-type(even) {
+  background: var(--sp-stripe);
+}
+
+.bibcite-reference > .field > .field__label {
+  flex: 0 0 200px;
+  width: 200px;
+  text-align: right;
+  font-weight: bold;
+  padding: 5px 5px 10px;
+  border-right: 1px solid var(--sp-rule);
+  box-sizing: border-box;
+}
+
+.bibcite-reference > .field > .field__item,
+.bibcite-reference > .field > .field__items {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 5px 10px;
+  overflow-wrap: anywhere;
+}
+
+.bibcite-reference > .field > .field__items .field__item {
+  display: inline;
+}
+
+.bibcite-reference > .field > .field__items .field__item:not(:last-child)::after {
+  content: ", ";
+}
+
+.bibcite-reference .bibcite-links {
+  margin-top: 15px;
+}
+
+@media (max-width: 739px) {
+  .bibcite-reference > .field {
+    flex-direction: column;
+  }
+
+  .bibcite-reference > .field > .field__label {
+    flex-basis: auto;
+    width: auto;
+    text-align: left;
+    border-right: none;
+    padding-bottom: 0;
+  }
+}
