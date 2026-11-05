@@ -1,11 +1,12 @@
 name: 'Taxanotes base'
-description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the literature (bibcite references linked to taxa, through taxanotes_literature), the species pages and images (through taxanotes_species), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
+description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the literature (bibcite references linked to taxa, through taxanotes_literature), the species pages and images (through taxanotes_species), the pages and blog posts (through taxanotes_pages), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
 type: 'Site'
 recipes:
   - taxanotes_taxon
   - taxanotes_users
   - taxanotes_literature
   - taxanotes_species
+  - taxanotes_pages
 install:
   - migrate
   - migrate_plus

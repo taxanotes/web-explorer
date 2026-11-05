@@ -1,0 +1,73 @@
+# One page node per Scratchpads page node (the current revision; revisions
+# are not migrated), keyed on the node uuid, which the D11 node also takes.
+# The author is the migrated account (the local administrator for the D7
+# site owner and for deleted accounts), the dates and the status the D7
+# ones, the body with its format mapped like the species pages
+# (filtered_html -> basic_html, full_html stays, anything else basic_html;
+# the [bib]nid[/bib] citations render through the basic_html citation
+# filter), the taxa the node names (field_taxonomic_name) in
+# field_taxonomic_names through the taxon migration by GUID.
+id: taxanotes_d7_page
+label: 'Scratchpads (Drupal 7) pages to Basic pages'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_node
+  node_type: page
+  track_changes: true
+process:
+  type:
+    plugin: default_value
+    default_value: page
+  langcode:
+    plugin: default_value
+    default_value: en
+  uuid: uuid
+  title: title
+  _uid_lookup:
+    plugin: migration_lookup
+    migration: taxanotes_d7_user
+    source: uid
+    no_stub: true
+  uid:
+    plugin: null_coalesce
+    source:
+      - '@_uid_lookup'
+    default_value: 1
+  status: status
+  created: created
+  changed: changed
+  promote: promote
+  sticky: sticky
+  body/value:
+    plugin: skip_on_empty
+    method: process
+    source: body_value
+  body/summary: body_summary
+  body/format:
+    plugin: static_map
+    source: body_format
+    map:
+      filtered_html: basic_html
+      full_html: full_html
+      plain_text: plain_text
+    default_value: basic_html
+  field_taxonomic_names:
+    plugin: sub_process
+    source: taxa
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_taxon
+        source: guid
+        no_stub: true
+destination:
+  plugin: 'entity:node'
+  default_bundle: page
+migration_dependencies:
+  required: {  }
+  optional:
+    - taxanotes_d7_user
+    - taxanotes_d7_taxon

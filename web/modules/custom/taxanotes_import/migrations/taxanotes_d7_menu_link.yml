@@ -1,0 +1,61 @@
+# The Scratchpads main-menu entries of the migrated pages and blog entries:
+# one menu_link_content item in the D11 main menu per D7 main-menu link to a
+# page or blog node, pointing at the migrated node (entity:node/<nid>, through
+# the page and blog migrations by uuid; a link to a node that was not
+# migrated is skipped). The title is the link's own (Mormyrids' "Notes" for
+# the page "Notes on our classification & how to cite"), the weight the D7
+# weight + 50 (see the source plugin), disabled links stay disabled. Keyed on
+# the D7 mlid; the D11 ids are fresh.
+id: taxanotes_d7_menu_link
+label: 'Scratchpads (Drupal 7) main-menu links of pages and blog entries'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_menu_link
+  menu_name: main-menu
+  node_types:
+    - page
+    - blog
+  track_changes: true
+  constants:
+    bundle: menu_link_content
+    menu_name: main
+    uri_prefix: 'entity:node/'
+process:
+  bundle: constants/bundle
+  langcode:
+    plugin: default_value
+    default_value: en
+  title: link_title
+  menu_name: constants/menu_name
+  _nid:
+    -
+      plugin: migration_lookup
+      migration:
+        - taxanotes_d7_page
+        - taxanotes_d7_blog
+      source: node_uuid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'The node of this link was not migrated'
+  'link/uri':
+    plugin: concat
+    source:
+      - constants/uri_prefix
+      - '@_nid'
+  weight: menu_weight
+  expanded: expanded
+  enabled: enabled
+destination:
+  plugin: 'entity:menu_link_content'
+  default_bundle: menu_link_content
+  no_stub: true
+migration_dependencies:
+  required:
+    - taxanotes_d7_page
+    - taxanotes_d7_blog
+  optional: {  }
