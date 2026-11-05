@@ -1,0 +1,26 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - bibcite_entity.bibcite_reference_type.database
+    - field.storage.bibcite_reference.field_file
+  module:
+    - file
+id: bibcite_reference.database.field_file
+field_name: field_file
+entity_type: bibcite_reference
+bundle: database
+label: Attachments
+description: 'The reference itself (a PDF) or related files. Imported attachments live under files/scratchpads/.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:file'
+  handler_settings: {  }
+  file_directory: 'literature/[date:custom:Y]'
+  file_extensions: 'pdf doc docx odt txt rtf html xml csv xls xlsx zip'
+  max_filesize: ''
+  description_field: true
+field_type: file

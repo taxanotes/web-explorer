@@ -1,0 +1,28 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - bibcite_entity.bibcite_reference_type.miscellaneous
+    - field.storage.bibcite_reference.field_taxonomic_name
+    - node.type.taxon
+id: bibcite_reference.miscellaneous.field_taxonomic_name
+field_name: field_taxonomic_name
+entity_type: bibcite_reference
+bundle: miscellaneous
+label: 'Taxonomic name'
+description: 'The taxa this reference is about or cites (Scratchpads field_taxonomic_name). The taxon page lists the references that name it.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      taxon: taxon
+    sort:
+      field: title
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

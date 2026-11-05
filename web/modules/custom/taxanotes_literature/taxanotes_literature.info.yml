@@ -1,0 +1,9 @@
+name: 'Taxanotes literature'
+description: 'Glue for the literature of a Taxanotes instance (bibcite references linked to taxa): the Views filters that let the Literature page be filtered by taxon and by author without duplicating rows. The fields, views and blocks themselves are configuration, installed by the taxanotes_literature recipe; nothing in this module names an instance.'
+type: module
+package: Taxanotes
+core_version_requirement: ^11
+dependencies:
+  - bibcite_entity:bibcite_entity
+  - drupal:node
+  - drupal:views

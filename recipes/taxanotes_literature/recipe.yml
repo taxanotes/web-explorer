@@ -1,0 +1,1077 @@
+name: 'Taxanotes literature'
+description: 'Gives a Taxanotes instance its literature: bibcite references (with contributors and keywords) linked to the taxa they cite, as in Scratchpads. On the reference: field_taxonomic_name (the taxa, unlimited), field_file (attachments) and field_scratchpads_uuid (the Scratchpads node uuid the import keys on), on the 14 publication types the pilot sites use. On the taxon: field_reference, the protologue as a link to the reference entity (its Scratchpads nid/title/GUID stay in the shadow fields). A Literature page (/literature, in the main menu) with filters, a Literature block on the taxon page (the references that name it) and a "Recently added literature" block on the front page. Applied by taxanotes_base; nothing here names an instance. Re-applying changes nothing that is already in place (blocks and the view are created only when missing).'
+type: 'Site'
+recipes:
+  - taxanotes_taxon
+  - taxanotes_users
+install:
+  - bibcite
+  - bibcite_entity
+  - bibcite_export
+  - bibcite_bibtex
+  - bibcite_ris
+  - block
+  - file
+  - views
+  - taxanotes_literature
+config:
+  # A recipe installs a module's simple configuration only; its config
+  # entities (bibcite's reference types, contributor roles and categories,
+  # form and view displays, the administration views) come in through this
+  # import list, as the taxon recipe imports the node view modes.
+  import:
+    bibcite: '*'
+    bibcite_entity: '*'
+    bibcite_export: '*'
+    bibcite_bibtex: '*'
+    bibcite_ris: '*'
+    file: '*'
+  strict:
+    # Field storages influence the database layout, so they must match exactly.
+    - field.storage.bibcite_reference.field_file
+    - field.storage.bibcite_reference.field_scratchpads_uuid
+    - field.storage.bibcite_reference.field_taxonomic_name
+    - field.storage.node.field_reference
+  actions:
+    # The contributor name bibcite shows (and the author autocomplete matches)
+    # is composed from the name parts; Scratchpads stores the middle initials
+    # as a part too ("Régia Mayane Pacheco Fonseca"), so they are in the
+    # pattern. Set on every apply (a site that changes it keeps its value
+    # until the next apply).
+    bibcite_entity.contributor.settings:
+      simpleConfigUpdate:
+        full_name_pattern: '@prefix @first_name @middle_name @last_name @suffix'
+    # Everyone reads the literature; the list formatter shows an author only
+    # when the contributor entity is viewable, hence the three permissions.
+    user.role.anonymous:
+      grantPermissions:
+        - 'view bibcite_reference'
+        - 'view bibcite_contributor'
+        - 'view bibcite_keyword'
+    user.role.authenticated:
+      grantPermissions:
+        - 'view bibcite_reference'
+        - 'view bibcite_contributor'
+        - 'view bibcite_keyword'
+    # Editing follows the taxon roles (recipes/taxanotes_users): a
+    # contributor adds references and edits their own, an editor any.
+    user.role.contributor:
+      grantPermissions:
+        - 'create bibcite_reference'
+        - 'edit own bibcite_reference'
+        - 'delete own bibcite_reference'
+        - 'create bibcite_contributor'
+        - 'create bibcite_keyword'
+    user.role.editor:
+      grantPermissions:
+        - 'create bibcite_reference'
+        - 'edit any bibcite_reference'
+        - 'delete any bibcite_reference'
+        - 'view all bibcite_reference revisions'
+        - 'revert all bibcite_reference revisions'
+        - 'create bibcite_contributor'
+        - 'edit bibcite_contributor'
+        - 'delete bibcite_contributor'
+        - 'create bibcite_keyword'
+        - 'edit bibcite_keyword'
+        - 'delete bibcite_keyword'
+    # The taxon page: the protologue as a link to the reference entity, where
+    # the taxon recipe shows the reference title text (the shadow field,
+    # hidden here; it keeps the Scratchpads value for taxa whose reference
+    # did not resolve).
+    core.entity_view_display.node.taxon.default:
+      setComponents:
+        - name: field_reference
+          options: { type: entity_reference_label, label: inline, weight: 11, region: content, settings: { link: true }, third_party_settings: {  } }
+      hideComponents:
+        - field_reference_title
+    core.entity_form_display.node.taxon.default:
+      setComponents:
+        - name: field_reference
+          options: { type: entity_reference_autocomplete, weight: 12, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
+    # Blocks (default theme; Olivero regions, "content" elsewhere), created
+    # only when missing like the front recipe's: the references naming the
+    # taxon under the taxon's fields, the newest references on the front page.
+    block.block.taxanotes_taxon_literature:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_literature-taxon'
+        region:
+          olivero: content
+        default_region: content
+        weight: 20
+        settings:
+          id: 'views_block:taxanotes_literature-taxon'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
+    block.block.taxanotes_front_recent_literature:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_literature-recent'
+        region:
+          olivero: content_below
+        default_region: content
+        weight: 2
+        settings:
+          id: 'views_block:taxanotes_literature-recent'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    # The reference forms and pages of the 14 types: the taxa (tags
+    # autocomplete) and the attachments; the Scratchpads uuid stays off the
+    # form and the page. bibcite installs a form display and the default and
+    # table view displays per type (the reference page uses "table").
+    core.entity_form_display.bibcite_reference.book.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.book.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.book.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.book_chapter.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.book_chapter.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.book_chapter.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.journal_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.journal_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.journal_article.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.conference_paper.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.conference_paper.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.conference_paper.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.conference_proceedings.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.conference_proceedings.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.conference_proceedings.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.newspaper_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.newspaper_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.newspaper_article.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.magazine_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.magazine_article.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.magazine_article.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.thesis.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.thesis.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.thesis.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.report.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.report.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.report.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.personal.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.personal.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.personal.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.manuscript.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.manuscript.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.manuscript.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.unpublished.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.unpublished.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.unpublished.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.database.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.database.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.database.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_form_display.bibcite_reference.miscellaneous.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_autocomplete_tags
+            weight: 4
+            region: content
+            settings:
+              match_operator: CONTAINS
+              match_limit: 10
+              size: 60
+              placeholder: ''
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_generic
+            weight: 5
+            region: content
+            settings:
+              progress_indicator: throbber
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.miscellaneous.default:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
+    core.entity_view_display.bibcite_reference.miscellaneous.table:
+      setComponents:
+        -
+          name: field_taxonomic_name
+          options:
+            type: entity_reference_label
+            label: above
+            weight: 4
+            region: content
+            settings:
+              link: true
+            third_party_settings: {  }
+        -
+          name: field_file
+          options:
+            type: file_default
+            label: above
+            weight: 5
+            region: content
+            settings:
+              use_description_as_link_text: true
+            third_party_settings: {  }
