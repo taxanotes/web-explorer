@@ -20,7 +20,10 @@
 
   /**
    * Builds the jqTree inside #node_tree. If the URL is
-   * /taxonomy-tree/node/<guid> the tree is opened down to that taxon.
+   * /taxonomy-tree/node/<guid>, or the page is a taxon page (the block
+   * passes the taxon's GUID in drupalSettings.nodeTree.selected), the tree
+   * is opened down to that taxon, which is selected and scrolled into view
+   * within the tree; the rest loads on demand.
    */
   Drupal.behaviors.node_tree_open_tree_at = {
     attach: function (context) {
@@ -28,22 +31,30 @@
         var $container = $(container);
         var $tree = $('<div id="id_node_tree"></div>').attr('data-url', CHILDREN_URL);
         $container.append($tree);
-        var guid = getGuidFromUrl();
+        var onTreePage = $('.node_treecontentdisplay').length > 0;
+        var guid = getGuidFromUrl() || (!onTreePage && drupalSettings.nodeTree && drupalSettings.nodeTree.selected) || null;
         if (guid) {
           $container.prepend('<p class="node-tree-loading">' + Drupal.t('Loading tree expanded to selected taxon…') + '</p>');
           $.getJSON(EXPAND_URL + encodeURIComponent(guid), function (data) {
             $container.find('.node-tree-loading').remove();
             $tree.tree({ data: data, autoOpen: false, dragAndDrop: false, dataUrl: dataUrl });
-            bindEvents($tree);
             var target = $tree.tree('getNodeById', guid);
             if (target) {
-              // selectNode fires tree.select, which renders the taxon.
-              $tree.tree('selectNode', target);
-              if (target.element && target.element.scrollIntoView) {
-                // Scroll within the tree column only, so the content column
-                // stays in view.
-                target.element.scrollIntoView({ block: 'nearest' });
+              if (onTreePage) {
+                // selectNode fires tree.select, which renders the taxon.
+                bindEvents($tree);
+                $tree.tree('selectNode', target);
               }
+              else {
+                // On a taxon page the selection is only a highlight: bind
+                // the events after it, so it does not navigate.
+                $tree.tree('selectNode', target);
+                bindEvents($tree);
+              }
+              scrollIntoTree(container, target.element);
+            }
+            else {
+              bindEvents($tree);
             }
           });
         }
@@ -54,6 +65,30 @@
       });
     }
   };
+
+  /**
+   * Scrolls the tree's own scrollable box so that an element is visible.
+   *
+   * Only the box scrolls (the block has a max-height), never the page: a
+   * taxon page must not jump to its sidebar when the tree opens.
+   */
+  function scrollIntoTree(container, element) {
+    if (!element) {
+      return;
+    }
+    var box = container;
+    while (box && box !== document.body && window.getComputedStyle(box).overflowY !== 'auto' && window.getComputedStyle(box).overflowY !== 'scroll') {
+      box = box.parentElement;
+    }
+    if (!box || box === document.body) {
+      return;
+    }
+    var boxRect = box.getBoundingClientRect();
+    var rect = element.getBoundingClientRect();
+    if (rect.top < boxRect.top || rect.bottom > boxRect.bottom) {
+      box.scrollTop += rect.top - boxRect.top - Math.max(0, (boxRect.height - rect.height) / 2);
+    }
+  }
 
   // jqTree calls this with the node being opened (or null for the roots).
   function dataUrl(node) {
