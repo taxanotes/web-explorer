@@ -35,35 +35,6 @@ targetEntityType: node
 bundle: taxon
 mode: default
 content:
-  field_authors:
-    type: string
-    label: hidden
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 0
-    region: content
-  field_rank:
-    type: list_default
-    label: inline
-    settings: {  }
-    third_party_settings: {  }
-    weight: 1
-    region: content
-  field_usage:
-    type: list_default
-    label: inline
-    settings: {  }
-    third_party_settings: {  }
-    weight: 2
-    region: content
-  field_unacceptability_reason:
-    type: list_default
-    label: inline
-    settings: {  }
-    third_party_settings: {  }
-    weight: 3
-    region: content
   field_accepted_name:
     type: entity_reference_label
     label: inline
@@ -72,48 +43,30 @@ content:
     third_party_settings: {  }
     weight: 4
     region: content
-  field_parent_taxon_reference:
-    type: entity_reference_label
-    label: inline
+  field_authors:
+    type: string
+    label: hidden
     settings:
-      link: true
+      link_to_entity: false
+      link_rel: canonical
     third_party_settings: {  }
-    weight: 5
+    weight: 0
     region: content
-  field_unit_names:
-    type: custom_table
-    label: above
-    settings:
-      fields: {  }
-      hide_empty: true
-      sort_by: _delta
-      sort_order: asc
-      hide_header: false
-    third_party_settings: {  }
-    weight: 6
-    region: content
-  field_vernacular_names:
-    type: custom_table
-    label: above
-    settings:
-      fields: {  }
-      hide_empty: false
-    third_party_settings: {  }
-    weight: 10
-    region: content
-  field_reference_title:
+  field_guid:
     type: string
     label: inline
     settings:
       link_to_entity: false
+      link_rel: canonical
     third_party_settings: {  }
-    weight: 11
+    weight: 30
     region: content
   field_page_number:
     type: string
     label: inline
     settings:
       link_to_entity: false
+      link_rel: canonical
     third_party_settings: {  }
     weight: 12
     region: content
@@ -129,6 +82,30 @@ content:
     third_party_settings: {  }
     weight: 13
     region: content
+  field_parent_taxon_reference:
+    type: entity_reference_label
+    label: inline
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 5
+    region: content
+  field_rank:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_reference_title:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+      link_rel: canonical
+    third_party_settings: {  }
+    weight: 11
+    region: content
   field_term_description:
     type: text_default
     label: above
@@ -136,13 +113,43 @@ content:
     third_party_settings: {  }
     weight: 20
     region: content
-  field_guid:
-    type: string
+  field_unacceptability_reason:
+    type: list_default
     label: inline
-    settings:
-      link_to_entity: false
+    settings: {  }
     third_party_settings: {  }
-    weight: 30
+    weight: 3
+    region: content
+  field_unit_names:
+    type: custom_table
+    label: above
+    settings:
+      fields: {  }
+      hide_empty: true
+      sort_by: _delta
+      sort_order: asc
+      hide_header: false
+    third_party_settings: {  }
+    weight: 6
+    region: content
+  field_usage:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_vernacular_names:
+    type: custom_table
+    label: above
+    settings:
+      fields: {  }
+      hide_empty: true
+      sort_by: _delta
+      sort_order: asc
+      hide_header: false
+    third_party_settings: {  }
+    weight: 10
     region: content
 hidden:
   field_accepted_guid: true
@@ -154,3 +161,4 @@ hidden:
   field_reference_nid: true
   field_weight: true
   links: true
+

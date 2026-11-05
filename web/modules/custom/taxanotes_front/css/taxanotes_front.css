@@ -79,3 +79,29 @@
 .taxanotes-tree-link-view {
   margin-bottom: 0.75rem;
 }
+
+/* The taxa list (/taxa): a table that fits the viewport. On a narrow
+   screen the view hides its lower-priority columns (Views responsive
+   columns; Olivero's priority-low / priority-medium rules, with the
+   "Show all columns" toggle); whatever is left scrolls inside the view,
+   never the page. */
+.view-taxa .view-content {
+  overflow-x: auto;
+}
+.view-taxa td.views-field-title {
+  min-width: 12rem;
+}
+@media (max-width: 43.75rem) {
+  .view-taxa td.views-field-title {
+    min-width: 0;
+  }
+}
+.view-taxa td.views-field-field-usage {
+  white-space: nowrap;
+}
+
+/* The taxon page's custom-field tables (unit names, vernacular names):
+   headers aligned like their cells. */
+.field--type-custom th {
+  text-align: left;
+}

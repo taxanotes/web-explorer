@@ -4,9 +4,7 @@ dependencies:
   config:
     - field.storage.node.field_authors
     - field.storage.node.field_guid
-    - field.storage.node.field_parent_taxon_reference
     - field.storage.node.field_rank
-    - field.storage.node.field_weight
     - node.type.taxon
   module:
     - node
@@ -230,8 +228,8 @@ display:
           total_pages: null
           id: 0
           tags:
-            previous: ‹‹
             next: ››
+            previous: ‹‹
           expose:
             items_per_page: false
             items_per_page_label: 'Items per page'
@@ -353,9 +351,9 @@ display:
           entity_type: node
           entity_field: type
           plugin_id: bundle
+          operator: in
           value:
             taxon: taxon
-          operator: in
           group: 1
           expose:
             operator_id: ''
@@ -411,6 +409,7 @@ display:
           replica: false
           query_tags: {  }
       relationships: {  }
+      css_class: 'taxanotes-recent taxanotes-children'
       header:
         view:
           id: view
@@ -424,7 +423,6 @@ display:
           view_to_insert: 'taxanotes_taxon_page:tree_link'
           inherit_arguments: true
       footer: {  }
-      css_class: 'taxanotes-recent taxanotes-children'
       display_extenders: {  }
     cache_metadata:
       max-age: -1
@@ -437,7 +435,6 @@ display:
         - user.permissions
       tags:
         - 'config:field.storage.node.field_authors'
-        - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
   children:
     id: children
@@ -460,7 +457,6 @@ display:
         - user.permissions
       tags:
         - 'config:field.storage.node.field_authors'
-        - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
   tree_link:
     id: tree_link
@@ -468,10 +464,6 @@ display:
     display_plugin: block
     position: 2
     display_options:
-      display_description: ''
-      display_extenders: {  }
-      block_description: 'Taxon: link to the classification tree'
-      block_category: Taxanotes
       title: ''
       fields:
         field_guid:
@@ -544,6 +536,7 @@ display:
         options:
           offset: 0
           items_per_page: 1
+      empty: {  }
       sorts: {  }
       arguments:
         nid:
@@ -581,18 +574,21 @@ display:
           validate_options: {  }
           break_phrase: false
           not: false
-      header: {  }
-      empty: {  }
-      css_class: taxanotes-tree-link-view
       defaults:
+        empty: false
         title: false
-        fields: false
+        css_class: false
         pager: false
+        fields: false
         sorts: false
         arguments: false
         header: false
-        empty: false
-        css_class: false
+      css_class: taxanotes-tree-link-view
+      display_description: ''
+      header: {  }
+      display_extenders: {  }
+      block_description: 'Taxon: link to the classification tree'
+      block_category: Taxanotes
     cache_metadata:
       max-age: -1
       contexts:
@@ -603,3 +599,4 @@ display:
         - user.permissions
       tags:
         - 'config:field.storage.node.field_guid'
+

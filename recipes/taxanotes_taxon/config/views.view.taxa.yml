@@ -3,7 +3,6 @@ status: true
 dependencies:
   config:
     - field.storage.node.field_authors
-    - field.storage.node.field_guid
     - field.storage.node.field_rank
     - field.storage.node.field_unit_names
     - field.storage.node.field_usage
@@ -148,15 +147,15 @@ display:
           hide_alter_empty: true
           click_sort_column: name
           # The units composed into one string, "Genus species var. name":
-          # each unit as "[indicator] [name]" (the indicator is empty for
-          # most units), all units of a taxon joined with a space.
-          type: custom_template
+          # each unit as its sub-fields joined with a space (the inline
+          # formatter leaves an empty indicator out, so no stray spaces),
+          # all units of a taxon joined with a space.
+          type: custom_inline
           settings:
-            template: '[indicator] [name]'
-            tokens: basic
-            advanced_tokens:
-              recursion_limit: 3
-              global_types: false
+            fields: {  }
+            show_labels: false
+            label_separator: ': '
+            item_separator: ' '
           group_column: ''
           group_columns: {  }
           group_rows: true
@@ -360,71 +359,6 @@ display:
           multi_type: separator
           separator: ', '
           field_api_classes: false
-        field_guid:
-          id: field_guid
-          table: node__field_guid
-          field: field_guid
-          relationship: none
-          group_type: group
-          admin_label: ''
-          entity_type: node
-          entity_field: field_guid
-          plugin_id: field
-          label: GUID
-          exclude: false
-          alter:
-            alter_text: false
-            text: ''
-            make_link: false
-            path: ''
-            absolute: false
-            external: false
-            replace_spaces: false
-            path_case: none
-            trim_whitespace: false
-            alt: ''
-            rel: ''
-            link_class: ''
-            prefix: ''
-            suffix: ''
-            target: ''
-            nl2br: false
-            max_length: 0
-            word_boundary: false
-            ellipsis: false
-            more_link: false
-            more_link_text: ''
-            more_link_path: ''
-            strip_tags: false
-            trim: false
-            preserve_tags: ''
-            html: false
-          element_type: ''
-          element_class: ''
-          element_label_type: ''
-          element_label_class: ''
-          element_label_colon: false
-          element_wrapper_type: ''
-          element_wrapper_class: ''
-          element_default_classes: true
-          empty: ''
-          hide_empty: false
-          empty_zero: false
-          hide_alter_empty: true
-          click_sort_column: value
-          type: string
-          settings:
-            link_to_entity: false
-          group_column: value
-          group_columns: {  }
-          group_rows: true
-          delta_limit: 0
-          delta_offset: 0
-          delta_reversed: false
-          delta_first_last: false
-          multi_type: separator
-          separator: ', '
-          field_api_classes: false
       pager:
         type: mini
         options:
@@ -616,6 +550,64 @@ display:
             group_items: {  }
       style:
         type: table
+        # Responsive columns (core's tableresponsive behaviour, Olivero's
+        # priority-medium rule): on a phone only the name, unit names and
+        # rank show; authors and usage from 700 px; a "Show all columns"
+        # link restores them. The GUID is not listed (it wraps into many
+        # lines in the content column); it is on the taxon page.
+        options:
+          grouping: {  }
+          row_class: ''
+          default_row_class: true
+          columns:
+            title: title
+            field_unit_names: field_unit_names
+            field_rank: field_rank
+            field_authors: field_authors
+            field_usage: field_usage
+          default: '-1'
+          info:
+            title:
+              sortable: false
+              default_sort_order: asc
+              align: ''
+              separator: ''
+              empty_column: false
+              responsive: ''
+            field_unit_names:
+              sortable: false
+              default_sort_order: asc
+              align: ''
+              separator: ''
+              empty_column: false
+              responsive: ''
+            field_rank:
+              sortable: false
+              default_sort_order: asc
+              align: ''
+              separator: ''
+              empty_column: false
+              responsive: ''
+            field_authors:
+              sortable: false
+              default_sort_order: asc
+              align: ''
+              separator: ''
+              empty_column: false
+              responsive: priority-medium
+            field_usage:
+              sortable: false
+              default_sort_order: asc
+              align: ''
+              separator: ''
+              empty_column: false
+              responsive: priority-medium
+          override: true
+          sticky: false
+          summary: ''
+          empty_table: false
+          caption: ''
+          description: ''
       row:
         type: fields
       query:
@@ -642,7 +634,6 @@ display:
         - user.permissions
       tags:
         - 'config:field.storage.node.field_authors'
-        - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
         - 'config:field.storage.node.field_unit_names'
         - 'config:field.storage.node.field_usage'
@@ -674,7 +665,6 @@ display:
         - user.permissions
       tags:
         - 'config:field.storage.node.field_authors'
-        - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
         - 'config:field.storage.node.field_unit_names'
         - 'config:field.storage.node.field_usage'

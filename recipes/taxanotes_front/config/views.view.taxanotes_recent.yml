@@ -345,6 +345,7 @@ display:
             label: ''
             field_identifier: ''
           exposed: false
+      arguments: {  }
       filters:
         status:
           id: status
@@ -364,9 +365,9 @@ display:
           entity_type: node
           entity_field: type
           plugin_id: bundle
+          operator: in
           value:
             taxon: taxon
-          operator: in
           group: 1
           expose:
             operator_id: ''
@@ -422,22 +423,20 @@ display:
           replica: false
           query_tags: {  }
       relationships: {  }
-      arguments: {  }
-      header: {  }
-      footer: {  }
+      css_class: taxanotes-recent
       use_more: true
       use_more_always: true
       use_more_text: 'All taxa'
       link_display: custom_url
       link_url: /taxa
-      css_class: taxanotes-recent
+      header: {  }
+      footer: {  }
       display_extenders: {  }
     cache_metadata:
       max-age: -1
       contexts:
         - 'languages:language_content'
         - 'languages:language_interface'
-        - url.query_args
         - 'user.node_grants:view'
         - user.permissions
       tags:
@@ -458,7 +457,6 @@ display:
       contexts:
         - 'languages:language_content'
         - 'languages:language_interface'
-        - url.query_args
         - 'user.node_grants:view'
         - user.permissions
       tags:
@@ -470,10 +468,6 @@ display:
     display_plugin: block
     position: 2
     display_options:
-      display_description: ''
-      display_extenders: {  }
-      block_description: 'Recently updated taxa'
-      block_category: Taxanotes
       title: 'Recently updated taxa'
       fields:
         title:
@@ -766,14 +760,18 @@ display:
         title: false
         fields: false
         sorts: false
+      display_description: ''
+      display_extenders: {  }
+      block_description: 'Recently updated taxa'
+      block_category: Taxanotes
     cache_metadata:
       max-age: -1
       contexts:
         - 'languages:language_content'
         - 'languages:language_interface'
-        - url.query_args
         - 'user.node_grants:view'
         - user.permissions
       tags:
         - 'config:field.storage.node.field_authors'
         - 'config:field.storage.node.field_rank'
+

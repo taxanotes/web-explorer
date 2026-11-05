@@ -69,7 +69,7 @@ config:
         - links
       setComponents:
         - name: field_authors
-          options: { type: string, label: hidden, weight: 0, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+          options: { type: string, label: hidden, weight: 0, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }
         - name: field_rank
           options: { type: list_default, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
         - name: field_usage
@@ -83,14 +83,14 @@ config:
         - name: field_unit_names
           options: { type: custom_table, label: above, weight: 6, region: content, settings: { fields: {  }, hide_empty: true, sort_by: _delta, sort_order: asc, hide_header: false }, third_party_settings: {  } }
         - name: field_vernacular_names
-          options: { type: custom_table, label: above, weight: 10, region: content, settings: { fields: {  }, hide_empty: false }, third_party_settings: {  } }
+          options: { type: custom_table, label: above, weight: 10, region: content, settings: { fields: {  }, hide_empty: true, sort_by: _delta, sort_order: asc, hide_header: false }, third_party_settings: {  } }
         - name: field_reference_title
-          options: { type: string, label: inline, weight: 11, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+          options: { type: string, label: inline, weight: 11, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }
         - name: field_page_number
-          options: { type: string, label: inline, weight: 12, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+          options: { type: string, label: inline, weight: 12, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }
         - name: field_page_url
           options: { type: link, label: inline, weight: 13, region: content, settings: { trim_length: 80, url_only: false, url_plain: false, rel: '', target: _blank }, third_party_settings: {  } }
         - name: field_term_description
           options: { type: text_default, label: above, weight: 20, region: content, settings: {  }, third_party_settings: {  } }
         - name: field_guid
-          options: { type: string, label: inline, weight: 30, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+          options: { type: string, label: inline, weight: 30, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }
