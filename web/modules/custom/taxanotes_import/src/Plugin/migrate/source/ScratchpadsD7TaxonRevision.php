@@ -25,7 +25,17 @@ use Drupal\migrate\Row;
  *   reference and page URL as the taxon source, read from the revision
  *   tables, one row per field and revision even when the revision holds a
  *   row per language (ScratchpadsD7Base::joinFieldTable()); unit names are
- *   trimmed here (not in the pipeline) so NULL stays NULL;
+ *   trimmed here (not in the pipeline) so NULL stays NULL. For the current
+ *   revision (is_current) every one of these values, the name, description
+ *   and vernacular names included, is taken from the *current* tables
+ *   (taxonomy_term_data, field_data_*) instead of the revision tables: a
+ *   Scratchpads term can be saved without a new revision (an import, a
+ *   drag-and-drop, a bulk edit), after which field_data_* holds a newer
+ *   value than the current revision's field_revision_* row and the D7 site
+ *   renders field_data_*. The default revision this row becomes therefore
+ *   carries exactly what the taxon source wrote and what Scratchpads shows
+ *   (Mormyrids has 4 such terms; the weight is treated the same way, see
+ *   below);
  * - page_url_item: the protologue page URL as one link item {uri, title},
  *   NULL when the revision has no URL. The migration maps this whole item
  *   rather than `field_page_url/uri`: a NULL sub-property does not clear the
@@ -66,6 +76,23 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
   protected ?array $vernacular = NULL;
 
   /**
+   * The current values of every term (name, fields, vernacular names), once.
+   *
+   * @var array<int, array<string, mixed>>|null
+   */
+  protected ?array $live = NULL;
+
+  /**
+   * Source properties the current revision takes from the current tables.
+   */
+  protected const LIVE_PROPERTIES = [
+    'name', 'description', 'format',
+    'accepted_tid', 'accepted_name', 'accepted_guid',
+    'reference_nid', 'reference_title', 'reference_guid',
+    'page_url', 'page_url_title',
+  ];
+
+  /**
    * {@inheritdoc}
    */
   public function checkRequirements() {
@@ -80,8 +107,6 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
    * {@inheritdoc}
    */
   public function query() {
-    $schema = $this->getDatabase()->schema();
-
     $query = $this->select('taxonomy_term_data_revision', 'r')
       ->fields('r', ['revision_id', 'tid', 'log', 'timestamp', 'uid', 'name', 'description', 'format', 'weight'])
       ->distinct()
@@ -101,42 +126,9 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $query->leftJoin($latest, 'latest', '[latest].[tid] = [r].[tid]');
     $query->addField('latest', 'term_changed', 'term_changed');
 
-    // Scalar ITIS fields from the revision tables.
-    foreach (static::SCALAR_FIELDS as $alias => $field_name) {
-      $table = 'field_revision_' . $field_name;
-      if (!$schema->tableExists($table)) {
-        continue;
-      }
-      $this->joinFieldTable($query, $field_name, $alias, 'r', TRUE);
-      $query->addField($alias, $field_name . '_value', $alias);
-    }
-
-    // Associated accepted name (field_aan_<vid>), as of that revision.
-    $aan_field = $this->acceptedNameField();
-    if ($aan_field && $schema->tableExists('field_revision_' . $aan_field)) {
-      $column = $aan_field . '_tid';
-      $this->joinFieldTable($query, $aan_field, 'aan', 'r', TRUE);
-      $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
-      $query->addField('aan', $column, 'accepted_tid');
-      $query->addField('tda', 'name', 'accepted_name');
-      $this->addGuid($query, 'tda', 'accepted_guid');
-    }
-
-    // Protologue reference (node_reference to a biblio node).
-    if ($schema->tableExists('field_revision_field_reference')) {
-      $this->joinFieldTable($query, 'field_reference', 'ref', 'r', TRUE);
-      $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
-      $query->addField('ref', 'field_reference_nid', 'reference_nid');
-      $query->addField('refn', 'title', 'reference_title');
-      $query->addField('refn', 'uuid', 'reference_guid');
-    }
-
-    // Page URL (link field).
-    if ($schema->tableExists('field_revision_field_page_url')) {
-      $this->joinFieldTable($query, 'field_page_url', 'purl', 'r', TRUE);
-      $query->addField('purl', 'field_page_url_url', 'page_url');
-      $query->addField('purl', 'field_page_url_title', 'page_url_title');
-    }
+    // Scalar ITIS fields, accepted name, protologue reference and page URL
+    // as of that revision (field_revision_*; shared with the taxon source).
+    $this->joinItisFields($query, 'r', TRUE);
 
     return $query;
   }
@@ -192,6 +184,16 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $is_current = (int) $row->getSourceProperty('is_current');
     $row->setSourceProperty('is_current', $is_current);
     $row->setSourceProperty('vernacular', $this->vernacularNames()[$revision_id] ?? []);
+    if ($is_current) {
+      // The current revision carries what the D7 site renders now (see the
+      // class comment): every revisioned value from the current tables.
+      $live = $this->liveValues()[(int) $row->getSourceProperty('tid')] ?? NULL;
+      if ($live !== NULL) {
+        foreach ($live as $property => $value) {
+          $row->setSourceProperty($property, $value);
+        }
+      }
+    }
     $url = $row->getSourceProperty('page_url');
     $row->setSourceProperty('page_url_item', is_string($url) && $url !== '' ? [
       'uri' => $url,
@@ -224,46 +226,44 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
 
   /**
    * Loads the vernacular-name items of every term revision, once.
-   *
-   * The collection field's revision row stores the field_collection_item id
-   * and its revision id; the item's own field values live in the
-   * field_revision_* tables of the field_collection_item entity type.
    */
   protected function vernacularNames(): array {
-    if ($this->vernacular !== NULL) {
-      return $this->vernacular;
-    }
-    $this->vernacular = [];
-    $schema = $this->getDatabase()->schema();
-    if (!$schema->tableExists('field_revision_field_vernacular_name_collection')) {
-      return $this->vernacular;
-    }
-    $query = $this->select('field_revision_field_vernacular_name_collection', 'c')
-      ->fields('c', ['revision_id', 'delta'])
-      ->condition('c.entity_type', 'taxonomy_term')
-      ->condition('c.deleted', 0)
-      ->orderBy('c.revision_id')
-      ->orderBy('c.delta');
-    if (!empty($this->configuration['bundle'])) {
-      $query->condition('c.bundle', (array) $this->configuration['bundle'], 'IN');
-    }
-    // One row per sub-field and item revision, whatever languages it holds
-    // (see joinFieldTable()).
-    foreach (static::VERNACULAR_FIELDS as $alias => $field_name) {
-      if ($schema->tableExists('field_revision_' . $field_name)) {
-        $this->joinFieldTable($query, $field_name, $alias, 'c', TRUE, 'field_collection_item', 'field_vernacular_name_collection_value', 'field_vernacular_name_collection_revision_id');
-        $query->addField($alias, $field_name . '_value', $alias);
-      }
-    }
-    foreach ($query->execute()->fetchAll() as $record) {
-      $this->vernacular[(int) $record['revision_id']][] = [
-        'name' => $record['name'] ?? NULL,
-        'language' => $record['language'] ?? NULL,
-        'area' => $record['area'] ?? NULL,
-        'remarks' => $record['remarks'] ?? NULL,
-      ];
+    if ($this->vernacular === NULL) {
+      $this->vernacular = $this->loadVernacularNames(TRUE);
     }
     return $this->vernacular;
+  }
+
+  /**
+   * Loads the current values of every term of the vocabulary, once.
+   *
+   * One query over taxonomy_term_data with the same field joins as the taxon
+   * source (field_data_*), plus the current vernacular names; keyed by tid.
+   * Only properties the revision query also yields are kept, so the row of
+   * the current revision has the same property set as every other row.
+   *
+   * @return array<int, array<string, mixed>>
+   *   The current source properties of each term, keyed by tid.
+   */
+  protected function liveValues(): array {
+    if ($this->live !== NULL) {
+      return $this->live;
+    }
+    $this->live = [];
+    $query = $this->select('taxonomy_term_data', 'td')
+      ->fields('td', ['tid', 'name', 'description', 'format']);
+    $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
+    $this->addBundleCondition($query);
+    $this->joinItisFields($query, 'td');
+    $keep = array_merge(static::LIVE_PROPERTIES, array_keys(static::SCALAR_FIELDS));
+    $vernacular = $this->loadVernacularNames(FALSE);
+    foreach ($query->execute()->fetchAll() as $record) {
+      $tid = (int) $record['tid'];
+      $values = array_intersect_key($record, array_flip($keep));
+      $values['vernacular'] = $vernacular[$tid] ?? [];
+      $this->live[$tid] = $values;
+    }
+    return $this->live;
   }
 
 }

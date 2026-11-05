@@ -111,7 +111,7 @@ final class ScratchpadsD7User extends SqlBase {
       'pass' => $this->t('Password hash (phpass)'),
       'mail' => $this->t('Email address'),
       'created' => $this->t('Registered on'),
-      'changed' => $this->t('Last changed (Scratchpads column)'),
+      'changed' => $this->t('Last changed (Scratchpads column; the registration time when 0 or absent)'),
       'access' => $this->t('Last access'),
       'login' => $this->t('Last login'),
       'status' => $this->t('Status (0 blocked, 1 active)'),
@@ -140,6 +140,12 @@ final class ScratchpadsD7User extends SqlBase {
   public function prepareRow(Row $row) {
     $uid = (int) $row->getSourceProperty('uid');
     $row->setSourceProperty('roles', array_map(fn(string $name) => ['name' => $name], $this->roleNames()[$uid] ?? []));
+    // An account never changed since registration has changed = 0 in D7 (or
+    // no column at all); core would stamp an empty value with the import
+    // time, so the registration time is used instead.
+    if (!(int) $row->getSourceProperty('changed')) {
+      $row->setSourceProperty('changed', $row->getSourceProperty('created'));
+    }
     return parent::prepareRow($row);
   }
 

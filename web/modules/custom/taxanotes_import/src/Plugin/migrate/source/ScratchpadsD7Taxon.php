@@ -163,49 +163,10 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
       $query->addField('rev', 'changed', 'changed');
     }
 
-    // Scalar ITIS fields: one LEFT JOIN each on the field data table.
-    foreach (static::SCALAR_FIELDS as $alias => $field_name) {
-      $table = 'field_data_' . $field_name;
-      if (!$schema->tableExists($table)) {
-        continue;
-      }
-      $this->joinFieldTable($query, $field_name, $alias, 'td');
-      $query->addField($alias, $field_name . '_value', $alias);
-    }
-
-    // Associated accepted name: a term reference whose field name carries the
-    // vocabulary id (field_aan_<vid>). Resolve it by vocabulary at query time.
-    $aan_field = $this->acceptedNameField();
-    if ($aan_field) {
-      $column = $aan_field . '_tid';
-      $this->joinFieldTable($query, $aan_field, 'aan', 'td');
-      $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
-      $query->addField('aan', $column, 'accepted_tid');
-      $query->addField('tda', 'name', 'accepted_name');
-      if ($has_feeds) {
-        $query->leftJoin('feeds_item', 'fia', "[fia].[entity_type] = 'taxonomy_term' AND [fia].[entity_id] = [tda].[tid]");
-        $query->addExpression($this->guidExpression('fia', 'tda', $has_uuid), 'accepted_guid');
-      }
-      else {
-        $query->addExpression('[tda].[uuid]', 'accepted_guid');
-      }
-    }
-
-    // Protologue reference (node_reference to a biblio node).
-    if ($schema->tableExists('field_data_field_reference')) {
-      $this->joinFieldTable($query, 'field_reference', 'ref', 'td');
-      $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
-      $query->addField('ref', 'field_reference_nid', 'reference_nid');
-      $query->addField('refn', 'title', 'reference_title');
-      $query->addField('refn', 'uuid', 'reference_guid');
-    }
-
-    // Page URL (link field).
-    if ($schema->tableExists('field_data_field_page_url')) {
-      $this->joinFieldTable($query, 'field_page_url', 'purl', 'td');
-      $query->addField('purl', 'field_page_url_url', 'page_url');
-      $query->addField('purl', 'field_page_url_title', 'page_url_title');
-    }
+    // Scalar ITIS fields, accepted name, protologue reference and page URL,
+    // one LEFT JOIN each on the field data tables (shared with the revision
+    // source).
+    $this->joinItisFields($query, 'td');
 
     return $query;
   }
@@ -355,39 +316,8 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
    * Loads every vernacular-name collection item of the vocabulary, once.
    */
   protected function vernacularNames(): array {
-    if ($this->vernacular !== NULL) {
-      return $this->vernacular;
-    }
-    $this->vernacular = [];
-    $schema = $this->getDatabase()->schema();
-    if (!$schema->tableExists('field_data_field_vernacular_name_collection')) {
-      return $this->vernacular;
-    }
-    // $this->select() fetches associative arrays (SqlBase sets the fetch mode).
-    $query = $this->select('field_data_field_vernacular_name_collection', 'c')
-      ->fields('c', ['entity_id', 'delta'])
-      ->condition('c.entity_type', 'taxonomy_term')
-      ->condition('c.deleted', 0)
-      ->orderBy('c.entity_id')
-      ->orderBy('c.delta');
-    if (!empty($this->configuration['bundle'])) {
-      $query->condition('c.bundle', (array) $this->configuration['bundle'], 'IN');
-    }
-    // One row per sub-field and item, whatever languages it holds (see
-    // joinFieldTable()).
-    foreach (static::VERNACULAR_FIELDS as $alias => $field_name) {
-      if ($schema->tableExists('field_data_' . $field_name)) {
-        $this->joinFieldTable($query, $field_name, $alias, 'c', FALSE, 'field_collection_item', 'field_vernacular_name_collection_value');
-        $query->addField($alias, $field_name . '_value', $alias);
-      }
-    }
-    foreach ($query->execute()->fetchAll() as $record) {
-      $this->vernacular[(int) $record['entity_id']][] = [
-        'name' => $record['name'] ?? NULL,
-        'language' => $record['language'] ?? NULL,
-        'area' => $record['area'] ?? NULL,
-        'remarks' => $record['remarks'] ?? NULL,
-      ];
+    if ($this->vernacular === NULL) {
+      $this->vernacular = $this->loadVernacularNames(FALSE);
     }
     return $this->vernacular;
   }

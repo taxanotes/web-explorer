@@ -30,15 +30,25 @@ process:
   is_default_revision: is_current
   revision_timestamp: timestamp
   revision_log: log
+  # The revision author: the migrated account; D7 uid 0 (a revision saved by
+  # an anonymous process, e.g. an import) stays anonymous; D7 uid 1 (the site
+  # owner, never migrated) and deleted accounts become the local admin.
+  _revision_uid_lookup:
+    plugin: migration_lookup
+    migration: taxanotes_d7_user
+    source: uid
+    no_stub: true
+  _revision_uid_fallback:
+    plugin: static_map
+    source: uid
+    map:
+      0: 0
+    default_value: 1
   revision_uid:
-    -
-      plugin: migration_lookup
-      migration: taxanotes_d7_user
-      source: uid
-      no_stub: true
-    -
-      plugin: default_value
-      default_value: 1
+    plugin: null_coalesce
+    source:
+      - '@_revision_uid_lookup'
+      - '@_revision_uid_fallback'
   # The revision's own timestamp; for the current revision the term's latest
   # revision timestamp, which is what taxanotes_d7_taxon writes (see the
   # source plugin), so both migrations agree on the default revision.

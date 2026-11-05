@@ -72,7 +72,9 @@ local administrator; core's `entity:user` destination would keep its
 password but replace its name, mail and roles with the D7 site owner's);
 `include_root: true` in the source configuration migrates it anyway. D7 uid
 1's revisions map to uid 1 through the fallback in the revision migration.
-Passwords are the D7 `$S$` hashes, stored pre-hashed; core's Password
+An account whose D7 `changed` is 0 (never changed since registration, or a
+dump without the column) gets its `created` time as `changed`; core would
+otherwise stamp the import time. Passwords are the D7 `$S$` hashes, stored pre-hashed; core's Password
 Compatibility (`phpass`) module, part of Drupal 11 core and installed by the
 standard profile, verifies them on login, after which core re-hashes with
 the current algorithm. Roles: `maintainer` and `administrator` ->
@@ -103,7 +105,17 @@ D7 timestamp, author and log, and the current field values do not change.
 Fields D7 does not revision (GUID, legacy tid, parent, weight, status,
 author) keep the node's current value in every revision (the weight column
 of the D7 revision rows is always 0: sibling order is set by drag-and-drop
-without a revision). Rolling the revision migration
+without a revision). For the same reason the **current** revision's values
+(name, description, every ITIS field, accepted name, reference, page URL,
+vernacular names) are read from the current tables (`taxonomy_term_data`,
+`field_data_*`), not from its `field_revision_*` rows: a Scratchpads term can
+be saved without a new revision, after which `field_data_*` is newer than the
+current revision's row and is what the D7 site renders (4 Mormyrids terms;
+none on Myriatrix). The default revision therefore always carries what
+`taxanotes_d7_taxon` imported, and both migrations hash the same values.
+Revision authors: a migrated account keeps its uid; D7 uid 0 (anonymous, e.g.
+an import process) stays uid 0; D7 uid 1 and deleted accounts become the
+local administrator (uid 1). Rolling the revision migration
 back deletes the non-default revisions; the default revision cannot be
 deleted, so its log is reset to "Scratchpads revision history rolled back",
 which the next import replaces again. Run it after both taxon passes (it

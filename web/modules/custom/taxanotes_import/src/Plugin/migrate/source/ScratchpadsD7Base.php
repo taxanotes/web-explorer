@@ -145,6 +145,15 @@ abstract class ScratchpadsD7Base extends SqlBase {
    * path). The choice is a derived table grouped per entity (and revision),
    * so the main query stays one set-based statement.
    *
+   * "The term's own language" is taxonomy_term_data.language as it is now,
+   * also for the revision tables (the revision table carries no language of
+   * its own): a historic revision is ranked by the term's current language,
+   * not by whatever language the term had when that revision was saved. The
+   * two differ only for a term whose language changed between revisions and
+   * whose fields hold rows in several languages with different values; no
+   * term of the two pilot vocabularies does, and the current revision takes
+   * its values from the data tables anyway (ScratchpadsD7TaxonRevision).
+   *
    * @param \Drupal\Core\Database\Query\SelectInterface $query
    *   The query; $entity_alias must be taxonomy_term_data (or, for revisions,
    *   taxonomy_term_data_revision) with the columns tid and revision_id.
@@ -196,6 +205,116 @@ abstract class ScratchpadsD7Base extends SqlBase {
     }
     $query->leftJoin($best, $best_alias, $on);
     $query->leftJoin($table, $alias, $join);
+  }
+
+  /**
+   * Joins the ITIS fields of a term (or term revision) into a query.
+   *
+   * Adds, each only when its D7 table exists and one row per entity
+   * (joinFieldTable()): the scalar fields of SCALAR_FIELDS as source
+   * properties named after their alias; the associated accepted name
+   * (accepted_tid, accepted_name, accepted_guid); the protologue reference
+   * (reference_nid, reference_title, reference_guid); the page URL (page_url,
+   * page_url_title). Both sources read the same property set through this
+   * method: the taxon source from the field_data_* tables, the revision
+   * source from field_revision_* for the history and from field_data_* for
+   * the current revision (what the D7 site renders).
+   *
+   * @param \Drupal\Core\Database\Query\SelectInterface $query
+   *   The query; $entity_alias must be taxonomy_term_data (or
+   *   taxonomy_term_data_revision) with the columns tid and revision_id.
+   * @param string $entity_alias
+   *   Alias of the term (or term revision) table.
+   * @param bool $revision
+   *   TRUE to read the field_revision_* tables on (tid, revision_id).
+   */
+  protected function joinItisFields(SelectInterface $query, string $entity_alias, bool $revision = FALSE): void {
+    $schema = $this->getDatabase()->schema();
+    $prefix = $revision ? 'field_revision_' : 'field_data_';
+    foreach (static::SCALAR_FIELDS as $alias => $field_name) {
+      if (!$schema->tableExists($prefix . $field_name)) {
+        continue;
+      }
+      $this->joinFieldTable($query, $field_name, $alias, $entity_alias, $revision);
+      $query->addField($alias, $field_name . '_value', $alias);
+    }
+    // Associated accepted name: a term reference whose field name carries
+    // the vocabulary id (field_aan_<vid>), resolved by vocabulary.
+    $aan_field = $this->acceptedNameField();
+    if ($aan_field && $schema->tableExists($prefix . $aan_field)) {
+      $column = $aan_field . '_tid';
+      $this->joinFieldTable($query, $aan_field, 'aan', $entity_alias, $revision);
+      $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
+      $query->addField('aan', $column, 'accepted_tid');
+      $query->addField('tda', 'name', 'accepted_name');
+      $this->addGuid($query, 'tda', 'accepted_guid');
+    }
+    // Protologue reference (node_reference to a biblio node).
+    if ($schema->tableExists($prefix . 'field_reference')) {
+      $this->joinFieldTable($query, 'field_reference', 'ref', $entity_alias, $revision);
+      $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
+      $query->addField('ref', 'field_reference_nid', 'reference_nid');
+      $query->addField('refn', 'title', 'reference_title');
+      $query->addField('refn', 'uuid', 'reference_guid');
+    }
+    // Page URL (link field).
+    if ($schema->tableExists($prefix . 'field_page_url')) {
+      $this->joinFieldTable($query, 'field_page_url', 'purl', $entity_alias, $revision);
+      $query->addField('purl', 'field_page_url_url', 'page_url');
+      $query->addField('purl', 'field_page_url_title', 'page_url_title');
+    }
+  }
+
+  /**
+   * Loads the vernacular-name collection items of the vocabulary.
+   *
+   * The collection field row stores the field_collection_item id (and, in
+   * the revision table, the item revision id); the item's own values live in
+   * the field tables of the field_collection_item entity type, one row per
+   * sub-field and item whatever languages it holds (joinFieldTable()).
+   *
+   * @param bool $revision
+   *   FALSE for the current items (field_data_*, keyed by term id), TRUE for
+   *   the items of every term revision (field_revision_*, keyed by term
+   *   revision id).
+   *
+   * @return array<int, array<int, array<string, string|null>>>
+   *   Items (name, language, area, remarks) in delta order, keyed by term id
+   *   or term revision id.
+   */
+  protected function loadVernacularNames(bool $revision): array {
+    $items = [];
+    $schema = $this->getDatabase()->schema();
+    $prefix = $revision ? 'field_revision_' : 'field_data_';
+    if (!$schema->tableExists($prefix . 'field_vernacular_name_collection')) {
+      return $items;
+    }
+    $key = $revision ? 'revision_id' : 'entity_id';
+    // $this->select() fetches associative arrays (SqlBase sets the fetch mode).
+    $query = $this->select($prefix . 'field_vernacular_name_collection', 'c')
+      ->fields('c', [$key, 'delta'])
+      ->condition('c.entity_type', 'taxonomy_term')
+      ->condition('c.deleted', 0)
+      ->orderBy('c.' . $key)
+      ->orderBy('c.delta');
+    if (!empty($this->configuration['bundle'])) {
+      $query->condition('c.bundle', (array) $this->configuration['bundle'], 'IN');
+    }
+    foreach (static::VERNACULAR_FIELDS as $alias => $field_name) {
+      if ($schema->tableExists($prefix . $field_name)) {
+        $this->joinFieldTable($query, $field_name, $alias, 'c', $revision, 'field_collection_item', 'field_vernacular_name_collection_value', 'field_vernacular_name_collection_revision_id');
+        $query->addField($alias, $field_name . '_value', $alias);
+      }
+    }
+    foreach ($query->execute()->fetchAll() as $record) {
+      $items[(int) $record[$key]][] = [
+        'name' => $record['name'] ?? NULL,
+        'language' => $record['language'] ?? NULL,
+        'area' => $record['area'] ?? NULL,
+        'remarks' => $record['remarks'] ?? NULL,
+      ];
+    }
+    return $items;
   }
 
   /**
