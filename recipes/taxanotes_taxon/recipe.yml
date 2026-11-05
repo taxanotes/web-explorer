@@ -51,3 +51,53 @@ config:
       - system.action.node_publish_action
       - system.action.node_save_action
       - system.action.node_unpublish_action
+  # The taxon page reads like the Scratchpads taxon page: authors under the
+  # name, rank, status, parent, vernacular names, the protologue, the
+  # description. config/ seeds a fresh site; these actions bring an existing
+  # instance's display to the same order on every apply (display only, no
+  # fields).
+  actions:
+    core.entity_view_display.node.taxon.default:
+      hideComponents:
+        - field_accepted_guid
+        - field_accepted_tid
+        - field_legacy_tid
+        - field_parent_guid
+        - field_parent_term_name
+        - field_reference_guid
+        - field_reference_nid
+        - field_unit_indicator_1
+        - field_unit_indicator_2
+        - field_unit_indicator_3
+        - field_unit_indicator_4
+        - field_unit_name_1
+        - field_unit_name_2
+        - field_unit_name_3
+        - field_unit_name_4
+        - field_weight
+        - links
+      setComponents:
+        - name: field_authors
+          options: { type: string, label: hidden, weight: 0, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: field_rank
+          options: { type: list_default, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_usage
+          options: { type: list_default, label: inline, weight: 2, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_unacceptability_reason
+          options: { type: list_default, label: inline, weight: 3, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_accepted_name
+          options: { type: entity_reference_label, label: inline, weight: 4, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_parent_taxon_reference
+          options: { type: entity_reference_label, label: inline, weight: 5, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_vernacular_names
+          options: { type: custom_table, label: above, weight: 10, region: content, settings: { fields: {  }, hide_empty: false }, third_party_settings: {  } }
+        - name: field_reference_title
+          options: { type: string, label: inline, weight: 11, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: field_page_number
+          options: { type: string, label: inline, weight: 12, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: field_page_url
+          options: { type: link, label: inline, weight: 13, region: content, settings: { trim_length: 80, url_only: false, url_plain: false, rel: '', target: _blank }, third_party_settings: {  } }
+        - name: field_term_description
+          options: { type: text_default, label: above, weight: 20, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_guid
+          options: { type: string, label: inline, weight: 30, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }

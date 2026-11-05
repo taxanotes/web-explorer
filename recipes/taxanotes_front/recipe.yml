@@ -1,0 +1,192 @@
+name: 'Taxanotes front page'
+description: 'Gives a Taxanotes instance its public face in the spirit of the Scratchpads front page: a front page with a welcome text (/front), a taxon search, the classification tree and the instance in numbers in the sidebar, recently added and recently updated taxa below, a footer text, a placeholder About page (/about) and the main menu (Home, Taxa, Classification, About); and the taxon page blocks (link into the tree, child taxa). Applies taxanotes_base first. The texts are recipe inputs that scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing here names an instance. Re-applying changes nothing that is already in place (blocks are created only when missing, the views are left alone once they exist) except the texts, which follow instance.yml.'
+type: 'Site'
+recipes:
+  - taxanotes_base
+install:
+  - block
+  - views
+  - taxanotes_front
+input:
+  front_title:
+    data_type: string
+    description: 'The front page title; empty means "Welcome to <site name>".'
+    form:
+      '#type': textfield
+      '#title': 'Front page title'
+    default:
+      source: config
+      config: ['taxanotes_front.settings', 'front_title']
+      fallback: ''
+  front_intro:
+    data_type: string
+    description: 'The front page introduction (HTML).'
+    form:
+      '#type': textarea
+      '#title': 'Front page introduction'
+    default:
+      source: config
+      config: ['taxanotes_front.settings', 'front_intro']
+      fallback: '<p>This site is a collaborative taxonomic database: a classification you can browse, a page for every name, and the literature behind each description.</p>'
+  about_body:
+    data_type: string
+    description: 'The About page body (HTML).'
+    form:
+      '#type': textarea
+      '#title': 'About page'
+    default:
+      source: config
+      config: ['taxanotes_front.settings', 'about_body']
+      fallback: '<p>This site runs on Taxanotes, an open platform for taxonomic websites that carries on from the Scratchpads. Each name in the classification has its own page with its rank, status, parent and synonyms, vernacular names and the reference that published it.</p>'
+  footer_text:
+    data_type: string
+    description: 'The footer text (HTML): licence, credits.'
+    form:
+      '#type': textarea
+      '#title': 'Footer text'
+    default:
+      source: config
+      config: ['taxanotes_front.settings', 'footer_text']
+      fallback: '<p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>.</p>'
+config:
+  # The views are a starting point an instance may tailor: once they exist
+  # they are left alone.
+  strict: false
+  actions:
+    taxanotes_front.settings:
+      simpleConfigUpdate:
+        front_title: ${front_title}
+        front_intro: ${front_intro}
+        about_body: ${about_body}
+        footer_text: ${footer_text}
+    system.site:
+      simpleConfigUpdate:
+        page.front: /front
+    # Front page blocks (default theme; Olivero regions, "content" elsewhere).
+    # placeBlockInDefaultTheme creates a block only when it does not exist.
+    block.block.taxanotes_front_search:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_search
+        region:
+          olivero: sidebar
+        default_region: content
+        weight: -10
+        settings:
+          id: taxanotes_front_search
+          label: 'Find a taxon'
+          label_display: visible
+          provider: taxanotes_front
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_tree:
+      placeBlockInDefaultTheme:
+        plugin: block-node-tree-hierarchicaltaxontree
+        region:
+          olivero: sidebar
+        default_region: content
+        weight: -5
+        settings:
+          id: block-node-tree-hierarchicaltaxontree
+          label: 'Browse the classification'
+          label_display: visible
+          provider: node_tree
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_summary:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_summary
+        region:
+          olivero: sidebar
+        default_region: content
+        weight: 0
+        settings:
+          id: taxanotes_front_summary
+          label: 'In numbers'
+          label_display: visible
+          provider: taxanotes_front
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_recent_added:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_recent-added'
+        region:
+          olivero: content_below
+        default_region: content
+        weight: 0
+        settings:
+          id: 'views_block:taxanotes_recent-added'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_recent_updated:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_recent-updated'
+        region:
+          olivero: content_below
+        default_region: content
+        weight: 1
+        settings:
+          id: 'views_block:taxanotes_recent-updated'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_footer_text:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_text
+        region:
+          olivero: footer_top
+        default_region: content
+        weight: 0
+        settings:
+          id: taxanotes_front_text
+          label: 'Licence'
+          label_display: '0'
+          provider: taxanotes_front
+          text_key: footer_text
+    # Taxon page: the classification block (tree link, child taxa) under the
+    # taxon's fields.
+    block.block.taxanotes_taxon_classification:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_taxon_page-children'
+        region:
+          olivero: content
+        default_region: content
+        weight: 10
+        settings:
+          id: 'views_block:taxanotes_taxon_page-children'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
