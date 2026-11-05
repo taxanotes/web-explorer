@@ -101,23 +101,24 @@ final class RecentColumnsBlock extends BlockBase implements ContainerFactoryPlug
     $limit = max(1, (int) $this->configuration['items']);
     $types = $this->entityTypeManager->getStorage('node_type');
 
-    // First column: the configured type, else page (the Scratchpads default).
+    // First column: the configured type, else page (the Scratchpads
+    // default). An instance without that type (none of the pilots has pages
+    // yet) still gets the column, empty.
     $type = (string) $this->configuration['node_type'];
     if ($type === '' || !$types->load($type)) {
       $type = 'page';
     }
     $columns = [];
-    if ($type_entity = $types->load($type)) {
-      $label = (string) $type_entity->label();
-      // "Basic page" is what the Standard profile calls it; "Recent Pages"
-      // is what the Scratchpads front page said.
-      $label = $label === 'Basic page' ? 'Page' : $label;
-      $columns[] = [
-        'heading' => $this->t('Recent @types', ['@type' => $label]),
-        'items' => $this->nodeItems($type, $limit, $metadata, TRUE),
-      ];
-      $metadata->addCacheTags(['node_list:' . $type]);
-    }
+    $type_entity = $types->load($type);
+    // "Basic page" is what the Standard profile calls it; "Recent Pages"
+    // is what the Scratchpads front page said.
+    $label = $type_entity ? (string) $type_entity->label() : 'Page';
+    $label = $label === 'Basic page' ? 'Page' : $label;
+    $columns[] = [
+      'heading' => $this->t('Recent @types', ['@type' => $label]),
+      'items' => $type_entity ? $this->nodeItems($type, $limit, $metadata, TRUE) : [],
+    ];
+    $metadata->addCacheTags(['node_list:' . $type, 'config:node_type_list']);
 
     // Second column: the literature (bibcite references).
     if ($this->entityTypeManager->hasDefinition('bibcite_reference')) {

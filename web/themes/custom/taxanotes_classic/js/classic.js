@@ -118,6 +118,19 @@
       if (!document.body.classList.contains('page-node-type-taxon')) {
         return;
       }
+      // The authors after the name, as the Scratchpads page title had them.
+      once('taxanotes-classic-subtitle', '.node--type-taxon .field--name-field-authors', context).forEach(function (authors) {
+        var title = document.querySelector('#region-content h1.page-title');
+        var text = authors.textContent.trim();
+        if (title && text) {
+          var span = document.createElement('span');
+          span.className = 'subtitle';
+          span.textContent = text;
+          title.appendChild(document.createTextNode(' '));
+          title.appendChild(span);
+          authors.remove();
+        }
+      });
       once('taxanotes-classic-tabs', '#region-content .region-content', context).forEach(function (region) {
         var blocks = Array.prototype.slice.call(region.children).filter(function (el) {
           return el.classList.contains('block');

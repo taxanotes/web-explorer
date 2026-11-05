@@ -94,12 +94,19 @@
   overflow-wrap: break-word;
 }
 
-.layout-content .view-content, .layout-content .bibcite-reference {
+.layout-content .view-content, .layout-content .bibcite-reference-table {
   overflow-x: auto;
 }
 
-.layout-content .bibcite-reference td {
+.layout-content .bibcite-reference-table td {
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 739px) {
+  .bibcite-reference-table table td:first-child {
+    width: auto;
+    text-align: left;
+  }
 }
 
 /* The literature table: the biblio table gave the authors a fixed column. */

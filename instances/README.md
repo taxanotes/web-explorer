@@ -35,7 +35,8 @@ database in the ddev db container, installs Drupal, sets the themes, applies
 type, the roles, the literature (bibcite references linked to taxa, the
 Literature page and blocks), the tree, the import module, the site identity,
 then the front page, the About page, the main menu and the taxon page
-blocks), installs the logo, runs the eleven `taxanotes_import` migrations
+blocks), sets the themes and applies the theme's own recipe when it has one
+(`recipes/taxanotes_classic`, see "The classic view"), installs the logo, runs the eleven `taxanotes_import` migrations
 (taxa, then literature, then the images and the species pages) when `.env`
 names a Scratchpads database, rebuilds caches and prints the URL. A second run on the same instance changes
 nothing that is already in place: blocks and views are created only when
@@ -67,7 +68,10 @@ slug: mormyrids                    # directory name under instances/; default fo
 site:
   name: 'Mormyridae - …'           # system.site:name (recipe input taxanotes_base.site_name)
   slogan: '…'                      # system.site:slogan (may be empty)
-  theme: olivero                   # default theme (enabled and set by the script)
+  theme: taxanotes_classic         # default theme (enabled and set by the script): the
+                                   # classic view, or olivero (the alternative)
+  colour: '047DB8'                 # accent colour of the classic view, six hex digits (the
+                                   # Drupal 7 site's scratchpads_colour); default 047DB8
   admin_theme: claro               # administration theme
   # Site texts (HTML), recipe inputs of taxanotes_front -> taxanotes_front.settings,
   # editable afterwards at /admin/config/system/taxanotes-front. Each is
@@ -213,8 +217,39 @@ instance's values:
 | front page, below | *Recently added literature* beside the recent taxa | block `views_block:taxanotes_literature-recent` |
 
 Blocks are placed in the instance's default theme (`site.theme`); the
-regions above are Olivero's, any other theme gets them in `content`. Pages,
+regions above are Olivero's, the classic theme's are named alike. Pages,
 media and biographies have no blocks yet: they come with their migrations.
+
+## The classic view
+
+`site.theme: taxanotes_classic` (the three pilots) gives the instance the
+Scratchpads (Drupal 7) front end: `web/themes/custom/taxanotes_classic`, a
+theme of its own (no base theme, the Starterkit template set, the
+Scratchpads GPL-2 stylesheets ported), plus `recipes/taxanotes_classic`,
+which the scripts apply after `taxanotes_front` whenever
+`recipes/<site.theme>/recipe.yml` exists. The script sets the themes
+**after** the front recipe: the recipe places its blocks in the default
+theme of the moment (Olivero on a fresh install), and installing another
+theme copies those blocks into it (`block_theme_initialize()`, ids
+`<theme>_<block id>`, regions of the same name), so an instance that moves
+from Olivero to the classic view and one built fresh with it have the same
+blocks, and the Olivero ones stay as they were: `site.theme: olivero`
+still gives the Olivero front page.
+
+| Where (classic) | What | Source |
+|---|---|---|
+| header (accent colour) | logo (60 px) + site name + slogan; the search box with *All / Taxonomy*; the tabbed main menu (stacked behind a *Menu* button on a phone) | branding block; block `taxanotes_front_header_search` → `/find` (Taxonomy: `/taxa?name=`; All: a results page across taxa, literature, species pages, pages) |
+| slide top | the account links (*Log in*) as a tab on the dark strip | account menu block |
+| front page | welcome title + text (4 columns) beside the slideshow (8; the four newest images, thumbnails as a pager; absent without images); then *Recent Pages* / *Recently added literature* / *Recently added taxon descriptions*, three items each, "None yet." when empty | `taxanotes_front.settings`, view `taxanotes_slideshow` (image styles 619×463, 154×115), block `taxanotes_front_recent` (first column's node type a block setting, `page` by default, falls back to page when the type is absent) |
+| taxon page | the name with the authors as a subtitle; tabs *Overview* (the fields as a stripy group, the classification block) / *Descriptions* / *Images* / *Literature*, a tab only where its block has content; the classification tree in the grey sidebar | `js/classic.js` builds the tabs from the content blocks `taxanotes_classic_preprocess_block()` marks; block `taxanotes_classic_taxon_tree` |
+| footer (grey) | the main menu's links inline, the `footer_text` licence line, "Powered by Drupal" | blocks `taxanotes_classic_footer_menu`, `taxanotes_front_text`, `powered` |
+| colour | `site.colour` → recipe input `taxanotes_classic.colour` → `taxanotes_classic.settings:colour` → `--sp-colour` on `:root` and a `scratchpad-colour-<hex>` body class (the Drupal 7 scratchpads_colour module's palette logic: the header, links, headings and block title bars take the colour; the menu tabs and the search button are a 30 % black overlay on it, white when active) | theme setting, editable at `/admin/appearance/settings/taxanotes_classic` |
+
+The Olivero front page blocks (sidebar search, tree and numbers; recent and
+updated taxa; newest images; recent literature and species pages) are
+switched off in the classic theme by the recipe (`setStatus: false` on their
+copies), not deleted: the block layout can turn any of them back on, and
+`css/front.css` lays them out side by side under the columns.
 
 The script never installs over data: Drupal is installed only into an
 **empty** database. A database with tables that does not bootstrap (db

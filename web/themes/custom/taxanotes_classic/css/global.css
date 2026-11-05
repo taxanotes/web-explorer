@@ -621,7 +621,7 @@ table.views-table ul {
 
 /* The reference page (bibcite renders its fields as a table): the label
    column as the biblio table had it. */
-.bibcite-reference table td:first-child {
+.bibcite-reference-table table td:first-child {
   width: 200px;
   text-align: right;
   border-right: 1px solid var(--sp-rule);

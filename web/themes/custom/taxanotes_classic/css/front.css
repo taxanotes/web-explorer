@@ -61,7 +61,20 @@
    (js/classic.js); the image title appears over the image on hover. */
 .taxanotes-slideshow {
   background: #fff;
-  max-width: 619px;
+  max-width: 774px;
+}
+
+/* With the script: the slide (619 px) with the thumbnails in a column at
+   its right (154 px), as the Scratchpads laid them out. */
+.js .taxanotes-slideshow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.js .taxanotes-slideshow .view-content {
+  flex: 0 1 619px;
+  min-width: 0;
 }
 
 .taxanotes-slideshow .views-row {
@@ -110,9 +123,9 @@
 
 .taxanotes-slideshow .slideshow-pager {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  flex: 0 0 154px;
   gap: 1px;
-  margin-top: 1px;
 }
 
 .taxanotes-slideshow .slideshow-pager .views-field-field-media-image-1 {
@@ -141,6 +154,21 @@
   .path-frontpage .layout-content .block-views-blocktaxanotes-slideshow-block {
     grid-column: 1;
     grid-row: 3;
+  }
+
+  .js .taxanotes-slideshow {
+    flex-direction: column;
+  }
+
+  .js .taxanotes-slideshow .view-content {
+    flex-basis: auto;
+  }
+
+  .taxanotes-slideshow .slideshow-pager {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-basis: auto;
+    margin-top: 1px;
   }
 
   .taxanotes-slideshow .slideshow-pager img {
