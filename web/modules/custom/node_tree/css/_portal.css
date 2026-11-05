@@ -9,3 +9,6 @@
 .node-tree-content-column { flex: 1 1 auto; min-width: 0; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
 .node-tree-taxon-title { margin-top: 0; }
 @media (max-width: 800px) { .node-tree-page { flex-direction: column; } .node-tree-column { max-width: 100%; max-height: 50vh; } .node-tree-content-column { position: static; max-height: none; } }
+
+/* The tree block (a sidebar, the front page): scrolls inside itself. */
+.node-tree-block { max-height: 70vh; overflow: auto; }

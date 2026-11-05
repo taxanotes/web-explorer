@@ -30,7 +30,6 @@ final class NodeTreeBlock extends BlockBase
     ];
     */
     return [
-      '#id' => 'abc',
       '#theme' => 'node-tree-hierarchy-tree-block',
       '#attached' => array(
         'library' => array(
