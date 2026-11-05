@@ -24,9 +24,10 @@
  *   their import does not move the taxon checksums;
  * - literature (when the literature recipe is applied and the D7 site has
  *   biblio): the D7 and D11 counts of references, contributors, keywords,
- *   author rows, taxon links, protologue links and attachments, and a
+ *   author rows, taxon links, protologue links and attachments, a
  *   reference-by-reference comparison of title, year, type and authors for
- *   every D7 biblio node;
+ *   every D7 biblio node, and the /literature page rendered as anonymous
+ *   (rows, rows with an author shown, broken field handlers);
  * - species (when the species recipe is applied and the D7 site has spm
  *   nodes): the D7 and D11 counts of species pages and images (with the
  *   rule the image import applies), their taxon links and licences, and a
@@ -35,7 +36,10 @@
  */
 
 use Drupal\Core\Database\Database;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Site\Settings;
+use Drupal\views\Plugin\views\field\Broken;
+use Drupal\views\Views;
 
 $vocab = $extra[0] ?? NULL;
 if (!$vocab) {
@@ -102,15 +106,22 @@ $c['terms without node'] = count(array_diff_key($d7_counts, $d11_counts));
 $c['placeholder revisions left'] = (int) $d11->query("SELECT COUNT(*) FROM {node_revision} WHERE revision_log LIKE 'Migrated from Scratchpads%' OR revision_log LIKE 'Synced from Scratchpads%' OR revision_log LIKE 'Scratchpads revision history rolled back%'")->fetchField();
 // Default revision = the D7 current revision (two databases, so in PHP).
 $current = $d7->query('SELECT tid, revision_id FROM {taxonomy_term_data} WHERE vid = :v', [':v' => $vid])->fetchAllKeyed();
-$map = $d11->query('SELECT sourceid1, destid1 FROM {migrate_map_taxanotes_d7_taxon_revision}')->fetchAllKeyed();
-$default_vid = $d11->query("SELECT l.field_legacy_tid_value, n.vid FROM {node_field_data} n JOIN {node__field_legacy_tid} l ON l.entity_id = n.nid WHERE n.type = 'taxon'")->fetchAllKeyed();
-$ok = 0;
-foreach ($current as $tid => $rid) {
-  if (isset($map[$rid], $default_vid[$tid]) && (int) $map[$rid] === (int) $default_vid[$tid]) {
-    $ok++;
+// A partial build (the revision migration not run yet) has no map table:
+// reported, not fatal.
+if ($d11->schema()->tableExists('migrate_map_taxanotes_d7_taxon_revision')) {
+  $map = $d11->query('SELECT sourceid1, destid1 FROM {migrate_map_taxanotes_d7_taxon_revision}')->fetchAllKeyed();
+  $default_vid = $d11->query("SELECT l.field_legacy_tid_value, n.vid FROM {node_field_data} n JOIN {node__field_legacy_tid} l ON l.entity_id = n.nid WHERE n.type = 'taxon'")->fetchAllKeyed();
+  $ok = 0;
+  foreach ($current as $tid => $rid) {
+    if (isset($map[$rid], $default_vid[$tid]) && (int) $map[$rid] === (int) $default_vid[$tid]) {
+      $ok++;
+    }
   }
+  $c['default revision = D7 current'] = $ok;
 }
-$c['default revision = D7 current'] = $ok;
+else {
+  $c['default revision = D7 current'] = 'not checked: taxanotes_d7_taxon_revision has not run';
+}
 $c['d7 revisions by uid 0 (vocabulary)'] = (int) $d7->query('SELECT COUNT(*) FROM {taxonomy_term_data_revision} r JOIN {taxonomy_term_data} t ON t.tid = r.tid WHERE t.vid = :v AND r.uid = 0', [':v' => $vid])->fetchField();
 $c['d11 revisions by uid 0'] = (int) $d11->query('SELECT COUNT(*) FROM {node_revision} WHERE revision_uid = 0')->fetchField();
 $c['d11 accepted names'] = (int) $d11->query('SELECT COUNT(*) FROM {node__field_accepted_name}')->fetchField();
@@ -430,6 +441,39 @@ if ($d11->schema()->tableExists('bibcite_reference') && $d7->schema()->tableExis
   $lit['comparisons (reference x value)'] = $lit_compared;
   $lit['mismatches'] = count($lit_mismatches);
   $lit['mismatch list'] = $lit_mismatches;
+
+  // The /literature page as rendered: the first page of rows, and how many
+  // of them have a non-empty Authors cell (a Views field whose handler is
+  // broken renders every cell empty while the data is there, as happened
+  // with the author field of this view), rendered as the anonymous user.
+  if (\Drupal::moduleHandler()->moduleExists('views') && ($view = Views::getView('taxanotes_literature'))) {
+    $account_switcher = \Drupal::service('account_switcher');
+    $account_switcher->switchTo(new AnonymousUserSession());
+    try {
+      $view->setDisplay('page');
+      $view->preExecute();
+      $view->execute();
+      $view->render();
+      $broken = [];
+      foreach ($view->field as $id => $handler) {
+        if ($handler instanceof Broken) {
+          $broken[] = $id;
+        }
+      }
+      $with_author = 0;
+      foreach (array_keys($view->result) as $i) {
+        if (trim(strip_tags((string) $view->style_plugin->getField($i, 'author'))) !== '') {
+          $with_author++;
+        }
+      }
+      $lit['/literature rows rendered (first page)'] = count($view->result);
+      $lit['/literature rows with an author shown'] = $with_author;
+      $lit['/literature broken field handlers'] = $broken;
+    }
+    finally {
+      $account_switcher->switchBack();
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
