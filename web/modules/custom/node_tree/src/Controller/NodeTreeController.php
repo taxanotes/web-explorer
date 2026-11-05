@@ -12,6 +12,7 @@ use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * JSON endpoints and page for the lazily loaded taxon tree (jqTree).
@@ -48,9 +49,13 @@ class NodeTreeController extends ControllerBase {
    * The tree page: /taxonomy-tree and /taxonomy-tree/node/{guid}.
    *
    * The JavaScript builds the jqTree inside #node_tree and renders the
-   * selected taxon into .node_treecontentdisplay.
+   * selected taxon into .node_treecontentdisplay. A permalink to a GUID that
+   * is not a published taxon is a real 404, not an empty tree.
    */
   public function page(string $guid = ''): array {
+    if ($guid !== '' && !$this->loadNodeByGuid($guid)) {
+      throw new NotFoundHttpException();
+    }
     return [
       '#type' => 'container',
       '#attributes' => ['class' => ['node-tree-page']],

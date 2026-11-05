@@ -22,8 +22,8 @@
             bindEvents($tree);
             var target = $tree.tree('getNodeById', guid);
             if (target) {
+              // selectNode fires tree.select, which renders the taxon.
               $tree.tree('selectNode', target);
-              showContent(guid);
               if (target.element && target.element.scrollIntoView) {
                 target.element.scrollIntoView({ block: 'center' });
               }
