@@ -23,9 +23,11 @@ process:
   uid:
     plugin: default_value
     default_value: 1
+  # Published, except the "Deleted taxa" subtree (source config
+  # unpublished_roots / $settings['taxanotes_import']['unpublished_roots']).
   status:
-    plugin: default_value
-    default_value: 1
+    plugin: scratchpads_published_status
+    source: tid
   created:
     -
       plugin: skip_on_empty

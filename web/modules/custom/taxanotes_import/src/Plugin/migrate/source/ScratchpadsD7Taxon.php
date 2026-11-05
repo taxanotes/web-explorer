@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
+use Drupal\Core\Database\Statement\FetchAs;
 use Drupal\Core\Site\Settings;
 use Drupal\migrate\Plugin\migrate\source\SourcePluginBase;
 use Drupal\migrate\Row;
@@ -34,6 +35,12 @@ use Drupal\taxonomy\Plugin\migrate\source\d7\Term;
  * - bundle: the D7 vocabulary machine name. When omitted it is read from
  *   $settings['taxanotes_import']['source_vocabulary'] so the migration YAML
  *   stays instance-agnostic.
+ * - unpublished_roots: names of root terms whose whole subtree must be
+ *   imported unpublished (Scratchpads parks removed names under a root called
+ *   "Deleted taxa", which is the default). Overridable per instance with
+ *   $settings['taxanotes_import']['unpublished_roots']. Used by the
+ *   scratchpads_published_status process plugin; it is not a source column, so
+ *   the track_changes row hash is unaffected.
  *
  * @MigrateSource(
  *   id = "scratchpads_d7_taxon",
@@ -69,14 +76,34 @@ class ScratchpadsD7Taxon extends Term {
   protected ?array $vernacular = NULL;
 
   /**
+   * Root term names whose subtree is imported unpublished, unless configured.
+   */
+  protected const DEFAULT_UNPUBLISHED_ROOTS = ['Deleted taxa'];
+
+  /**
+   * tid => parent tid for every term of the vocabulary, loaded once.
+   *
+   * @var array<int, int>|null
+   */
+  protected ?array $parents = NULL;
+
+  /**
+   * tids of the configured unpublished roots, loaded once.
+   *
+   * @var array<int, true>|null
+   */
+  protected ?array $unpublishedRootTids = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state, $entity_type_manager) {
-    if (empty($configuration['bundle'])) {
-      $instance = Settings::get('taxanotes_import', []);
-      if (!empty($instance['source_vocabulary'])) {
-        $configuration['bundle'] = $instance['source_vocabulary'];
-      }
+    $instance = Settings::get('taxanotes_import', []);
+    if (empty($configuration['bundle']) && !empty($instance['source_vocabulary'])) {
+      $configuration['bundle'] = $instance['source_vocabulary'];
+    }
+    if (!isset($configuration['unpublished_roots'])) {
+      $configuration['unpublished_roots'] = $instance['unpublished_roots'] ?? static::DEFAULT_UNPUBLISHED_ROOTS;
     }
     parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state, $entity_type_manager);
   }
@@ -224,6 +251,94 @@ class ScratchpadsD7Taxon extends Term {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * The default count runs the full query() with its ~25 joins (twice per
+   * `migrate:status`, once per migration); the row count is the same as the
+   * number of terms in the vocabulary, which is one indexed lookup.
+   */
+  protected function doCount() {
+    $query = $this->select('taxonomy_term_data', 'td');
+    $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
+    if (isset($this->configuration['bundle'])) {
+      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
+    }
+    return (int) $query->countQuery()->execute()->fetchField();
+  }
+
+  /**
+   * Whether a term is one of the configured unpublished roots or below one.
+   *
+   * Walks tid => parent in memory (the hierarchy of the whole vocabulary is
+   * read once; 32k rows is a few hundred kilobytes). Cycle-safe.
+   */
+  public function isUnderUnpublishedRoot(int $tid): bool {
+    $roots = $this->unpublishedRootTids();
+    if (!$roots) {
+      return FALSE;
+    }
+    $parents = $this->parentMap();
+    $seen = [];
+    while ($tid > 0 && !isset($seen[$tid])) {
+      if (isset($roots[$tid])) {
+        return TRUE;
+      }
+      $seen[$tid] = TRUE;
+      $tid = $parents[$tid] ?? 0;
+    }
+    return FALSE;
+  }
+
+  /**
+   * tid => parent tid for the vocabulary (single parent, 0 for roots).
+   *
+   * @return array<int, int>
+   */
+  protected function parentMap(): array {
+    if ($this->parents !== NULL) {
+      return $this->parents;
+    }
+    $this->parents = [];
+    $query = $this->select('taxonomy_term_hierarchy', 'th')->fields('th', ['tid', 'parent']);
+    $query->innerJoin('taxonomy_term_data', 'td', '[td].[tid] = [th].[tid]');
+    $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
+    if (isset($this->configuration['bundle'])) {
+      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
+    }
+    foreach ($query->execute()->fetchAllKeyed(0, 1) as $tid => $parent) {
+      $this->parents[(int) $tid] = (int) $parent;
+    }
+    return $this->parents;
+  }
+
+  /**
+   * tids of the root terms (parent 0) named in `unpublished_roots`.
+   *
+   * @return array<int, true>
+   */
+  protected function unpublishedRootTids(): array {
+    if ($this->unpublishedRootTids !== NULL) {
+      return $this->unpublishedRootTids;
+    }
+    $this->unpublishedRootTids = [];
+    $names = array_values(array_filter((array) ($this->configuration['unpublished_roots'] ?? [])));
+    if (!$names) {
+      return $this->unpublishedRootTids;
+    }
+    $query = $this->select('taxonomy_term_data', 'td')->fields('td', ['tid']);
+    $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
+    $query->innerJoin('taxonomy_term_hierarchy', 'th', '[th].[tid] = [td].[tid] AND [th].[parent] = 0');
+    $query->condition('td.name', $names, 'IN');
+    if (isset($this->configuration['bundle'])) {
+      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
+    }
+    foreach ($query->execute()->fetchCol() as $tid) {
+      $this->unpublishedRootTids[(int) $tid] = TRUE;
+    }
+    return $this->unpublishedRootTids;
+  }
+
+  /**
    * Loads every vernacular-name collection item of the vocabulary, once.
    */
   protected function vernacularNames(): array {
@@ -256,12 +371,14 @@ class ScratchpadsD7Taxon extends Term {
         $query->addField($alias, $column, $alias);
       }
     }
-    foreach ($query->execute() as $record) {
-      $this->vernacular[(int) $record->entity_id][] = [
-        'name' => $record->name ?? NULL,
-        'language' => $record->language ?? NULL,
-        'area' => $record->area ?? NULL,
-        'remarks' => $record->remarks ?? NULL,
+    // The migrate source connection fetches associative arrays (SqlBase sets
+    // FetchAs::Associative), so ask for that explicitly rather than assuming.
+    foreach ($query->execute()->fetchAll(FetchAs::Associative) as $record) {
+      $this->vernacular[(int) $record['entity_id']][] = [
+        'name' => $record['name'] ?? NULL,
+        'language' => $record['language'] ?? NULL,
+        'area' => $record['area'] ?? NULL,
+        'remarks' => $record['remarks'] ?? NULL,
       ];
     }
     return $this->vernacular;

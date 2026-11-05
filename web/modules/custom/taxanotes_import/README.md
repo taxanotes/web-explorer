@@ -24,8 +24,19 @@ Instance configuration lives in `settings.local.php`:
 $databases['migrate']['default'] = [ /* the D7 database */ ];
 $settings['taxanotes_import'] = [
   'source_vocabulary' => 'myriatrix',   // D7 vocabulary machine name
+  // Root terms whose whole subtree is imported unpublished. Optional;
+  // defaults to ['Deleted taxa'], the Scratchpads convention.
+  'unpublished_roots' => ['Deleted taxa'],
 ];
 ```
+
+Node `status` comes from the `scratchpads_published_status` process plugin:
+0 for a term that is, or descends from, one of the `unpublished_roots`, 1
+for everything else. The lookup walks the D7 hierarchy in memory and is not a
+source column, so it does not change the `track_changes` hash of any row.
+The source plugin also overrides `count()` (one indexed `COUNT(*)` on
+`taxonomy_term_data` instead of the full join query), so `drush
+migrate:status` answers in well under a second.
 
 Run:
 
@@ -39,3 +50,18 @@ Both migrations are idempotent (`track_changes: true`): re-running imports
 only rows whose source hash changed. Rolling back the parent pass leaves the
 nodes in place (it only cleared references); rolling back `taxanotes_d7_taxon`
 deletes the nodes.
+
+To redo a handful of taxa (for example after changing a process step), roll
+back **both** passes for those GUIDs before importing them again; `--update`
+on the parent pass alone fails with a duplicate-key error when its map row
+points at a node that no longer exists:
+
+```
+drush migrate:rollback taxanotes_d7_taxon_parent --idlist=<guid>,<guid>
+drush migrate:rollback taxanotes_d7_taxon --idlist=<guid>,<guid>
+drush migrate:import taxanotes_d7_taxon --idlist=<guid>,<guid>
+drush migrate:import taxanotes_d7_taxon_parent --idlist=<guid>,<guid>
+```
+
+(`--idlist` splits on `,` and then on `:`; pass `--idlist-delimiter='|'` for
+LSID GUIDs, which contain colons.)
