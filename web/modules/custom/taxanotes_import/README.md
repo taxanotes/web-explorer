@@ -18,7 +18,7 @@ first, then the literature, then the pass that links the two):
 | `taxanotes_d7_biblio_contributor` | one `bibcite_contributor` per `biblio_contributor_data` row (cid kept as the id): last, first and middle names, prefix, suffix |
 | `taxanotes_d7_biblio_keyword` | one `bibcite_keyword` per `biblio_keyword_data` row (kid kept) |
 | `taxanotes_d7_file` | one file entity per attachment of a biblio node (`field_file`) that exists under `source_files_dir`, copied to `public://scratchpads/<D7 path>`; a file not on this machine skips its row with a message |
-| `taxanotes_d7_biblio` | one `bibcite_reference` per biblio node, keyed on the node uuid (kept in `field_scratchpads_uuid`): the 14 publication types mapped onto bibcite's, every `biblio_*` column onto the bibcite field of the same name, authors (role and category), keywords, the taxa it names (`field_taxonomic_name`, through the taxon migration by GUID) and the attachments |
+| `taxanotes_d7_biblio` | one `bibcite_reference` per biblio node, keyed on the node uuid (kept in `field_scratchpads_uuid`; the nid in `field_scratchpads_nid`, which the `[bib]nid[/bib]` citations in texts are resolved through): the 14 publication types mapped onto bibcite's, every `biblio_*` column onto the bibcite field of the same name, authors (role and category), keywords, the taxa it names (`field_taxonomic_name`, through the taxon migration by GUID) and the attachments |
 | `taxanotes_d7_taxon_reference` | second pass over the taxa with a protologue: `field_reference` (entity reference to the bibcite reference) from the shadow `field_reference_guid` through the reference migration; the shadow fields stay |
 
 Source plugin `scratchpads_d7_taxon` is built on core migrate's `SqlBase`

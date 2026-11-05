@@ -474,6 +474,46 @@ if ($d11->schema()->tableExists('bibcite_reference') && $d7->schema()->tableExis
       $account_switcher->switchBack();
     }
   }
+
+  // The Scratchpads inline citations ([bib]nid[/bib]) in the formatted text
+  // fields of nodes: how many values carry one, the distinct nids cited, how
+  // many of those a reference carries in field_scratchpads_nid, and whether
+  // the basic_html format renders them (no "[bib]" left in the output of
+  // check_markup on each value), as the citation filter of
+  // taxanotes_literature should.
+  $cited = [];
+  $values_with_citations = 0;
+  $values_rendered_clean = 0;
+  $cite_pattern = '/\\[bib\\]\\s*(\\d+)\\s*\\[\\/bib\\]/';
+  foreach (\Drupal::service('entity_field.manager')->getFieldMapByFieldType('text_long') + \Drupal::service('entity_field.manager')->getFieldMapByFieldType('text_with_summary') as $entity_type_id => $fields) {
+    if ($entity_type_id !== 'node') {
+      continue;
+    }
+    foreach (array_keys($fields) as $field_name) {
+      $table = "node__$field_name";
+      if (!$d11->schema()->tableExists($table)) {
+        continue;
+      }
+      $rows = $d11->query("SELECT {$field_name}_value v, {$field_name}_format f FROM {{$table}} WHERE {$field_name}_value LIKE :l", [':l' => '%[bib]%']);
+      foreach ($rows as $row) {
+        if (!preg_match_all($cite_pattern, $row->v, $m)) {
+          continue;
+        }
+        $values_with_citations++;
+        foreach ($m[1] as $nid) {
+          $cited[(int) $nid] = TRUE;
+        }
+        if (!preg_match($cite_pattern, (string) check_markup($row->v, $row->f))) {
+          $values_rendered_clean++;
+        }
+      }
+    }
+  }
+  $lit['citation markup: field values carrying [bib]nid[/bib]'] = $values_with_citations;
+  $lit['citation markup: distinct nids cited'] = count($cited);
+  $lit['citation markup: nids with a reference (field_scratchpads_nid)'] = $cited && $d11->schema()->tableExists('bibcite_reference__field_scratchpads_nid')
+    ? (int) $d11->query('SELECT COUNT(DISTINCT field_scratchpads_nid_value) FROM {bibcite_reference__field_scratchpads_nid} WHERE field_scratchpads_nid_value IN (:n[])', [':n[]' => array_keys($cited)])->fetchField() : 0;
+  $lit['citation markup: values rendered without [bib] left'] = $values_rendered_clean;
 }
 
 // ---------------------------------------------------------------------------

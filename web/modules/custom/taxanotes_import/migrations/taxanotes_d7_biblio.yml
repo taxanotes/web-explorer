@@ -51,6 +51,10 @@ process:
   created: created
   changed: changed
   field_scratchpads_uuid: uuid
+  # The D7 nid: the Scratchpads texts cite references as [bib]nid[/bib], and
+  # the citation filter of taxanotes_literature resolves the nid through this
+  # field (the bibcite citekey is computed, not stored).
+  field_scratchpads_nid: nid
   # Authors in rank order, each with the bibcite role and category that the
   # biblio auth_type / auth_category numbers stand for.
   author:

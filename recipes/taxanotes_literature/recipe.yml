@@ -1,5 +1,5 @@
 name: 'Taxanotes literature'
-description: 'Gives a Taxanotes instance its literature: bibcite references (with contributors and keywords) linked to the taxa they cite, as in Scratchpads. On the reference: field_taxonomic_name (the taxa, unlimited), field_file (attachments) and field_scratchpads_uuid (the Scratchpads node uuid the import keys on), on the 14 publication types the pilot sites use. On the taxon: field_reference, the protologue as a link to the reference entity (its Scratchpads nid/title/GUID stay in the shadow fields). A Literature page (/literature, in the main menu) with filters, a Literature block on the taxon page (the references that name it) and a "Recently added literature" block on the front page. Applied by taxanotes_base; nothing here names an instance. Re-applying changes nothing that is already in place (blocks and the view are created only when missing).'
+description: 'Gives a Taxanotes instance its literature: bibcite references (with contributors and keywords) linked to the taxa they cite, as in Scratchpads. On the reference: field_taxonomic_name (the taxa, unlimited), field_file (attachments), field_scratchpads_uuid (the Scratchpads node uuid the import keys on) and field_scratchpads_nid (the Scratchpads nid, which the inline citations in texts cite), on the 14 publication types the pilot sites use. On the basic_html text format: the Scratchpads inline citation filter ([bib]nid[/bib] becomes a numbered link to the reference, with the cited references listed under the text). On the taxon: field_reference, the protologue as a link to the reference entity (its Scratchpads nid/title/GUID stay in the shadow fields). A Literature page (/literature, in the main menu) with filters, a Literature block on the taxon page (the references that name it) and a "Recently added literature" block on the front page. Applied by taxanotes_base; nothing here names an instance. Re-applying changes nothing that is already in place (blocks and the view are created only when missing).'
 type: 'Site'
 recipes:
   - taxanotes_taxon
@@ -29,10 +29,25 @@ config:
   strict:
     # Field storages influence the database layout, so they must match exactly.
     - field.storage.bibcite_reference.field_file
+    - field.storage.bibcite_reference.field_scratchpads_nid
     - field.storage.bibcite_reference.field_scratchpads_uuid
     - field.storage.bibcite_reference.field_taxonomic_name
     - field.storage.node.field_reference
   actions:
+    # The Scratchpads inline citations ([bib]nid[/bib], the biblio filter
+    # markup) in the migrated texts, rendered by the filter of
+    # taxanotes_literature. On basic_html, the format the migrations give the
+    # Scratchpads filtered_html texts; after filter_html (weight -10), so the
+    # link and list it adds are not stripped. Set on every apply.
+    filter.format.basic_html:
+      setFilterConfig:
+        instance_id: taxanotes_citation
+        configuration:
+          id: taxanotes_citation
+          provider: taxanotes_literature
+          status: true
+          weight: 10
+          settings: {  }
     # The contributor name bibcite shows (and the author autocomplete matches)
     # is composed from the name parts; Scratchpads stores the middle initials
     # as a part too ("Régia Mayane Pacheco Fonseca"), so they are in the
