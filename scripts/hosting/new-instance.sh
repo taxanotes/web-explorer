@@ -199,13 +199,14 @@ if [ ! -f "$code/vendor/autoload.php" ]; then
   note "permissions: $owner:$group, directories 750, files 640"
 fi
 ( cd "$code" && composer install --no-dev --optimize-autoloader --no-interaction --no-progress 2>&1 | tail -n 3 )
-[ -f "$code/vendor/bin/drush" ] || die "composer install left no vendor/bin/drush"
+[ -f "$code/vendor/drush/drush/drush.php" ] || die "composer install left no vendor/drush/drush/drush.php"
 note "composer install --no-dev done"
 
-# Drush on this release and site. The cwd is the code directory so the
-# repo's drush.yml (if any) and vendor/ resolve; --uri gives the site its name.
+# Drush on this release and site: drush.php (what the vendor/bin/drush shell
+# launcher execs) run with a PHP memory limit the revision import needs; the
+# cwd is the code directory so vendor/ resolves, --uri gives the site its name.
 drush() {
-  ( cd "$code" && php -d memory_limit="$php_memory" vendor/bin/drush --uri="$url" "$@" )
+  ( cd "$code" && php -d memory_limit="$php_memory" vendor/drush/drush/drush.php --uri="$url" "$@" )
 }
 # One value (or list, one item per line) from instance.yml for this
 # environment, defaults applied (scripts/lib/instance.php knows them).
