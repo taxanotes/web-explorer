@@ -138,3 +138,6 @@ web/sites/*/services.local.yml
 
 # Planning notes, reports and drafts contain personal data and local credentials; never committed.
 docs/planning/
+
+# Per-instance config export directories (backup targets, never a source of truth).
+config/instances/
