@@ -42,10 +42,11 @@ process:
   changed: timestamp
   # Revisioned values. Every property below is always set (NULL clears the
   # field in that revision); unmapped fields (GUID, legacy tid, parent,
-  # status, author) keep the node's current value, because D7 does not
-  # revision them (the hierarchy table has no revision history).
+  # weight, status, author) keep the node's current value, because D7 does
+  # not revision them: the hierarchy table has no revision history, and the
+  # sibling order (taxonomy_term_data.weight) is written by drag-and-drop
+  # without a revision, so every revision row carries weight 0.
   title: name
-  field_weight: weight
   field_rank: field_rank
   field_usage: field_usage
   field_unacceptability_reason: field_unacceptability_reason

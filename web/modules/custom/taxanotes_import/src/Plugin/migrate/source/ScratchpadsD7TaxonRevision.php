@@ -29,8 +29,10 @@ use Drupal\migrate\Row;
  *   collection item revision is joined on the field_collection_item revision
  *   id stored with the term revision).
  *
- * The hierarchy (parent) and the Feeds GUID are not revisioned in D7, so the
- * rows carry no parent; the destination keeps the node's current value.
+ * The hierarchy (parent), the sibling weight (drag-and-drop writes
+ * taxonomy_term_data.weight without a revision; the revision rows all carry
+ * 0) and the Feeds GUID are not revisioned in D7, so the migration maps
+ * neither and the destination keeps the node's current values.
  *
  * Configuration keys: bundle (see ScratchpadsD7Base); the migration id
  * `revision_id` is a real column, so the id map could be joined, but
@@ -142,7 +144,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
       'name' => $this->t('The term name as of this revision.'),
       'description' => $this->t('The term description as of this revision.'),
       'format' => $this->t('Format of the description.'),
-      'weight' => $this->t('Weight as of this revision.'),
+      'weight' => $this->t('Weight column of the revision row (always 0 in Scratchpads: the sibling order is not revisioned; do not map it).'),
       'accepted_tid' => $this->t('Associated accepted name: term ID.'),
       'accepted_guid' => $this->t('Associated accepted name: GUID.'),
       'accepted_name' => $this->t('Associated accepted name: term name.'),

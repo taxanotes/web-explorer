@@ -79,8 +79,10 @@ row becomes the default revision and the placeholder revision that
 `taxanotes_d7_taxon` wrote (log "Migrated from Scratchpads GUID ...") is
 deleted, so the history holds exactly the D7 revisions in order, with the
 D7 timestamp, author and log, and the current field values do not change.
-Fields D7 does not revision (GUID, legacy tid, parent, status, author) keep
-the node's current value in every revision. Rolling the revision migration
+Fields D7 does not revision (GUID, legacy tid, parent, weight, status,
+author) keep the node's current value in every revision (the weight column
+of the D7 revision rows is always 0: sibling order is set by drag-and-drop
+without a revision). Rolling the revision migration
 back deletes the non-default revisions; the default revision cannot be
 deleted, so its log is reset to "Scratchpads revision history rolled back",
 which the next import replaces again. Run it after both taxon passes (it
