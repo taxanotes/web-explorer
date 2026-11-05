@@ -264,6 +264,12 @@ if [ ! -f "$env_file" ]; then
   note "created from instances/.env.example with a fresh HASH_SALT, random database passwords and SITE_MAIL=noreply@$domain"
 else
   note "exists, kept"
+  # A file created by an earlier release lacks the keys added since; an
+  # absent key reads as empty (its default), which is easy to miss when the
+  # key is a switch (SOURCE_FILES_DIR: without it the files are skipped).
+  env_keys() { sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$1" | sort -u; }
+  missing="$(comm -23 <(env_keys "$code/instances/.env.example") <(env_keys "$env_file") | paste -sd ' ' -)"
+  [ -z "$missing" ] || note "keys of instances/.env.example absent from this file (unset, so their defaults apply; append them to set a value): $missing"
 fi
 chmod 600 "$env_file"
 [ -n "$(env_get HASH_SALT)" ] || die "HASH_SALT is empty in $env_file"
