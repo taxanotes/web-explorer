@@ -33,6 +33,17 @@
  *   rule the image import applies), their taxon links and licences, and a
  *   page-by-page comparison of title, status, taxon and every text section
  *   for every D7 spm node;
+ * - nomenclature (in counts and fields): the synonyms (terms whose usage is
+ *   invalid) counted on both sides, ten random synonyms compared field by
+ *   field, and every nomenclature term field of the vocabulary (type
+ *   material, type locality, synonym lists, synonymy and designation,
+ *   notes: ScratchpadsD7Base::EXTRA_FIELDS) counted and compared value by
+ *   value, plus the list of the vocabulary's term fields the import does
+ *   not know;
+ * - pages (when the pages recipe is applied): the D7 page and blog nodes
+ *   against the Basic pages and blog posts (title, status, dates, author,
+ *   body and format, taxa), and the D7 main-menu links to them against the
+ *   main menu's links;
  * - classic (when the default theme is taxanotes_classic): the front page
  *   and a taxon page rendered as anonymous through the kernel: the accent
  *   colour of taxanotes_classic.settings must appear as the style attribute
@@ -40,7 +51,8 @@
  *   stylesheet's default; a <style> in the head did not, and every instance
  *   rendered 047DB8 until that was checked on the rendered page) and as the
  *   body class, the front page must carry the three recent-content columns,
- *   the taxon page its tab markers.
+ *   the taxon page its tab markers, its lineage breadcrumb, the tree opened
+ *   at it and, on a taxon with synonyms, the Nomenclature section.
  */
 
 use Drupal\Core\Database\Database;
@@ -266,6 +278,126 @@ $vern_d7 = $d7->schema()->tableExists('field_data_field_vernacular_name_collecti
 $vern_d11 = $d11->query('SELECT l.field_legacy_tid_value tid, COUNT(*) n FROM {node__field_vernacular_names} v JOIN {node__field_legacy_tid} l ON l.entity_id = v.entity_id GROUP BY l.field_legacy_tid_value')->fetchAllKeyed();
 $compare['vernacular_count'] = [array_map('intval', $vern_d7), array_map('intval', $vern_d11)];
 
+// ---------------------------------------------------------------------------
+// Nomenclature: the synonyms, and the term fields beyond the ITIS set.
+//
+// A Scratchpads synonym is a term whose usage is invalid (a child of the
+// accepted name). The nomenclature fields are the ones
+// ScratchpadsD7Base::EXTRA_FIELDS maps (D7 name => [D11 name, kind]): a
+// string, a text (every delta, with the format mapped), or a node_reference
+// to a biblio node (compared through the reference's field_scratchpads_nid).
+$usage_d7 = $d7_field('field_usage', 'field_usage_value');
+$c['d7 synonyms (usage invalid, vocabulary)'] = count(array_filter($usage_d7, fn($v) => $v === 'invalid'));
+$c['d11 synonyms (usage invalid)'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_usage} WHERE field_usage_value = 'invalid'")->fetchField();
+$c['d11 synonyms with a parent'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_usage} u JOIN {node__field_parent_taxon_reference} p ON p.entity_id = u.entity_id WHERE u.field_usage_value = 'invalid'")->fetchField();
+$extra_fields = [
+  'field_description_taxa' => ['field_type_material', 'text'],
+  'field_type_species' => ['field_type_material_notes', 'text'],
+  'field_type_locality' => ['field_type_locality', 'text'],
+  'field_original_combination' => ['field_original_combination', 'string'],
+  'field_synonyms' => ['field_synonyms_homotypic', 'text'],
+  'field_synonyms_heterotypic' => ['field_synonyms_heterotypic', 'text'],
+  'field_synonymy_by' => ['field_synonymy_by', 'string'],
+  'field_page_number_synonymy' => ['field_page_number_synonymy', 'string'],
+  'field_synonymy_reference' => ['field_synonymy_reference', 'reference'],
+  'field_designation_by' => ['field_designation_by', 'string'],
+  'field_page_number_designation' => ['field_page_number_designation', 'string'],
+  'field_designation_method' => ['field_designation_reference', 'reference'],
+  'field_family_level_name_origins' => ['field_family_level_name_origins', 'text'],
+  'field_taxonomic_notes' => ['field_taxonomic_notes', 'text'],
+  'field_biological_notes' => ['field_biological_notes', 'text'],
+];
+$known_term_fields = array_merge(array_keys($extra_fields), array_keys($scalar), [
+  "field_aan_$vid", 'field_reference', 'field_page_url', 'field_vernacular_name_collection',
+  'field_unit_indicator1', 'field_unit_indicator2', 'field_unit_indicator3', 'field_unit_indicator4',
+  'field_unit_name1', 'field_unit_name2', 'field_unit_name3', 'field_unit_name4',
+]);
+$vocab_term_fields = $d7->schema()->tableExists('field_config_instance')
+  ? $d7->query("SELECT fci.field_name FROM {field_config_instance} fci JOIN {taxonomy_vocabulary} tv ON tv.machine_name = fci.bundle WHERE fci.entity_type = 'taxonomy_term' AND fci.deleted = 0 AND tv.vid = :v ORDER BY fci.field_name", [':v' => $vid])->fetchCol()
+  : [];
+$c['d7 term fields not migrated'] = array_values(array_diff($vocab_term_fields, $known_term_fields));
+$text_formats = ['filtered_html' => 'basic_html', 'full_html' => 'full_html', 'plain_text' => 'plain_text'];
+
+/**
+ * Every delta of a D7 term field in the best language, by tid.
+ */
+$d7_field_items = function (string $field, array $columns) use ($d7, $vid, $term_lang): array {
+  $items = [];
+  if (!$d7->schema()->tableExists('field_data_' . $field)) {
+    return $items;
+  }
+  $cols = implode(', ', array_map(fn($col) => "f.$col", $columns));
+  $rows = $d7->query("SELECT f.entity_id, f.language, f.delta, $cols FROM {field_data_$field} f JOIN {taxonomy_term_data} t ON t.tid = f.entity_id WHERE f.entity_type = 'taxonomy_term' AND f.deleted = 0 AND t.vid = :v ORDER BY f.entity_id, f.delta", [':v' => $vid]);
+  $best = [];
+  $all = [];
+  foreach ($rows as $r) {
+    $r = (array) $r;
+    $tid = (int) $r['entity_id'];
+    $rank = ($r['language'] === ($term_lang[$tid] ?? NULL)) ? '0' : ($r['language'] === 'und' ? '1' : '2');
+    $key = $rank . $r['language'];
+    if (!isset($best[$tid]) || strcmp($key, $best[$tid]) < 0) {
+      $best[$tid] = $key;
+    }
+    $all[$tid][$key][] = $r;
+  }
+  foreach ($best as $tid => $key) {
+    $items[$tid] = $all[$tid][$key];
+  }
+  return $items;
+};
+$nomenclature = [];
+foreach ($extra_fields as $d7_name => [$name, $kind]) {
+  if (!in_array($d7_name, $vocab_term_fields, TRUE)) {
+    continue;
+  }
+  $expected = [];
+  $actual = [];
+  if ($kind === 'reference') {
+    $items = $d7_field_items($d7_name, ["{$d7_name}_nid"]);
+    foreach ($items as $tid => $rows) {
+      $nid = (int) ($rows[0]["{$d7_name}_nid"] ?? 0);
+      $expected[$tid] = $nid ?: NULL;
+    }
+    if ($d11->schema()->tableExists("node__$name")) {
+      $actual = $d11->query("SELECT l.field_legacy_tid_value tid, s.field_scratchpads_nid_value v FROM {node__$name} f JOIN {node__field_legacy_tid} l ON l.entity_id = f.entity_id LEFT JOIN {bibcite_reference__field_scratchpads_nid} s ON s.entity_id = f.{$name}_target_id")->fetchAllKeyed();
+    }
+  }
+  elseif ($kind === 'string') {
+    $items = $d7_field_items($d7_name, ["{$d7_name}_value"]);
+    foreach ($items as $tid => $rows) {
+      $value = $rows[0]["{$d7_name}_value"] ?? NULL;
+      $expected[$tid] = ($value === NULL || trim((string) $value) === '') ? NULL : (string) $value;
+    }
+    $actual = $d11_field("node__$name", "{$name}_value");
+  }
+  else {
+    $has_format = $d7->schema()->tableExists('field_data_' . $d7_name) && $d7->schema()->fieldExists('field_data_' . $d7_name, "{$d7_name}_format");
+    $items = $d7_field_items($d7_name, $has_format ? ["{$d7_name}_value", "{$d7_name}_format"] : ["{$d7_name}_value"]);
+    foreach ($items as $tid => $rows) {
+      $parts = [];
+      foreach ($rows as $r) {
+        $value = $r["{$d7_name}_value"];
+        if ($value === NULL || trim((string) $value) === '') {
+          continue;
+        }
+        $parts[] = $value . '|' . ($text_formats[$r["{$d7_name}_format"] ?? ''] ?? 'plain_text');
+      }
+      $expected[$tid] = $parts ? implode("\x1e", $parts) : NULL;
+    }
+    if ($d11->schema()->tableExists("node__$name")) {
+      foreach ($d11->query("SELECT l.field_legacy_tid_value tid, f.{$name}_value v, f.{$name}_format fmt FROM {node__$name} f JOIN {node__field_legacy_tid} l ON l.entity_id = f.entity_id ORDER BY f.entity_id, f.delta") as $r) {
+        $actual[(int) $r->tid] = isset($actual[(int) $r->tid]) ? $actual[(int) $r->tid] . "\x1e" . $r->v . '|' . $r->fmt : $r->v . '|' . $r->fmt;
+      }
+    }
+  }
+  $compare[$name] = [$expected, $actual];
+  $nomenclature[$name] = [
+    'd7 terms with a value (' . $d7_name . ')' => count(array_filter($expected, fn($v) => $v !== NULL)),
+    'd11 taxa with a value' => $d11->schema()->tableExists("node__$name") ? (int) $d11->query("SELECT COUNT(DISTINCT entity_id) FROM {node__$name}")->fetchField() : 'no field',
+  ];
+}
+$c['nomenclature fields'] = $nomenclature;
+
 $mismatches = [];
 $compared = 0;
 $empty = fn($v) => $v === NULL || $v === '' || $v === FALSE;
@@ -288,11 +420,39 @@ foreach ($compare as $what => [$expected, $actual]) {
     }
   }
 }
+// Ten random synonyms, field by field (name, authors, usage, reason,
+// parent, accepted name, and the nomenclature fields the vocabulary has).
+$synonym_tids = array_keys(array_filter($usage_d7, fn($v) => $v === 'invalid'));
+shuffle($synonym_tids);
+$sample = [];
+$sample_differing = 0;
+foreach (array_slice($synonym_tids, 0, 10) as $tid) {
+  $differing = [];
+  foreach ($compare as $what => [$expected, $actual]) {
+    $e = $expected[$tid] ?? NULL;
+    $a = $actual[$tid] ?? NULL;
+    if (!($empty($e) && $empty($a)) && (string) $e !== (string) $a) {
+      $differing[] = $what;
+    }
+  }
+  $sample_differing += $differing ? 1 : 0;
+  $sample[] = [
+    'tid' => (int) $tid,
+    'nid' => isset($nodes[$tid]) ? (int) $nodes[$tid]->nid : NULL,
+    'name' => $terms[$tid]->name ?? NULL,
+    'parent' => isset($terms[$tid]) && $terms[$tid]->parent ? ($terms[(int) $terms[$tid]->parent]->name ?? NULL) : NULL,
+    'reason' => $compare['field_unacceptability_reason'][0][$tid] ?? NULL,
+    'values compared' => count($compare),
+    'differing' => $differing,
+  ];
+}
 $f = [
   'terms compared' => count($terms),
   'comparisons (term x value)' => $compared,
   'mismatches' => count($mismatches),
   'mismatch list' => $mismatches,
+  'synonyms: 10 random compared' => $sample,
+  'synonyms: 10 random with a difference' => $sample_differing,
 ];
 
 // ---------------------------------------------------------------------------
@@ -769,6 +929,150 @@ if ($d11->schema()->tableExists('node__field_general_description') && $d7->schem
 }
 
 // ---------------------------------------------------------------------------
+// Pages and blog posts (page <- page, blog_post <- blog) and their main-menu
+// links.
+$pages = NULL;
+$format_map = ['filtered_html' => 'basic_html', 'full_html' => 'full_html', 'plain_text' => 'plain_text'];
+if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()->tableExists('node')) {
+  $pages = [];
+  $page_types = ['page' => 'page', 'blog' => 'blog_post'];
+  $d11_users = array_flip(array_map('intval', $d11->query('SELECT uid FROM {users_field_data}')->fetchCol()));
+
+  // One row set per node of a D7 node field (the node language rule), by nid.
+  $d7_page_field = function (string $field, array $columns, string $bundle, bool $all_deltas = FALSE) use ($d7): array {
+    $values = [];
+    if (!$d7->schema()->tableExists('field_data_' . $field)) {
+      return $values;
+    }
+    $cols = implode(', ', array_map(fn($c) => "f.$c", $columns));
+    $delta = $all_deltas ? '' : 'AND f.delta = 0';
+    $rows = $d7->query("SELECT f.entity_id, f.delta, $cols FROM {field_data_$field} f JOIN (SELECT f2.entity_id, SUBSTRING(MIN(CONCAT(CASE WHEN f2.language = n2.language THEN '0' WHEN f2.language = 'und' THEN '1' ELSE '2' END, f2.language)), 2) lang FROM {field_data_$field} f2 JOIN {node} n2 ON n2.nid = f2.entity_id WHERE f2.entity_type = 'node' AND f2.bundle = :b AND f2.deleted = 0 GROUP BY f2.entity_id) best ON best.entity_id = f.entity_id AND best.lang = f.language WHERE f.entity_type = 'node' AND f.bundle = :b AND f.deleted = 0 $delta ORDER BY f.entity_id, f.delta", [':b' => $bundle]);
+    foreach ($rows as $r) {
+      $r = (array) $r;
+      $nid = (int) $r['entity_id'];
+      if ($all_deltas) {
+        $values[$nid][] = $r;
+      }
+      else {
+        $values[$nid] = $r;
+      }
+    }
+    return $values;
+  };
+  $vocab_tids = $d7->query('SELECT tid FROM {taxonomy_term_data} WHERE vid = :v', [':v' => $vid])->fetchCol();
+  $vocab_tids = array_flip(array_map('intval', $vocab_tids));
+  $page_mismatches = [];
+  $page_compared = 0;
+  $d7_page_nids = [];
+  foreach ($page_types as $d7_type => $d11_type) {
+    $d7_nodes = $d7->query('SELECT nid, uuid, title, uid, status, created, changed FROM {node} WHERE type = :t', [':t' => $d7_type])->fetchAllAssoc('uuid');
+    $pages["d7 $d7_type nodes"] = count($d7_nodes);
+    $pages["d11 $d11_type nodes"] = (int) $d11->query('SELECT COUNT(*) FROM {node_field_data} WHERE type = :t', [':t' => $d11_type])->fetchField();
+    $bodies = $d7_page_field('body', ['body_value', 'body_format'], $d7_type);
+    $taxa = [];
+    foreach ($d7_page_field('field_taxonomic_name', ['field_taxonomic_name_tid'], $d7_type, TRUE) as $nid => $items) {
+      $seen = [];
+      foreach ($items as $item) {
+        $tid = (int) $item['field_taxonomic_name_tid'];
+        if (isset($vocab_tids[$tid]) && !isset($seen[$tid])) {
+          $seen[$tid] = TRUE;
+          $taxa[$nid] = ($taxa[$nid] ?? 0) + 1;
+        }
+      }
+    }
+    $d11_nodes = $d11->query("SELECT nb.uuid, n.nid, n.title, n.uid, n.status, n.created, n.changed, b.body_value, b.body_format FROM {node_field_data} n JOIN {node} nb ON nb.nid = n.nid LEFT JOIN {node__body} b ON b.entity_id = n.nid WHERE n.type = :t", [':t' => $d11_type])->fetchAllAssoc('uuid');
+    $d11_taxa = $d11->query("SELECT nb.uuid, COUNT(*) c FROM {node__field_taxonomic_names} t JOIN {node} nb ON nb.nid = t.entity_id JOIN {node_field_data} n ON n.nid = t.entity_id WHERE n.type = :t GROUP BY nb.uuid", [':t' => $d11_type])->fetchAllKeyed();
+    foreach ($d7_nodes as $uuid => $node) {
+      $d7_page_nids[(int) $node->nid] = $uuid;
+      $body = $bodies[(int) $node->nid] ?? NULL;
+      $expected = [
+        'title' => (string) $node->title,
+        'status' => (int) $node->status,
+        'created' => (int) $node->created,
+        'changed' => (int) $node->changed,
+        // The author: the migrated account (uid kept), else uid 1.
+        'uid' => ((int) $node->uid > 1 && isset($d11_users[(int) $node->uid])) ? (int) $node->uid : 1,
+        'body value' => $body['body_value'] ?? NULL,
+        'body format' => isset($body['body_value']) && $body['body_value'] !== '' ? ($format_map[$body['body_format'] ?? ''] ?? 'basic_html') : NULL,
+        'taxa' => $taxa[(int) $node->nid] ?? 0,
+      ];
+      $got = isset($d11_nodes[$uuid]) ? [
+        'title' => (string) $d11_nodes[$uuid]->title,
+        'status' => (int) $d11_nodes[$uuid]->status,
+        'created' => (int) $d11_nodes[$uuid]->created,
+        'changed' => (int) $d11_nodes[$uuid]->changed,
+        'uid' => (int) $d11_nodes[$uuid]->uid,
+        'body value' => $d11_nodes[$uuid]->body_value,
+        'body format' => $d11_nodes[$uuid]->body_format,
+        'taxa' => (int) ($d11_taxa[$uuid] ?? 0),
+      ] : NULL;
+      foreach ($expected as $what => $e) {
+        $page_compared++;
+        $a = $got[$what] ?? NULL;
+        if ($got === NULL || (string) $e !== (string) $a) {
+          $page_mismatches[] = [
+            'd7 nid' => (int) $node->nid,
+            'd11 nid' => $got ? (int) $d11_nodes[$uuid]->nid : NULL,
+            'type' => $d7_type,
+            'field' => $what,
+            'd7' => is_string($e) && strlen($e) > 80 ? substr($e, 0, 80) . '…' : $e,
+            'd11' => is_string($a) && strlen($a) > 80 ? substr($a, 0, 80) . '…' : $a,
+          ];
+        }
+      }
+    }
+  }
+  $pages['comparisons (node x value)'] = $page_compared;
+  $pages['mismatches'] = count($page_mismatches);
+  $pages['mismatch list'] = $page_mismatches;
+
+  // The main-menu links of the pages: one D11 link per D7 main-menu link to
+  // a migrated page or blog node, same title, enabled state and D7 weight
+  // + 50, pointing at the node imported from the same uuid.
+  $d7_links = [];
+  if ($d7->schema()->tableExists('menu_links')) {
+    foreach ($d7->query("SELECT ml.mlid, ml.link_path, ml.link_title, ml.weight, ml.hidden FROM {menu_links} ml WHERE ml.menu_name = 'main-menu' AND ml.link_path LIKE 'node/%'") as $r) {
+      $nid = (int) substr($r->link_path, 5);
+      if (isset($d7_page_nids[$nid])) {
+        $d7_links[] = [
+          'mlid' => (int) $r->mlid,
+          'uuid' => $d7_page_nids[$nid],
+          'title' => $r->link_title,
+          'weight' => (int) $r->weight + 50,
+          'enabled' => (int) $r->hidden === 0 ? 1 : 0,
+        ];
+      }
+    }
+  }
+  $d11_links = [];
+  if ($d11->schema()->tableExists('menu_link_content_data')) {
+    foreach ($d11->query("SELECT m.title, m.weight, m.enabled, m.link__uri FROM {menu_link_content_data} m WHERE m.menu_name = 'main' AND m.link__uri LIKE 'entity:node/%'") as $r) {
+      $nid = (int) substr($r->link__uri, 12);
+      $uuid = $d11->query('SELECT uuid FROM {node} WHERE nid = :n', [':n' => $nid])->fetchField();
+      $d11_links[$uuid][] = ['title' => $r->title, 'weight' => (int) $r->weight, 'enabled' => (int) $r->enabled];
+    }
+  }
+  $link_mismatches = [];
+  foreach ($d7_links as $link) {
+    $candidates = $d11_links[$link['uuid']] ?? [];
+    $found = FALSE;
+    foreach ($candidates as $candidate) {
+      if ($candidate['title'] === $link['title'] && $candidate['weight'] === $link['weight'] && $candidate['enabled'] === $link['enabled']) {
+        $found = TRUE;
+        break;
+      }
+    }
+    if (!$found) {
+      $link_mismatches[] = ['mlid' => $link['mlid'], 'd7' => $link, 'd11' => $candidates];
+    }
+  }
+  $pages['d7 main-menu links to pages and blog entries'] = count($d7_links);
+  $pages['d11 main-menu links to nodes'] = array_sum(array_map('count', $d11_links));
+  $pages['menu link mismatches'] = count($link_mismatches);
+  $pages['menu link mismatch list'] = $link_mismatches;
+}
+
+// ---------------------------------------------------------------------------
 // The classic view as rendered (the theme's own HTML, not its config).
 $classic = [];
 if (\Drupal::config('system.theme')->get('default') === 'taxanotes_classic') {
@@ -811,6 +1115,20 @@ if (\Drupal::config('system.theme')->get('default') === 'taxanotes_classic') {
     $classic['taxon: html style attribute carries the colour'] = str_contains($taxon, 'style="--sp-colour:#' . $colour . ';"');
     $classic['taxon: tab markers (data-taxanotes-tab)'] = substr_count($taxon, 'data-taxanotes-tab=');
     $classic['taxon: classification tree block'] = str_contains($taxon, 'block-node-tree-hierarchicaltaxontree');
+    $classic['taxon: tree opened at the taxon (drupalSettings nodeTree.selected)'] = (bool) preg_match('/"nodeTree":\{"selected":"[^"]+"\}/', $taxon);
+    preg_match('/<nav class="breadcrumb".*?<\/nav>/s', $taxon, $m);
+    $classic['taxon: breadcrumb items (Home › lineage › taxon)'] = isset($m[0]) ? substr_count($m[0], '<li>') : 0;
+  }
+  // A published taxon with the most synonyms (invalid children), for the
+  // Nomenclature section.
+  $parent_nid = (int) $d11->query("SELECT p.field_parent_taxon_reference_target_id FROM {node__field_parent_taxon_reference} p JOIN {node__field_usage} u ON u.entity_id = p.entity_id JOIN {node_field_data} n ON n.nid = p.entity_id JOIN {node_field_data} pn ON pn.nid = p.field_parent_taxon_reference_target_id WHERE u.field_usage_value = 'invalid' AND n.status = 1 AND pn.status = 1 GROUP BY p.field_parent_taxon_reference_target_id ORDER BY COUNT(*) DESC LIMIT 1")->fetchField();
+  if ($parent_nid) {
+    $with_synonyms = $render('/node/' . $parent_nid);
+    $classic['taxon with synonyms checked'] = '/node/' . $parent_nid;
+    $classic['taxon with synonyms: Nomenclature section'] = str_contains($with_synonyms, 'block-taxanotes-taxon-nomenclature');
+    preg_match('/<ul class="taxanotes-synonyms">.*?<\/ul>/s', $with_synonyms, $m);
+    $classic['taxon with synonyms: synonyms listed'] = isset($m[0]) ? substr_count($m[0], '<li>') : 0;
+    $classic['taxon with synonyms: synonyms in the database'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_parent_taxon_reference} p JOIN {node__field_usage} u ON u.entity_id = p.entity_id JOIN {node_field_data} n ON n.nid = p.entity_id WHERE p.field_parent_taxon_reference_target_id = :p AND u.field_usage_value = 'invalid' AND n.status = 1", [':p' => $parent_nid])->fetchField();
   }
 }
 
@@ -820,5 +1138,6 @@ echo json_encode([
   'checksums' => $sums,
   'literature' => $lit,
   'species' => $spm,
+  'pages' => $pages,
   'classic' => $classic,
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";

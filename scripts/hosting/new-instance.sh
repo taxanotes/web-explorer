@@ -649,6 +649,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+log "Footer logos: $settings_dir/assets/footer/"
+# The partner logos of the footer: every png and svg in settings/assets/footer/
+# (outside git and the releases) is copied into files/instance/footer/ and
+# listed in taxanotes_front.settings:footer_logos with the link and alt text
+# of instance.yml site.footer_logos; files no longer there are removed. No
+# file: an empty list, the footer shows no row.
+footer_src="$settings_dir/assets/footer"
+footer_dir="$files_dir/instance/footer"
+mkdir -p "$footer_dir"
+footer_count=0
+if [ -d "$footer_src" ]; then
+  for f in "$footer_src"/*.png "$footer_src"/*.svg "$footer_src"/*.PNG "$footer_src"/*.SVG; do
+    [ -f "$f" ] || continue
+    footer_count=$((footer_count + 1))
+    if ! cmp -s "$f" "$footer_dir/$(basename "$f")"; then
+      cp "$f" "$footer_dir/$(basename "$f")"
+      chmod 640 "$footer_dir/$(basename "$f")"
+      note "copied $(basename "$f")"
+    fi
+  done
+fi
+for f in "$footer_dir"/*; do
+  [ -f "$f" ] || continue
+  if [ ! -f "$footer_src/$(basename "$f")" ]; then
+    rm -f "$f"
+    note "removed $(basename "$f") (no longer in assets/footer/)"
+  fi
+done
+footer_yaml="$(php "$code/scripts/lib/instance.php" footer-logos "$code/$yml_rel" "$footer_src")"
+drush config:set taxanotes_front.settings footer_logos --input-format=yaml "$footer_yaml" --yes
+note "$footer_count logo(s): taxanotes_front.settings footer_logos set"
+
+# ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
 # Taxa first, then the literature (contributors, keywords, the files, the
 # references, the pass that points each taxon at its protologue reference
@@ -667,7 +700,7 @@ if [ "$source_ready" -eq 1 ] && [ -n "$source_vocabulary" ]; then
     note "D7 files: none on this server (SOURCE_FILES_DIR unset in instance.env): the attachments and the images are skipped (taxanotes_d7_file, taxanotes_d7_media_image)"
     migrations+=(taxanotes_d7_biblio taxanotes_d7_taxon_reference)
   fi
-  migrations+=(taxanotes_d7_spm)
+  migrations+=(taxanotes_d7_spm taxanotes_d7_page taxanotes_d7_blog taxanotes_d7_menu_link)
   for m in "${migrations[@]}"; do
     note "migrate:import $m ($(date -u +%H:%M:%S))"
     drush migrate:import "$m" --feedback=2000
