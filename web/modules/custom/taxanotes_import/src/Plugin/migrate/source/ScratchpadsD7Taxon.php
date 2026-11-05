@@ -4,22 +4,27 @@ declare(strict_types=1);
 
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
-use Drupal\Core\Database\Statement\FetchAs;
 use Drupal\Core\Site\Settings;
-use Drupal\migrate\Plugin\migrate\source\SourcePluginBase;
+use Drupal\migrate\Attribute\MigrateSource;
+use Drupal\migrate\Exception\RequirementsException;
+use Drupal\migrate\Plugin\migrate\source\SqlBase;
 use Drupal\migrate\Row;
-use Drupal\taxonomy\Plugin\migrate\source\d7\Term;
 
 /**
  * Scratchpads (Drupal 7) taxonomy terms with their GUIDs and ITIS fields.
  *
- * Extends the core d7_taxonomy_term source so the vocabulary filter, the
- * database handling and the documented base columns are inherited, and adds:
+ * Built directly on the migrate SqlBase plugin (migrate_drupal's
+ * DrupalSqlBase/FieldableEntity/d7 Term hierarchy is deprecated in Drupal
+ * 11.3 and removed in 12 with no replacement). The base term query of the
+ * core d7_taxonomy_term source (taxonomy_term_data + vocabulary machine name,
+ * filtered by bundle, ordered by tid) is inlined here and extended with:
  * - guid: feeds_item.guid for the term, falling back to the term's uuid for
  *   terms that were created by hand and never went through an importer (the
  *   Scratchpads exporter applies the same rule when it writes the GUID column);
  * - parent_guid / parent_name / parent_tid: the single parent from
- *   taxonomy_term_hierarchy (Scratchpads assumes one parent);
+ *   taxonomy_term_hierarchy (Scratchpads assumes one parent; should a term
+ *   ever carry two, the highest parent tid is used so a term never yields two
+ *   source rows with the same guid);
  * - accepted_guid / accepted_tid / accepted_name: field_aan_<vid>, the
  *   "associated accepted name" term reference;
  * - the scalar ITIS fields (rank, usage, unit names and indicators, authors,
@@ -29,7 +34,11 @@ use Drupal\taxonomy\Plugin\migrate\source\d7\Term;
  *   reference_guid (node_reference to a biblio node);
  * - created / changed: min and max taxonomy_term_data_revision.timestamp;
  * - vernacular: the field_vernacular_name_collection items (name, language,
- *   area, remarks), fetched once for the whole vocabulary.
+ *   area, remarks), fetched once for the whole vocabulary;
+ * - published: 0 when the term is, or descends from, one of the
+ *   unpublished_roots, else 1. Derived from the hierarchy in prepareRow() and
+ *   therefore part of the track_changes row hash, so moving a subtree into or
+ *   out of "Deleted taxa" in D7 re-imports every affected descendant.
  *
  * Configuration keys:
  * - bundle: the D7 vocabulary machine name. When omitted it is read from
@@ -38,16 +47,20 @@ use Drupal\taxonomy\Plugin\migrate\source\d7\Term;
  * - unpublished_roots: names of root terms whose whole subtree must be
  *   imported unpublished (Scratchpads parks removed names under a root called
  *   "Deleted taxa", which is the default). Overridable per instance with
- *   $settings['taxanotes_import']['unpublished_roots']. Used by the
- *   scratchpads_published_status process plugin; it is not a source column, so
- *   the track_changes row hash is unaffected.
+ *   $settings['taxanotes_import']['unpublished_roots'].
+ * - key / database_state_key, track_changes, ignore_map, constants: see
+ *   SqlBase and SourcePluginBase.
  *
- * @MigrateSource(
- *   id = "scratchpads_d7_taxon",
- *   source_module = "taxonomy"
- * )
+ * The migration id `guid` is a SQL expression alias (COALESCE over two
+ * tables). SqlBase can only join the id map to the source query on real
+ * columns, so migrations using this plugin must keep the map out of the
+ * query: `track_changes: true` does that implicitly and `ignore_map: true`
+ * does it explicitly; the shipped migrations set both.
  */
-class ScratchpadsD7Taxon extends Term {
+#[MigrateSource(
+  id: 'scratchpads_d7_taxon',
+)]
+final class ScratchpadsD7Taxon extends SqlBase {
 
   /**
    * Scalar D7 fields joined into the query: source alias => D7 field name.
@@ -69,6 +82,11 @@ class ScratchpadsD7Taxon extends Term {
   ];
 
   /**
+   * Root term names whose subtree is imported unpublished, unless configured.
+   */
+  protected const DEFAULT_UNPUBLISHED_ROOTS = ['Deleted taxa'];
+
+  /**
    * Vernacular names keyed by tid, loaded once.
    *
    * @var array<int, array<int, array<string, string|null>>>|null
@@ -76,19 +94,14 @@ class ScratchpadsD7Taxon extends Term {
   protected ?array $vernacular = NULL;
 
   /**
-   * Root term names whose subtree is imported unpublished, unless configured.
-   */
-  protected const DEFAULT_UNPUBLISHED_ROOTS = ['Deleted taxa'];
-
-  /**
-   * tid => parent tid for every term of the vocabulary, loaded once.
+   * The tid => parent tid map for every term of the vocabulary, loaded once.
    *
    * @var array<int, int>|null
    */
   protected ?array $parents = NULL;
 
   /**
-   * tids of the configured unpublished roots, loaded once.
+   * The tids of the configured unpublished roots, loaded once.
    *
    * @var array<int, true>|null
    */
@@ -97,7 +110,7 @@ class ScratchpadsD7Taxon extends Term {
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state, $entity_type_manager) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state) {
     $instance = Settings::get('taxanotes_import', []);
     if (empty($configuration['bundle']) && !empty($instance['source_vocabulary'])) {
       $configuration['bundle'] = $instance['source_vocabulary'];
@@ -105,43 +118,96 @@ class ScratchpadsD7Taxon extends Term {
     if (!isset($configuration['unpublished_roots'])) {
       $configuration['unpublished_roots'] = $instance['unpublished_roots'] ?? static::DEFAULT_UNPUBLISHED_ROOTS;
     }
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state, $entity_type_manager);
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Besides the database connection, a Scratchpads source needs a GUID per
+   * term: feeds_item (Feeds) or taxonomy_term_data.uuid (uuid module).
+   */
+  public function checkRequirements() {
+    parent::checkRequirements();
+    $schema = $this->getDatabase()->schema();
+    if (!$schema->tableExists('taxonomy_term_data') || !$schema->tableExists('taxonomy_vocabulary')) {
+      throw new RequirementsException('The migrate database is not a Drupal 7 database (taxonomy tables are missing).');
+    }
+    if (!$schema->tableExists('feeds_item') && !$schema->fieldExists('taxonomy_term_data', 'uuid')) {
+      throw new RequirementsException('The source needs feeds_item or taxonomy_term_data.uuid to provide a GUID per term; neither exists.');
+    }
   }
 
   /**
    * {@inheritdoc}
    */
   public function query() {
-    $query = parent::query();
     $db = $this->getDatabase();
+    $schema = $db->schema();
+    $has_feeds = $schema->tableExists('feeds_item');
+    $has_uuid = $schema->fieldExists('taxonomy_term_data', 'uuid');
+
+    // Base term query, as core's d7_taxonomy_term source builds it.
+    $query = $this->select('taxonomy_term_data', 'td')
+      ->fields('td')
+      ->distinct()
+      ->orderBy('tid');
+    $query->leftJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
+    $query->addField('tv', 'machine_name');
+    if ($schema->fieldExists('taxonomy_vocabulary', 'i18n_mode')) {
+      $query->addField('tv', 'i18n_mode');
+    }
+    if (isset($this->configuration['bundle'])) {
+      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
+    }
 
     // GUID: Feeds GUID first, term uuid as the fallback.
-    $query->leftJoin('feeds_item', 'fi', "[fi].[entity_type] = 'taxonomy_term' AND [fi].[entity_id] = [td].[tid]");
-    $query->addExpression("COALESCE(NULLIF([fi].[guid], ''), [td].[uuid])", 'guid');
-    $query->addField('fi', 'imported', 'feeds_imported');
+    if ($has_feeds) {
+      $query->leftJoin('feeds_item', 'fi', "[fi].[entity_type] = 'taxonomy_term' AND [fi].[entity_id] = [td].[tid]");
+      $query->addExpression($this->guidExpression('fi', 'td', $has_uuid), 'guid');
+      $query->addField('fi', 'imported', 'feeds_imported');
+    }
+    else {
+      $query->addExpression('[td].[uuid]', 'guid');
+    }
 
-    // Single parent (Scratchpads never writes more than one row per term).
-    $query->leftJoin('taxonomy_term_hierarchy', 'th', '[th].[tid] = [td].[tid] AND [th].[parent] <> 0');
+    // Single parent. Scratchpads never writes more than one hierarchy row per
+    // term; the GROUP BY keeps that true for this query even if a term ever
+    // had two (highest parent tid wins), so one term is one source row.
+    $th = $db->select('taxonomy_term_hierarchy', 'h');
+    $th->addField('h', 'tid');
+    $th->addExpression('MAX([h].[parent])', 'parent');
+    $th->groupBy('h.tid');
+    $query->leftJoin($th, 'th', '[th].[tid] = [td].[tid] AND [th].[parent] <> 0');
     $query->leftJoin('taxonomy_term_data', 'tdp', '[tdp].[tid] = [th].[parent]');
-    $query->leftJoin('feeds_item', 'fip', "[fip].[entity_type] = 'taxonomy_term' AND [fip].[entity_id] = [tdp].[tid]");
     $query->addField('th', 'parent', 'parent_tid');
     $query->addField('tdp', 'name', 'parent_name');
-    $query->addExpression("COALESCE(NULLIF([fip].[guid], ''), [tdp].[uuid])", 'parent_guid');
+    if ($has_feeds) {
+      $query->leftJoin('feeds_item', 'fip', "[fip].[entity_type] = 'taxonomy_term' AND [fip].[entity_id] = [tdp].[tid]");
+      $query->addExpression($this->guidExpression('fip', 'tdp', $has_uuid), 'parent_guid');
+    }
+    else {
+      $query->addExpression('[tdp].[uuid]', 'parent_guid');
+    }
 
-    // Revision timestamps give created/changed (D7 terms have none of their own).
-    $rev = $db->select('taxonomy_term_data_revision', 'r');
-    $rev->addField('r', 'tid');
-    $rev->addExpression('MIN([r].[timestamp])', 'created');
-    $rev->addExpression('MAX([r].[timestamp])', 'changed');
-    $rev->groupBy('r.tid');
-    $query->leftJoin($rev, 'rev', '[rev].[tid] = [td].[tid]');
-    $query->addField('rev', 'created', 'created');
-    $query->addField('rev', 'changed', 'changed');
+    // Revision timestamps give created/changed (D7 terms have none of their
+    // own). The revision table is Scratchpads-specific; without it the
+    // destination falls back to "now".
+    if ($schema->tableExists('taxonomy_term_data_revision')) {
+      $rev = $db->select('taxonomy_term_data_revision', 'r');
+      $rev->addField('r', 'tid');
+      $rev->addExpression('MIN([r].[timestamp])', 'created');
+      $rev->addExpression('MAX([r].[timestamp])', 'changed');
+      $rev->groupBy('r.tid');
+      $query->leftJoin($rev, 'rev', '[rev].[tid] = [td].[tid]');
+      $query->addField('rev', 'created', 'created');
+      $query->addField('rev', 'changed', 'changed');
+    }
 
     // Scalar ITIS fields: one LEFT JOIN each on the field data table.
     foreach (static::SCALAR_FIELDS as $alias => $field_name) {
       $table = 'field_data_' . $field_name;
-      if (!$db->schema()->tableExists($table)) {
+      if (!$schema->tableExists($table)) {
         continue;
       }
       $query->leftJoin($table, $alias, "[$alias].[entity_type] = 'taxonomy_term' AND [$alias].[entity_id] = [td].[tid] AND [$alias].[deleted] = 0 AND [$alias].[delta] = 0");
@@ -155,14 +221,19 @@ class ScratchpadsD7Taxon extends Term {
       $column = substr($aan_table, strlen('field_data_')) . '_tid';
       $query->leftJoin($aan_table, 'aan', "[aan].[entity_type] = 'taxonomy_term' AND [aan].[entity_id] = [td].[tid] AND [aan].[deleted] = 0 AND [aan].[delta] = 0");
       $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
-      $query->leftJoin('feeds_item', 'fia', "[fia].[entity_type] = 'taxonomy_term' AND [fia].[entity_id] = [tda].[tid]");
       $query->addField('aan', $column, 'accepted_tid');
       $query->addField('tda', 'name', 'accepted_name');
-      $query->addExpression("COALESCE(NULLIF([fia].[guid], ''), [tda].[uuid])", 'accepted_guid');
+      if ($has_feeds) {
+        $query->leftJoin('feeds_item', 'fia', "[fia].[entity_type] = 'taxonomy_term' AND [fia].[entity_id] = [tda].[tid]");
+        $query->addExpression($this->guidExpression('fia', 'tda', $has_uuid), 'accepted_guid');
+      }
+      else {
+        $query->addExpression('[tda].[uuid]', 'accepted_guid');
+      }
     }
 
     // Protologue reference (node_reference to a biblio node).
-    if ($db->schema()->tableExists('field_data_field_reference')) {
+    if ($schema->tableExists('field_data_field_reference')) {
       $query->leftJoin('field_data_field_reference', 'ref', "[ref].[entity_type] = 'taxonomy_term' AND [ref].[entity_id] = [td].[tid] AND [ref].[deleted] = 0 AND [ref].[delta] = 0");
       $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
       $query->addField('ref', 'field_reference_nid', 'reference_nid');
@@ -171,13 +242,22 @@ class ScratchpadsD7Taxon extends Term {
     }
 
     // Page URL (link field).
-    if ($db->schema()->tableExists('field_data_field_page_url')) {
+    if ($schema->tableExists('field_data_field_page_url')) {
       $query->leftJoin('field_data_field_page_url', 'purl', "[purl].[entity_type] = 'taxonomy_term' AND [purl].[entity_id] = [td].[tid] AND [purl].[deleted] = 0 AND [purl].[delta] = 0");
       $query->addField('purl', 'field_page_url_url', 'page_url');
       $query->addField('purl', 'field_page_url_title', 'page_url_title');
     }
 
     return $query;
+  }
+
+  /**
+   * SQL for "Feeds GUID, else the term uuid" over the given aliases.
+   */
+  protected function guidExpression(string $feeds_alias, string $term_alias, bool $has_uuid): string {
+    return $has_uuid
+      ? "COALESCE(NULLIF([$feeds_alias].[guid], ''), [$term_alias].[uuid])"
+      : "NULLIF([$feeds_alias].[guid], '')";
   }
 
   /**
@@ -188,7 +268,7 @@ class ScratchpadsD7Taxon extends Term {
     if (empty($this->configuration['bundle'])) {
       return NULL;
     }
-    $vid = $db->select('taxonomy_vocabulary', 'tv')
+    $vid = $this->select('taxonomy_vocabulary', 'tv')
       ->fields('tv', ['vid'])
       ->condition('machine_name', (array) $this->configuration['bundle'], 'IN')
       ->execute()
@@ -204,7 +284,15 @@ class ScratchpadsD7Taxon extends Term {
    * {@inheritdoc}
    */
   public function fields() {
-    return parent::fields() + [
+    return [
+      'tid' => $this->t('The term ID.'),
+      'vid' => $this->t('Existing term VID'),
+      'machine_name' => $this->t('Vocabulary machine name'),
+      'name' => $this->t('The name of the term.'),
+      'description' => $this->t('The term description.'),
+      'weight' => $this->t('Weight'),
+      'parent' => $this->t("The Drupal term IDs of the term's parents."),
+      'format' => $this->t('Format of the term description.'),
       'guid' => $this->t('Scratchpads GUID (feeds_item.guid, else the term uuid).'),
       'uuid' => $this->t('The term uuid (contrib uuid module).'),
       'feeds_imported' => $this->t('Timestamp of the last Feeds import of the term, if any.'),
@@ -222,6 +310,7 @@ class ScratchpadsD7Taxon extends Term {
       'page_url' => $this->t('Protologue page URL.'),
       'page_url_title' => $this->t('Protologue page URL title.'),
       'vernacular' => $this->t('Vernacular names: array of name, language, area, remarks.'),
+      'published' => $this->t('1, or 0 when the term is, or descends from, an unpublished root.'),
     ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value', ['@field' => $f]), static::SCALAR_FIELDS));
   }
 
@@ -241,13 +330,11 @@ class ScratchpadsD7Taxon extends Term {
    * {@inheritdoc}
    */
   public function prepareRow(Row $row) {
-    // The field values are already in the row (joined in query()), so skip the
-    // core Term::prepareRow() per-field and per-parent queries and go straight
-    // to the base implementation (hook_migrate_prepare_row()).
     $tid = (int) $row->getSourceProperty('tid');
     $row->setSourceProperty('vernacular', $this->vernacularNames()[$tid] ?? []);
     $row->setSourceProperty('parent', array_filter([(int) $row->getSourceProperty('parent_tid')]));
-    return SourcePluginBase::prepareRow($row);
+    $row->setSourceProperty('published', $this->isUnderUnpublishedRoot($tid) ? 0 : 1);
+    return parent::prepareRow($row);
   }
 
   /**
@@ -290,9 +377,10 @@ class ScratchpadsD7Taxon extends Term {
   }
 
   /**
-   * tid => parent tid for the vocabulary (single parent, 0 for roots).
+   * The tid => parent tid map for the vocabulary (single parent, 0 for roots).
    *
    * @return array<int, int>
+   *   Parent tid keyed by tid.
    */
   protected function parentMap(): array {
     if ($this->parents !== NULL) {
@@ -312,9 +400,10 @@ class ScratchpadsD7Taxon extends Term {
   }
 
   /**
-   * tids of the root terms (parent 0) named in `unpublished_roots`.
+   * The tids of the root terms (parent 0) named in `unpublished_roots`.
    *
    * @return array<int, true>
+   *   Set of root tids.
    */
   protected function unpublishedRootTids(): array {
     if ($this->unpublishedRootTids !== NULL) {
@@ -346,11 +435,12 @@ class ScratchpadsD7Taxon extends Term {
       return $this->vernacular;
     }
     $this->vernacular = [];
-    $db = $this->getDatabase();
-    if (!$db->schema()->tableExists('field_data_field_vernacular_name_collection')) {
+    $schema = $this->getDatabase()->schema();
+    if (!$schema->tableExists('field_data_field_vernacular_name_collection')) {
       return $this->vernacular;
     }
-    $query = $db->select('field_data_field_vernacular_name_collection', 'c')
+    // $this->select() fetches associative arrays (SqlBase sets the fetch mode).
+    $query = $this->select('field_data_field_vernacular_name_collection', 'c')
       ->fields('c', ['entity_id', 'delta'])
       ->condition('c.entity_type', 'taxonomy_term')
       ->condition('c.deleted', 0)
@@ -366,14 +456,12 @@ class ScratchpadsD7Taxon extends Term {
       'remarks' => ['field_data_field_vernacular_name_remarks', 'field_vernacular_name_remarks_value'],
     ];
     foreach ($sub as $alias => [$table, $column]) {
-      if ($db->schema()->tableExists($table)) {
+      if ($schema->tableExists($table)) {
         $query->leftJoin($table, $alias, "[$alias].[entity_type] = 'field_collection_item' AND [$alias].[entity_id] = [c].[field_vernacular_name_collection_value] AND [$alias].[deleted] = 0");
         $query->addField($alias, $column, $alias);
       }
     }
-    // The migrate source connection fetches associative arrays (SqlBase sets
-    // FetchAs::Associative), so ask for that explicitly rather than assuming.
-    foreach ($query->execute()->fetchAll(FetchAs::Associative) as $record) {
+    foreach ($query->execute()->fetchAll() as $record) {
       $this->vernacular[(int) $record['entity_id']][] = [
         'name' => $record['name'] ?? NULL,
         'language' => $record['language'] ?? NULL,

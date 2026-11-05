@@ -6,7 +6,10 @@ migration_tags:
   - 'Drupal 7'
 source:
   plugin: scratchpads_d7_taxon
+  # See taxanotes_d7_taxon.yml: the `guid` id is an expression, so the id map
+  # must stay out of the source query.
   track_changes: true
+  ignore_map: true
 process:
   # Load the node created by the first pass; rows without one are skipped.
   nid:

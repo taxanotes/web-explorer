@@ -29,6 +29,7 @@ dependencies:
     - field.field.node.taxon.field_unit_name_4
     - field.field.node.taxon.field_usage
     - field.field.node.taxon.field_vernacular_names
+    - field.field.node.taxon.field_weight
     - node.type.taxon
   module:
     - custom_field
@@ -57,14 +58,6 @@ content:
     third_party_settings: {  }
     weight: 18
     region: content
-  field_accepted_tid:
-    type: string
-    label: inline
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 20
-    region: content
   field_authors:
     type: string
     label: inline
@@ -80,15 +73,6 @@ content:
       link_to_entity: false
     third_party_settings: {  }
     weight: 1
-    region: content
-  field_legacy_tid:
-    type: number_integer
-    label: inline
-    settings:
-      thousand_separator: ''
-      prefix_suffix: false
-    third_party_settings: {  }
-    weight: 2
     region: content
   field_page_number:
     type: string
@@ -110,14 +94,6 @@ content:
     third_party_settings: {  }
     weight: 22
     region: content
-  field_parent_guid:
-    type: string
-    label: inline
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 3
-    region: content
   field_parent_taxon_reference:
     type: entity_reference_label
     label: inline
@@ -126,36 +102,12 @@ content:
     third_party_settings: {  }
     weight: 4
     region: content
-  field_parent_term_name:
-    type: string
-    label: inline
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 5
-    region: content
   field_rank:
     type: list_default
     label: inline
     settings: {  }
     third_party_settings: {  }
     weight: 6
-    region: content
-  field_reference_guid:
-    type: string
-    label: inline
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 24
-    region: content
-  field_reference_nid:
-    type: string
-    label: inline
-    settings:
-      link_to_entity: false
-    third_party_settings: {  }
-    weight: 23
     region: content
   field_reference_title:
     type: string
@@ -256,4 +208,11 @@ content:
     weight: 40
     region: content
 hidden:
+  field_accepted_tid: true
+  field_legacy_tid: true
+  field_parent_guid: true
+  field_parent_term_name: true
+  field_reference_guid: true
+  field_reference_nid: true
+  field_weight: true
   links: true

@@ -135,3 +135,6 @@ out/
 # ddev/local overrides
 web/sites/*/settings.ddev.php
 web/sites/*/services.local.yml
+
+# Planning notes, reports and drafts contain personal data and local credentials; never committed.
+docs/planning/

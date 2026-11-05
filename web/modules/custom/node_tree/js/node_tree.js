@@ -1,7 +1,22 @@
-(function ($, Drupal, once) {
+(function ($, Drupal, drupalSettings, once) {
   'use strict';
 
-  var CHILDREN_URL = '/node_tree/api/getImmediateChildrenOfParent/';
+  // All routes are built with Drupal.url() so an instance served from a
+  // sub-path (base path) works too.
+  var CHILDREN_URL = Drupal.url('node_tree/api/getImmediateChildrenOfParent/');
+  var EXPAND_URL = Drupal.url('node_tree/api/getExpandedTreePathToNode/');
+  var CONTENT_URL = Drupal.url('node_tree/api/getNodeTreeContent/');
+  var TREE_URL = Drupal.url('taxonomy-tree/node/');
+
+  // jqTree requests its lazy loads with cache: false, which appends a
+  // `_=<timestamp>` parameter and defeats the page cache for anonymous
+  // visitors. The endpoints are cache-tagged and vary on the `node` query
+  // argument, so plain GETs are correct.
+  $.ajaxPrefilter(function (options) {
+    if (options.url && options.url.indexOf(CHILDREN_URL) === 0) {
+      options.cache = true;
+    }
+  });
 
   /**
    * Builds the jqTree inside #node_tree. If the URL is
@@ -16,7 +31,7 @@
         var guid = getGuidFromUrl();
         if (guid) {
           $container.prepend('<p class="node-tree-loading">' + Drupal.t('Loading tree expanded to selected taxon…') + '</p>');
-          $.getJSON('/node_tree/api/getExpandedTreePathToNode/' + encodeURIComponent(guid), function (data) {
+          $.getJSON(EXPAND_URL + encodeURIComponent(guid), function (data) {
             $container.find('.node-tree-loading').remove();
             $tree.tree({ data: data, autoOpen: false, dragAndDrop: false, dataUrl: dataUrl });
             bindEvents($tree);
@@ -25,7 +40,9 @@
               // selectNode fires tree.select, which renders the taxon.
               $tree.tree('selectNode', target);
               if (target.element && target.element.scrollIntoView) {
-                target.element.scrollIntoView({ block: 'center' });
+                // Scroll within the tree column only, so the content column
+                // stays in view.
+                target.element.scrollIntoView({ block: 'nearest' });
               }
             }
           });
@@ -47,7 +64,13 @@
     $tree.on('tree.select', function (event) {
       if (event.node) {
         var node = event.node;
-        window.history.pushState('permalink-to-' + node.id, node.name, '/taxonomy-tree/node/' + encodeURIComponent(node.id));
+        var path = TREE_URL + encodeURIComponent(node.id);
+        // The permalink load selects the node the URL already names; do not
+        // push a second, identical history entry for it (compare decoded, a
+        // typed LSID keeps its colons while the pushed one is encoded).
+        if (decodeURIComponent(window.location.pathname) !== decodeURIComponent(path)) {
+          window.history.pushState('permalink-to-' + node.id, node.name, path);
+        }
         showContent(node.id);
       }
     });
@@ -55,9 +78,12 @@
 
   function showContent(guid) {
     $('.node_treecontentdisplay').html('<p class="node-tree-loading">' + Drupal.t('Loading…') + '</p>');
-    $.getJSON('/node_tree/api/getNodeTreeContent/' + encodeURIComponent(guid))
+    $.getJSON(CONTENT_URL + encodeURIComponent(guid))
       .done(function (response) {
-        $('.node_treecontentdisplay').html(response.data);
+        var $panel = $('.node_treecontentdisplay').html(response.data);
+        if (response.title) {
+          $panel.prepend($('<h2 class="node-tree-taxon-title"></h2>').text(response.title));
+        }
       })
       .fail(function () {
         $('.node_treecontentdisplay').html('<p>' + Drupal.t('Taxon not found.') + '</p>');
@@ -69,4 +95,4 @@
     return match ? decodeURIComponent(match[1]) : null;
   }
 
-})(jQuery, Drupal, once);
+})(jQuery, Drupal, drupalSettings, once);

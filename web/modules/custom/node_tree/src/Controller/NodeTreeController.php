@@ -22,7 +22,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * field_parent_taxon_reference, with field_parent_guid as the denormalised
  * copy that the children lookup uses (both are indexed).
  */
-class NodeTreeController extends ControllerBase {
+final class NodeTreeController extends ControllerBase {
 
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -94,7 +94,10 @@ class NodeTreeController extends ControllerBase {
    *
    * One SQL statement: children filtered on the indexed field_parent_guid
    * column (or on a NULL parent reference for the roots), joined to a
-   * GROUP BY child count so only expandable nodes get load_on_demand.
+   * GROUP BY count of *published* children so only expandable nodes get
+   * load_on_demand. Siblings are ordered by field_weight (0 when unset),
+   * then title, which is the Scratchpads sibling order. Queries are tagged
+   * node_access so grants apply if a node access module is ever enabled.
    */
   public function getImmediateChildrenOfParent(string $parent_guid = ''): array {
     $query = $this->database->select('node_field_data', 'nfd');
@@ -111,14 +114,21 @@ class NodeTreeController extends ControllerBase {
       $query->leftJoin('node__field_parent_taxon_reference', 'pr', 'pr.entity_id = nfd.nid');
       $query->isNull('pr.field_parent_taxon_reference_target_id');
     }
-    // Child counts for the candidate rows.
+    // Published child counts for the candidate rows.
     $counts = $this->database->select('node__field_parent_taxon_reference', 'c');
+    $counts->innerJoin('node_field_data', 'cn', 'cn.nid = c.entity_id');
+    $counts->condition('cn.status', NodeInterface::PUBLISHED);
     $counts->addField('c', 'field_parent_taxon_reference_target_id', 'parent_nid');
     $counts->addExpression('COUNT(*)', 'child_count');
     $counts->groupBy('c.field_parent_taxon_reference_target_id');
+    $counts->addTag('node_access');
     $query->leftJoin($counts, 'cc', 'cc.parent_nid = nfd.nid');
     $query->addExpression('COALESCE(cc.child_count, 0)', 'child_count');
+    $query->leftJoin('node__field_weight', 'w', 'w.entity_id = nfd.nid');
+    $query->addExpression('COALESCE(w.field_weight_value, 0)', 'weight');
+    $query->orderBy('weight');
     $query->orderBy('nfd.title');
+    $query->addTag('node_access');
 
     $items = [];
     foreach ($query->execute() as $row) {
@@ -142,7 +152,13 @@ class NodeTreeController extends ControllerBase {
     }
     $build = $this->entityTypeManager->getViewBuilder('node')->view($node, 'full');
     $html = (string) $this->renderer->renderInIsolation($build);
-    return new JsonResponse(['data' => $html, 'nid' => $node->id(), 'url' => $node->toUrl()->toString(), 'method' => 'GET']);
+    return new JsonResponse([
+      'data' => $html,
+      'title' => $node->label(),
+      'nid' => $node->id(),
+      'url' => $node->toUrl()->toString(),
+      'method' => 'GET',
+    ]);
   }
 
   /**

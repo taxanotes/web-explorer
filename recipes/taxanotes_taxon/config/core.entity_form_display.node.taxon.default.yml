@@ -29,6 +29,7 @@ dependencies:
     - field.field.node.taxon.field_unit_name_4
     - field.field.node.taxon.field_usage
     - field.field.node.taxon.field_vernacular_names
+    - field.field.node.taxon.field_weight
     - node.type.taxon
   module:
     - custom_field
@@ -235,6 +236,13 @@ content:
     region: content
     settings:
       size: 60
+      placeholder: ''
+    third_party_settings: {  }
+  field_weight:
+    type: number
+    weight: 41
+    region: content
+    settings:
       placeholder: ''
     third_party_settings: {  }
   field_usage:

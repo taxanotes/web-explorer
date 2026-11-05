@@ -38,4 +38,5 @@ content:
     weight: 3
     region: content
 hidden:
+  field_weight: true
   links: true

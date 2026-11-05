@@ -9,7 +9,13 @@ source:
   # bundle: <D7 vocabulary machine name> — omitted on purpose; the plugin reads
   # $settings['taxanotes_import']['source_vocabulary'] so this file serves every
   # instance unchanged.
+  # The migration id `guid` is a SQL expression (COALESCE over feeds_item and
+  # taxonomy_term_data), which the id map cannot be joined on. track_changes
+  # keeps the map out of the source query (and gives idempotent re-runs:
+  # only rows whose hash changed are re-imported); ignore_map says so
+  # explicitly, independent of track_changes.
   track_changes: true
+  ignore_map: true
   constants:
     log_prefix: 'Migrated from Scratchpads GUID '
 process:
@@ -25,9 +31,9 @@ process:
     default_value: 1
   # Published, except the "Deleted taxa" subtree (source config
   # unpublished_roots / $settings['taxanotes_import']['unpublished_roots']).
-  status:
-    plugin: scratchpads_published_status
-    source: tid
+  # `published` is derived from the D7 hierarchy in the source plugin and is
+  # part of the row hash, so moving a subtree in D7 re-imports its members.
+  status: published
   created:
     -
       plugin: skip_on_empty
@@ -51,6 +57,7 @@ process:
       - guid
   field_guid: guid
   field_legacy_tid: tid
+  field_weight: weight
   field_parent_guid: parent_guid
   field_parent_term_name: parent_name
   field_rank: field_rank

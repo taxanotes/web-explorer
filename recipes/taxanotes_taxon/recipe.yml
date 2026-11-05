@@ -41,6 +41,7 @@ config:
     - field.storage.node.field_unit_name_4
     - field.storage.node.field_usage
     - field.storage.node.field_vernacular_names
+    - field.storage.node.field_weight
   import:
     node:
       - core.entity_view_mode.node.full

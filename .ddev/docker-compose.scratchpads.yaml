@@ -1,0 +1,17 @@
+# Attach the web container to the Docker network of the local Scratchpads
+# (Drupal 7) stack so the `migrate` database connection in settings.local.php
+# can reach host `scratchpads.mysql:3306` (and `scratchpads.apache:8080`).
+#
+# ddev rebuilds its compose project from this file, so the attachment survives
+# `ddev restart` and every implicit container recreate; a manual
+# `docker network connect` does not. The network is created by
+# `docker compose up` in scratchpads-d7/scratchpads2 and must exist before
+# `ddev start` (an external network that is missing fails the start with a
+# clear message). Instances without a local D7 stack delete this file.
+services:
+  web:
+    networks:
+      - scratchpads2_default
+networks:
+  scratchpads2_default:
+    external: true
