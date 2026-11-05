@@ -20,8 +20,8 @@
         "drupal/core-project-message": "^11",
         "drupal/core-recommended": "^11",
         "drupal/custom_field": "^4.0",
-        "drupal/gin": "^3.0@RC",
-        "drupal/gin_toolbar": "^1.0@RC",
+        "drupal/gin": "^5.0",
+        "drupal/gin_toolbar": "^3.0",
         "drupal/migrate_plus": "^6.0",
         "drupal/migrate_source_csv": "^3.6",
         "drupal/migrate_tools": "^6.0",
@@ -43,7 +43,8 @@
             "drupal/core-project-message": true,
             "php-http/discovery": true,
             "phpstan/extension-installer": true,
-            "tbachert/spi": true
+            "tbachert/spi": true,
+            "symfony/runtime": true
         },
         "sort-packages": true
     },
