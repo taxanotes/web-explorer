@@ -24,13 +24,17 @@
 }
 
 /* The taxon's fields: the Scratchpads stripy group (label column,
-   zebra rows). The node's own fields are inline-labelled divs. */
-.node--type-taxon .node__content {
+   zebra rows). The node's own fields are inline-labelled divs. The species
+   page (taxon_description) in the Descriptions tab uses the same group, as
+   the Drupal 7 SPM node did. */
+.node--type-taxon .node__content,
+.node--type-taxon-description .node__content {
   margin: 20px 0;
   border-top: 1px solid var(--sp-rule);
 }
 
-.node--type-taxon .node__content > .field {
+.node--type-taxon .node__content > .field,
+.node--type-taxon-description .node__content > .field {
   display: flex;
   border: 1px solid var(--sp-rule);
   border-top: none;
@@ -38,11 +42,13 @@
   background: #fff;
 }
 
-.node--type-taxon .node__content > .field:nth-child(odd) {
+.node--type-taxon .node__content > .field:nth-child(odd),
+.node--type-taxon-description .node__content > .field:nth-child(odd) {
   background: var(--sp-stripe);
 }
 
-.node--type-taxon .node__content > .field > .field__label {
+.node--type-taxon .node__content > .field > .field__label,
+.node--type-taxon-description .node__content > .field > .field__label {
   flex: 0 0 200px;
   width: 200px;
   text-align: right;
@@ -53,35 +59,43 @@
 }
 
 .node--type-taxon .node__content > .field > .field__item,
-.node--type-taxon .node__content > .field > .field__items {
+.node--type-taxon-description .node__content > .field > .field__item,
+.node--type-taxon .node__content > .field > .field__items,
+.node--type-taxon-description .node__content > .field > .field__items {
   flex: 1 1 auto;
   min-width: 0;
   padding: 5px 5px 10px;
   overflow-wrap: anywhere;
 }
 
-.node--type-taxon .node__content > .field > .field__items .field__item {
+.node--type-taxon .node__content > .field > .field__items .field__item,
+.node--type-taxon-description .node__content > .field > .field__items .field__item {
   padding: 0;
 }
 
-.node--type-taxon .node__content > .field p {
+.node--type-taxon .node__content > .field p,
+.node--type-taxon-description .node__content > .field p {
   margin-bottom: 0;
 }
 
 /* A field without a label (the authors under the name) spans the row. */
 .node--type-taxon .node__content > .field.field--label-hidden,
-.node--type-taxon .node__content > .field.field--label-visually_hidden {
+.node--type-taxon-description .node__content > .field.field--label-hidden,
+.node--type-taxon .node__content > .field.field--label-visually_hidden,
+.node--type-taxon-description .node__content > .field.field--label-visually_hidden {
   padding: 5px;
 }
 
-.node--type-taxon .node__content > .field--name-field-authors {
+.node--type-taxon .node__content > .field--name-field-authors,
+.node--type-taxon-description .node__content > .field--name-field-authors {
   border: none;
   background: none;
   font-style: italic;
   margin-bottom: 10px;
 }
 
-.node--type-taxon .node__content > .field table {
+.node--type-taxon .node__content > .field table,
+.node--type-taxon-description .node__content > .field table {
   margin: 0;
 }
 
@@ -105,8 +119,27 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Image gallery tiles. */
+/* Image gallery tiles: the Images tab (view taxanotes_media) and the
+   species page's media field (the Drupal 7 Media block's grid). */
 .taxanotes-images .views-row {
   margin: 0 10px 10px 0;
   border: 1px solid #999;
+}
+
+.node--type-taxon-description .field--name-field-media > .field__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.node--type-taxon-description .field--name-field-media .field__item {
+  flex: 0 0 auto;
+  border: 1px solid #999;
+}
+
+.node--type-taxon-description .field--name-field-media img {
+  display: block;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
 }
