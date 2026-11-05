@@ -1,0 +1,43 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_unit_names
+    - node.type.taxon
+  module:
+    - custom_field
+id: node.taxon.field_unit_names
+field_name: field_unit_names
+entity_type: node
+bundle: taxon
+label: 'Unit names'
+description: 'The parts of the scientific name in order (ITIS units): the genus, the species epithet, then infraspecific epithets. An indicator before a unit marks a hybrid (x, ×) or an infrageneric/infraspecific category (sect., ser., subsp., var., f.).'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  add_more_label: 'Add unit'
+  # custom_field 4.0.4+ keeps only the field-level settings here; the widget
+  # type and its size/maxlength live in the form display component
+  # (core.entity_form_display.node.taxon.default.yml, settings.fields).
+  field_settings:
+    indicator:
+      label: Indicator
+      check_empty: false
+      required: false
+      translatable: false
+      description: 'x, ×, sect., subsect., ser., subser., subsp., var., f.'
+      description_display: after
+      prefix: ''
+      suffix: ''
+    name:
+      label: Name
+      check_empty: true
+      required: false
+      translatable: false
+      description: ''
+      description_display: after
+      prefix: ''
+      suffix: ''
+field_type: custom

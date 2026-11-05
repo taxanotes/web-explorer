@@ -19,14 +19,7 @@ dependencies:
     - field.field.node.taxon.field_reference_title
     - field.field.node.taxon.field_term_description
     - field.field.node.taxon.field_unacceptability_reason
-    - field.field.node.taxon.field_unit_indicator_1
-    - field.field.node.taxon.field_unit_indicator_2
-    - field.field.node.taxon.field_unit_indicator_3
-    - field.field.node.taxon.field_unit_indicator_4
-    - field.field.node.taxon.field_unit_name_1
-    - field.field.node.taxon.field_unit_name_2
-    - field.field.node.taxon.field_unit_name_3
-    - field.field.node.taxon.field_unit_name_4
+    - field.field.node.taxon.field_unit_names
     - field.field.node.taxon.field_usage
     - field.field.node.taxon.field_vernacular_names
     - field.field.node.taxon.field_weight
@@ -86,6 +79,18 @@ content:
       link: true
     third_party_settings: {  }
     weight: 5
+    region: content
+  field_unit_names:
+    type: custom_table
+    label: above
+    settings:
+      fields: {  }
+      hide_empty: true
+      sort_by: _delta
+      sort_order: asc
+      hide_header: false
+    third_party_settings: {  }
+    weight: 6
     region: content
   field_vernacular_names:
     type: custom_table
@@ -147,13 +152,5 @@ hidden:
   field_parent_term_name: true
   field_reference_guid: true
   field_reference_nid: true
-  field_unit_indicator_1: true
-  field_unit_indicator_2: true
-  field_unit_indicator_3: true
-  field_unit_indicator_4: true
-  field_unit_name_1: true
-  field_unit_name_2: true
-  field_unit_name_3: true
-  field_unit_name_4: true
   field_weight: true
   links: true

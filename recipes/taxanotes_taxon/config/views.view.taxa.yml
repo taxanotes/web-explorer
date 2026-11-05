@@ -5,10 +5,12 @@ dependencies:
     - field.storage.node.field_authors
     - field.storage.node.field_guid
     - field.storage.node.field_rank
+    - field.storage.node.field_unit_names
     - field.storage.node.field_usage
     - node.type.taxon
     - system.menu.main
   module:
+    - custom_field
     - node
     - options
     - user
@@ -92,6 +94,78 @@ display:
           delta_first_last: false
           multi_type: separator
           separator: ', '
+          field_api_classes: false
+        field_unit_names:
+          id: field_unit_names
+          table: node__field_unit_names
+          field: field_unit_names
+          relationship: none
+          group_type: group
+          admin_label: ''
+          entity_type: node
+          entity_field: field_unit_names
+          plugin_id: field
+          label: 'Unit names'
+          exclude: false
+          alter:
+            alter_text: false
+            text: ''
+            make_link: false
+            path: ''
+            absolute: false
+            external: false
+            replace_spaces: false
+            path_case: none
+            trim_whitespace: false
+            alt: ''
+            rel: ''
+            link_class: ''
+            prefix: ''
+            suffix: ''
+            target: ''
+            nl2br: false
+            max_length: 0
+            word_boundary: false
+            ellipsis: false
+            more_link: false
+            more_link_text: ''
+            more_link_path: ''
+            strip_tags: false
+            trim: false
+            preserve_tags: ''
+            html: false
+          element_type: ''
+          element_class: ''
+          element_label_type: ''
+          element_label_class: ''
+          element_label_colon: false
+          element_wrapper_type: ''
+          element_wrapper_class: ''
+          element_default_classes: true
+          empty: ''
+          hide_empty: false
+          empty_zero: false
+          hide_alter_empty: true
+          click_sort_column: name
+          # The units composed into one string, "Genus species var. name":
+          # each unit as "[indicator] [name]" (the indicator is empty for
+          # most units), all units of a taxon joined with a space.
+          type: custom_template
+          settings:
+            template: '[indicator] [name]'
+            tokens: basic
+            advanced_tokens:
+              recursion_limit: 3
+              global_types: false
+          group_column: ''
+          group_columns: {  }
+          group_rows: true
+          delta_limit: 0
+          delta_offset: 0
+          delta_reversed: false
+          delta_first_last: false
+          multi_type: separator
+          separator: ' '
           field_api_classes: false
         field_rank:
           id: field_rank
@@ -570,6 +644,7 @@ display:
         - 'config:field.storage.node.field_authors'
         - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
+        - 'config:field.storage.node.field_unit_names'
         - 'config:field.storage.node.field_usage'
   page_1:
     id: page_1
@@ -601,4 +676,5 @@ display:
         - 'config:field.storage.node.field_authors'
         - 'config:field.storage.node.field_guid'
         - 'config:field.storage.node.field_rank'
+        - 'config:field.storage.node.field_unit_names'
         - 'config:field.storage.node.field_usage'

@@ -11,8 +11,8 @@
  *
  * Prints JSON with three parts:
  * - counts: the D7 and D11 counts that must agree (terms, parent links,
- *   orphans, roots, users, roles, revisions, accepted and vernacular names,
- *   weights, ranks, usages);
+ *   orphans, roots, users, roles, revisions, accepted, unit and vernacular
+ *   names, weights, ranks, usages);
  * - fields: a comparison of EVERY term's current values with the D7
  *   field_data_* tables (what the Scratchpads site renders), one entry per
  *   mismatching (term, field), so an empty list is a value-by-value proof;
@@ -150,27 +150,50 @@ $scalar = [
   'field_page_number' => 'node__field_page_number',
   'field_rank' => 'node__field_rank',
   'field_unacceptability_reason' => 'node__field_unacceptability_reason',
-  'field_unit_indicator1' => 'node__field_unit_indicator_1',
-  'field_unit_indicator2' => 'node__field_unit_indicator_2',
-  'field_unit_indicator3' => 'node__field_unit_indicator_3',
-  'field_unit_indicator4' => 'node__field_unit_indicator_4',
-  'field_unit_name1' => 'node__field_unit_name_1',
-  'field_unit_name2' => 'node__field_unit_name_2',
-  'field_unit_name3' => 'node__field_unit_name_3',
-  'field_unit_name4' => 'node__field_unit_name_4',
   'field_usage' => 'node__field_usage',
 ];
-$trimmed = ['field_unit_name1', 'field_unit_name2', 'field_unit_name3', 'field_unit_name4'];
 
 // Expected (D7) and actual (D11) values per comparison, keyed by tid.
 $compare = [];
 foreach ($scalar as $field => $table) {
-  $expected = $d7_field($field, $field . '_value');
-  if (in_array($field, $trimmed, TRUE)) {
-    $expected = array_map(fn($v) => is_string($v) ? trim($v) : $v, $expected);
-  }
-  $compare[$field] = [$expected, $d11_field($table, substr($table, 6) . '_value')];
+  $compare[$field] = [$d7_field($field, $field . '_value'), $d11_field($table, substr($table, 6) . '_value')];
 }
+// Unit names: the four D7 name/indicator pairs against the items of
+// field_unit_names, with the migration's rule (ScratchpadsD7Base::unitNames):
+// one item per position whose name is non-empty after trimming, in position
+// order (so the delta is the unit's order), a blank indicator as NULL. Each
+// term is compared as one string, "indicator|name" per unit joined with ";".
+$unit_expected = [];
+for ($i = 1; $i <= 4; $i++) {
+  $names = $d7_field("field_unit_name$i", "field_unit_name{$i}_value");
+  $indicators = $d7_field("field_unit_indicator$i", "field_unit_indicator{$i}_value");
+  foreach ($names as $tid => $name) {
+    $name = is_string($name) ? trim($name) : '';
+    if ($name === '') {
+      continue;
+    }
+    $indicator = $indicators[$tid] ?? NULL;
+    $indicator = is_string($indicator) ? trim($indicator) : '';
+    $unit_expected[$tid][] = ($indicator === '' ? '' : $indicator) . '|' . $name;
+  }
+}
+$unit_actual = [];
+$unit_rows = 0;
+if ($d11->schema()->tableExists('node__field_unit_names')) {
+  foreach ($d11->query('SELECT l.field_legacy_tid_value tid, f.delta, f.field_unit_names_indicator indicator, f.field_unit_names_name name FROM {node__field_unit_names} f JOIN {node__field_legacy_tid} l ON l.entity_id = f.entity_id ORDER BY f.entity_id, f.delta') as $r) {
+    $unit_actual[(int) $r->tid][] = (string) $r->indicator . '|' . $r->name;
+    $unit_rows++;
+  }
+}
+$compare['unit_names'] = [
+  array_map(fn($units) => implode(';', $units), $unit_expected),
+  array_map(fn($units) => implode(';', $units), $unit_actual),
+];
+$c['d7 unit names (non-empty positions)'] = array_sum(array_map('count', $unit_expected));
+$c['d11 unit name rows'] = $unit_rows;
+$c['d11 unit name rows with an indicator'] = $d11->schema()->tableExists('node__field_unit_names')
+  ? (int) $d11->query("SELECT COUNT(*) FROM {node__field_unit_names} WHERE field_unit_names_indicator IS NOT NULL AND field_unit_names_indicator <> ''")->fetchField()
+  : 0;
 $compare['accepted_tid'] = [
   $d7_field("field_aan_$vid", "field_aan_{$vid}_tid"),
   $d11_field('node__field_accepted_tid', 'field_accepted_tid_value'),

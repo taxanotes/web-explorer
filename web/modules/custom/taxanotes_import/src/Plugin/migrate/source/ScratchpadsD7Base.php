@@ -8,6 +8,7 @@ use Drupal\Core\Database\Query\SelectInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Plugin\migrate\source\SqlBase;
+use Drupal\migrate\Row;
 
 /**
  * Shared behaviour of the Scratchpads (Drupal 7) taxon source plugins.
@@ -17,7 +18,8 @@ use Drupal\migrate\Plugin\migrate\source\SqlBase;
  * 11.3 and removed in 12 with no replacement). Holds what the taxon and the
  * taxon-revision sources have in common: the vocabulary ("bundle") read from
  * settings when the migration omits it, the GUID expression, the ITIS field
- * list and the lookup of the vocabulary-specific "accepted name" field.
+ * list, the unit names folded into one property and the lookup of the
+ * vocabulary-specific "accepted name" field.
  *
  * Configuration keys:
  * - bundle: the D7 vocabulary machine name. When omitted it is read from
@@ -46,6 +48,11 @@ abstract class ScratchpadsD7Base extends SqlBase {
     'field_unit_name4' => 'field_unit_name4',
     'field_usage' => 'field_usage',
   ];
+
+  /**
+   * The number of unit positions Scratchpads stores (unit_name1..4).
+   */
+  protected const UNIT_POSITIONS = 4;
 
   /**
    * Sub-fields of a vernacular-name collection item: source key => D7 field.
@@ -312,6 +319,42 @@ abstract class ScratchpadsD7Base extends SqlBase {
         'language' => $record['language'] ?? NULL,
         'area' => $record['area'] ?? NULL,
         'remarks' => $record['remarks'] ?? NULL,
+      ];
+    }
+    return $items;
+  }
+
+  /**
+   * The unit names of a row as the items of field_unit_names.
+   *
+   * Scratchpads keeps the parts of a scientific name in four field pairs,
+   * field_unit_indicator1..4 / field_unit_name1..4 (read as they are, see
+   * SCALAR_FIELDS). The taxon type holds them in one multi-value field: one
+   * item {indicator, name} per position whose name is non-empty once trimmed,
+   * in position order, so the delta is the unit's order within the name
+   * (both pilot vocabularies fill the positions contiguously; a gap would
+   * close up). A blank or missing indicator is NULL, a blank name drops the
+   * position with its indicator.
+   *
+   * @param \Drupal\migrate\Row $row
+   *   A source row carrying the SCALAR_FIELDS properties.
+   *
+   * @return array<int, array{indicator: string|null, name: string}>
+   *   The unit items, in order; empty when the term has no unit name.
+   */
+  protected function unitNames(Row $row): array {
+    $items = [];
+    for ($i = 1; $i <= static::UNIT_POSITIONS; $i++) {
+      $name = $row->getSourceProperty("field_unit_name$i");
+      $name = is_string($name) ? trim($name) : '';
+      if ($name === '') {
+        continue;
+      }
+      $indicator = $row->getSourceProperty("field_unit_indicator$i");
+      $indicator = is_string($indicator) ? trim($indicator) : '';
+      $items[] = [
+        'indicator' => $indicator === '' ? NULL : $indicator,
+        'name' => $name,
       ];
     }
     return $items;

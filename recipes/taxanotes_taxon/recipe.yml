@@ -31,14 +31,7 @@ config:
     - field.storage.node.field_reference_title
     - field.storage.node.field_term_description
     - field.storage.node.field_unacceptability_reason
-    - field.storage.node.field_unit_indicator_1
-    - field.storage.node.field_unit_indicator_2
-    - field.storage.node.field_unit_indicator_3
-    - field.storage.node.field_unit_indicator_4
-    - field.storage.node.field_unit_name_1
-    - field.storage.node.field_unit_name_2
-    - field.storage.node.field_unit_name_3
-    - field.storage.node.field_unit_name_4
+    - field.storage.node.field_unit_names
     - field.storage.node.field_usage
     - field.storage.node.field_vernacular_names
     - field.storage.node.field_weight
@@ -52,11 +45,17 @@ config:
       - system.action.node_save_action
       - system.action.node_unpublish_action
   # The taxon page reads like the Scratchpads taxon page: authors under the
-  # name, rank, status, parent, vernacular names, the protologue, the
-  # description. config/ seeds a fresh site; these actions bring an existing
-  # instance's display to the same order on every apply (display only, no
-  # fields).
+  # name, rank, status, parent, unit names, vernacular names, the protologue,
+  # the description. config/ seeds a fresh site; these actions bring an
+  # existing instance's displays to the same state on every apply (display
+  # only, no fields): the view display order, and the unit-names widget on
+  # the form (an instance built before field_unit_names existed has the
+  # field after this recipe is applied, but no widget for it otherwise).
   actions:
+    core.entity_form_display.node.taxon.default:
+      setComponents:
+        - name: field_unit_names
+          options: { type: custom_stacked, weight: 7, region: content, settings: { wrapper: div, label_value: '', label_limit: 60, label_prefix: Unit, auto_collapse: false, open: true, fields: { indicator: { type: text, weight: 0, size: 10, placeholder: '', maxlength: 32, maxlength_js: false }, name: { type: text, weight: 1, size: 40, placeholder: '', maxlength: 255, maxlength_js: false } } }, third_party_settings: {  } }
     core.entity_view_display.node.taxon.default:
       hideComponents:
         - field_accepted_guid
@@ -66,14 +65,6 @@ config:
         - field_parent_term_name
         - field_reference_guid
         - field_reference_nid
-        - field_unit_indicator_1
-        - field_unit_indicator_2
-        - field_unit_indicator_3
-        - field_unit_indicator_4
-        - field_unit_name_1
-        - field_unit_name_2
-        - field_unit_name_3
-        - field_unit_name_4
         - field_weight
         - links
       setComponents:
@@ -89,6 +80,8 @@ config:
           options: { type: entity_reference_label, label: inline, weight: 4, region: content, settings: { link: true }, third_party_settings: {  } }
         - name: field_parent_taxon_reference
           options: { type: entity_reference_label, label: inline, weight: 5, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_unit_names
+          options: { type: custom_table, label: above, weight: 6, region: content, settings: { fields: {  }, hide_empty: true, sort_by: _delta, sort_order: asc, hide_header: false }, third_party_settings: {  } }
         - name: field_vernacular_names
           options: { type: custom_table, label: above, weight: 10, region: content, settings: { fields: {  }, hide_empty: false }, third_party_settings: {  } }
         - name: field_reference_title

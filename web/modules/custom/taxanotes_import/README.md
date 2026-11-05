@@ -49,6 +49,20 @@ language (what the D7 site shows on its default path). Without this a term
 yielded one source row per language combination, i.e. the same GUID twice,
 and the last row won.
 
+The parts of the scientific name, which Scratchpads stores as four field
+pairs (`field_unit_indicator1..4`, `field_unit_name1..4`), land in one
+multi-value custom field, `field_unit_names` (sub-fields `indicator`, `name`;
+cardinality 4). The source plugins read the eight D7 columns as they are and
+fold them into the property `unit_names` (`ScratchpadsD7Base::unitNames()`):
+one item per position whose name is non-empty after trimming, in position
+order, a blank indicator as NULL; both migrations map it with `sub_process`.
+A taxon called *Mormyrus caballus bumbanus* is three items, `Mormyrus`,
+`caballus`, `bumbanus`; a variety carries its marker in the third item's
+indicator (`var.`). The eight D7 columns are part of the `track_changes` row
+hash, so a unit edited in Drupal 7 re-imports the term. An instance built
+before this field existed is converted with `scripts/convert-unit-names.php`
+(see its header).
+
 Node `status` is mapped from the source property `published`: 0 for a term
 that is, or descends from, one of the `unpublished_roots`, 1 for everything
 else. The lookup walks the D7 hierarchy in memory; the value is part of the
