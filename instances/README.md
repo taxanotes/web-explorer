@@ -35,9 +35,9 @@ database in the ddev db container, installs Drupal, sets the themes, applies
 type, the roles, the literature (bibcite references linked to taxa, the
 Literature page and blocks), the tree, the import module, the site identity,
 then the front page, the About page, the main menu and the taxon page
-blocks), installs the logo, runs the nine `taxanotes_import` migrations
-(taxa, then literature) when `.env` names a Scratchpads database, rebuilds
-caches and prints the URL. A second run on the same instance changes
+blocks), installs the logo, runs the eleven `taxanotes_import` migrations
+(taxa, then literature, then the images and the species pages) when `.env`
+names a Scratchpads database, rebuilds caches and prints the URL. A second run on the same instance changes
 nothing that is already in place: blocks and views are created only when
 missing (an instance may move or edit them), the site texts are seeded again
 from `instance.yml` (a key left out keeps what the site has); a changed
@@ -49,6 +49,16 @@ Scratchpads stack's MySQL is on the `scratchpads2_default` Docker network that
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to; load the
 instance's dump as its own database there (see the mormyrids report in
 `docs/planning/reports/`).
+
+The D7 files directory of an instance (attachments, images) is a per-developer
+bind mount, not committed: copy
+`.ddev/docker-compose.scratchpads-files.local.yaml.dist` to
+`.ddev/docker-compose.scratchpads-files.local.yaml` (gitignored; the `.dist`
+mounts the sibling `../../scratchpads-d7/data/files` checkout of Myriatrix at
+`/mnt/scratchpads/myriatrix/files`, add a volume line per instance whose files
+you have), `ddev restart`, and point `source.files.ddev` in `instance.yml` (or
+`SOURCE_FILES_DIR` in `.env`) at the container path. Without the file the
+instance scripts skip the file and image migrations and say so.
 
 ## `instance.yml` schema
 

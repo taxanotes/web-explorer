@@ -43,8 +43,9 @@ source:
     production: s_myriatrix
   # D7 public files directory (the literature attachments are copied from
   # it), per environment, as PHP reaches it: under ddev the Scratchpads files
-  # directory bind-mounted into the web container by
-  # .ddev/docker-compose.scratchpads-files.yaml. Not on the server yet.
+  # directory bind-mounted into the web container by the gitignored
+  # .ddev/docker-compose.scratchpads-files.local.yaml (copy of its .dist,
+  # see instances/README.md). Not on the server yet.
   files:
     ddev: /mnt/scratchpads/myriatrix/files
   unpublished_roots:

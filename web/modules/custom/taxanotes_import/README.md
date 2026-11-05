@@ -227,7 +227,8 @@ biblio node points at, plus the image files the instance uses (below), and
 resolves each under `source_files_dir`
 (`$settings['taxanotes_import']['source_files_dir']`, from `.env`
 `SOURCE_FILES_DIR` or `instance.yml` `source.files`; under ddev
-`.ddev/docker-compose.scratchpads-files.yaml` bind-mounts the Scratchpads
+`.ddev/docker-compose.scratchpads-files.local.yaml` (gitignored, copied from
+its `.dist`) bind-mounts the Scratchpads
 files directory read-only at `/mnt/scratchpads/myriatrix/files`). A file
 that is not there skips its row with the message *Source file is not
 available locally*, an image the image toolkit cannot render (TIFF) with
@@ -245,7 +246,42 @@ set) and the `entity:node` destination with `overwrite_properties`, like the
 parent pass; rolling it back keeps the links. Rolling back
 `taxanotes_d7_biblio` deletes the references (the taxa and their shadow
 fields are untouched; `field_reference` then points at nothing until the
-reference import and this pass with `--update` run again).
+reference import and this pass with `--update` run again). The `--update`
+matters: this pass has `track_changes` and the taxon rows did not change in
+D7, so after any biblio rollback and re-import a plain `migrate:import
+taxanotes_d7_taxon_reference` reports 0 items and leaves the links dangling
+(and the re-imported references get fresh entity ids, so their
+`/bibcite/reference/<id>` URLs change; citekeys and uuids stay). The instance
+scripts never roll back, so they run the plain import; after a hand rollback
+run `drush migrate:import taxanotes_d7_biblio && drush migrate:import
+taxanotes_d7_taxon_reference --update`.
+
+A hand run of `taxanotes_d7_file` or `taxanotes_d7_media_image` on an instance
+whose files are not on the machine (no `source_files_dir`) writes one *not
+available locally* message per file (828 on Mormyrids) and marks the rows
+ignored; harmless, the messages list what the server rsync must deliver, and
+a later run with the files present imports them. The instance scripts skip
+the two migrations in that case, so this happens only by hand.
+
+**Ids and the one-way cutover.** Contributors (`cid`), keywords (`kid`), files
+(`fid`) and media (`mid` = fid) keep their D7 ids as entity ids, and the
+`entity:*` destinations update an existing entity of that id. While the
+Scratchpads site is still edited and the Drupal 11 instance is read-only (the
+plan's cutover), re-imports are safe. If both sites were edited for a while,
+a new D7 row could take the id of an entity created on the Drupal 11 side and
+the next import would overwrite it; the taxa and species pages (keyed on
+uuid, fresh node ids) cannot collide. Keying the four migrations on uuid
+with fresh ids (the `migration_lookup`s already resolve the links) is the
+change to make before any two-way period.
+
+**Re-runs on a long-lived instance.** `taxanotes_d7_user` and
+`taxanotes_d7_taxon_parent` use `track_changes`; an instance imported with an
+older version of a source plugin (Myriatrix, imported before the plugins
+grew their literature and species columns) carries older row hashes, so the
+first run of the current code re-saves every user and parent row once
+("76 updated", "32,485 updated"; the values are the same, every checksum
+identical) and later runs are 0 items. The other migrations are 0 items on
+every re-run.
 
 ### Species pages and images
 
