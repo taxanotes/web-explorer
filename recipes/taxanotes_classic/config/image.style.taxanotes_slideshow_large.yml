@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: {  }
+name: taxanotes_slideshow_large
+label: 'Slideshow (619x463, cropped)'
+effects:
+  2f0cc3a9-8601-4ca2-8d71-3671d0853a33:
+    uuid: 2f0cc3a9-8601-4ca2-8d71-3671d0853a33
+    id: image_scale_and_crop
+    weight: 1
+    data:
+      width: 619
+      height: 463
+      anchor: center-center

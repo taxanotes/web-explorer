@@ -146,6 +146,7 @@ config:
         plugin: 'views_block:taxanotes_species-taxon'
         region:
           olivero: content
+          taxanotes_classic: content
         default_region: content
         weight: 12
         settings:
@@ -168,6 +169,7 @@ config:
         plugin: 'views_block:taxanotes_media-taxon'
         region:
           olivero: content
+          taxanotes_classic: content
         default_region: content
         weight: 14
         settings:
@@ -190,6 +192,7 @@ config:
         plugin: 'views_block:taxanotes_media-featured'
         region:
           olivero: content_below
+          taxanotes_classic: content_below
         default_region: content
         weight: -1
         settings:
@@ -209,6 +212,7 @@ config:
         plugin: 'views_block:taxanotes_species-recent'
         region:
           olivero: content_below
+          taxanotes_classic: content_below
         default_region: content
         weight: 3
         settings:
