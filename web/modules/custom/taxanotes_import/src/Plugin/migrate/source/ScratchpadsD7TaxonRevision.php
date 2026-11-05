@@ -23,8 +23,9 @@ use Drupal\migrate\Row;
  * - is_current: 1 for the revision that is the term's current one in D7;
  * - the same scalar ITIS fields, accepted name (guid/tid/name), protologue
  *   reference and page URL as the taxon source, read from the revision
- *   tables; unit names are trimmed here (not in the pipeline) so NULL stays
- *   NULL;
+ *   tables, one row per field and revision even when the revision holds a
+ *   row per language (ScratchpadsD7Base::joinFieldTable()); unit names are
+ *   trimmed here (not in the pipeline) so NULL stays NULL;
  * - page_url_item: the protologue page URL as one link item {uri, title},
  *   NULL when the revision has no URL. The migration maps this whole item
  *   rather than `field_page_url/uri`: a NULL sub-property does not clear the
@@ -106,7 +107,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
       if (!$schema->tableExists($table)) {
         continue;
       }
-      $query->leftJoin($table, $alias, $this->revisionJoin($alias));
+      $this->joinFieldTable($query, $field_name, $alias, 'r', TRUE);
       $query->addField($alias, $field_name . '_value', $alias);
     }
 
@@ -114,7 +115,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $aan_field = $this->acceptedNameField();
     if ($aan_field && $schema->tableExists('field_revision_' . $aan_field)) {
       $column = $aan_field . '_tid';
-      $query->leftJoin('field_revision_' . $aan_field, 'aan', $this->revisionJoin('aan'));
+      $this->joinFieldTable($query, $aan_field, 'aan', 'r', TRUE);
       $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
       $query->addField('aan', $column, 'accepted_tid');
       $query->addField('tda', 'name', 'accepted_name');
@@ -123,7 +124,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
 
     // Protologue reference (node_reference to a biblio node).
     if ($schema->tableExists('field_revision_field_reference')) {
-      $query->leftJoin('field_revision_field_reference', 'ref', $this->revisionJoin('ref'));
+      $this->joinFieldTable($query, 'field_reference', 'ref', 'r', TRUE);
       $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
       $query->addField('ref', 'field_reference_nid', 'reference_nid');
       $query->addField('refn', 'title', 'reference_title');
@@ -132,19 +133,12 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
 
     // Page URL (link field).
     if ($schema->tableExists('field_revision_field_page_url')) {
-      $query->leftJoin('field_revision_field_page_url', 'purl', $this->revisionJoin('purl'));
+      $this->joinFieldTable($query, 'field_page_url', 'purl', 'r', TRUE);
       $query->addField('purl', 'field_page_url_url', 'page_url');
       $query->addField('purl', 'field_page_url_title', 'page_url_title');
     }
 
     return $query;
-  }
-
-  /**
-   * Join condition for a field_revision_* table on the term revision row.
-   */
-  protected function revisionJoin(string $alias): string {
-    return "[$alias].[entity_type] = 'taxonomy_term' AND [$alias].[entity_id] = [r].[tid] AND [$alias].[revision_id] = [r].[revision_id] AND [$alias].[deleted] = 0 AND [$alias].[delta] = 0";
   }
 
   /**
@@ -253,16 +247,12 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     if (!empty($this->configuration['bundle'])) {
       $query->condition('c.bundle', (array) $this->configuration['bundle'], 'IN');
     }
-    $sub = [
-      'name' => ['field_revision_field_vernacular_name', 'field_vernacular_name_value'],
-      'language' => ['field_revision_field_language', 'field_language_value'],
-      'area' => ['field_revision_field_vernacular_locality', 'field_vernacular_locality_value'],
-      'remarks' => ['field_revision_field_vernacular_name_remarks', 'field_vernacular_name_remarks_value'],
-    ];
-    foreach ($sub as $alias => [$table, $column]) {
-      if ($schema->tableExists($table)) {
-        $query->leftJoin($table, $alias, "[$alias].[entity_type] = 'field_collection_item' AND [$alias].[entity_id] = [c].[field_vernacular_name_collection_value] AND [$alias].[revision_id] = [c].[field_vernacular_name_collection_revision_id] AND [$alias].[deleted] = 0");
-        $query->addField($alias, $column, $alias);
+    // One row per sub-field and item revision, whatever languages it holds
+    // (see joinFieldTable()).
+    foreach (static::VERNACULAR_FIELDS as $alias => $field_name) {
+      if ($schema->tableExists('field_revision_' . $field_name)) {
+        $this->joinFieldTable($query, $field_name, $alias, 'c', TRUE, 'field_collection_item', 'field_vernacular_name_collection_value', 'field_vernacular_name_collection_revision_id');
+        $query->addField($alias, $field_name . '_value', $alias);
       }
     }
     foreach ($query->execute()->fetchAll() as $record) {

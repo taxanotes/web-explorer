@@ -48,6 +48,16 @@ abstract class ScratchpadsD7Base extends SqlBase {
   ];
 
   /**
+   * Sub-fields of a vernacular-name collection item: source key => D7 field.
+   */
+  protected const VERNACULAR_FIELDS = [
+    'name' => 'field_vernacular_name',
+    'language' => 'field_language',
+    'area' => 'field_vernacular_locality',
+    'remarks' => 'field_vernacular_name_remarks',
+  ];
+
+  /**
    * The D7 vocabulary id of the configured bundle, resolved once.
    */
   protected int|false|null $vocabularyId = NULL;
@@ -117,6 +127,75 @@ abstract class ScratchpadsD7Base extends SqlBase {
     else {
       $query->addExpression("[$term_alias].[uuid]", $as);
     }
+  }
+
+  /**
+   * LEFT JOINs one row of a D7 field table per term (or per term revision).
+   *
+   * Scratchpads fields are translatable (entity_translation), so a term can
+   * carry one row per language for the same delta: Myriatrix has `en`/`und`
+   * pairs with equal values, Mormyrids a term with an `en` and a `fr` row
+   * holding different authors and page numbers, and vernacular-name items
+   * with two language rows. Joining the table on delta 0 alone then yields
+   * one source row per combination, i.e. the same GUID (or the same
+   * vernacular name) several times, and the last one wins. This joins
+   * exactly one row: the one in the term's own language, else the
+   * language-neutral (`und`) row, else
+   * the alphabetically first language (what the D7 site shows on its default
+   * path). The choice is a derived table grouped per entity (and revision),
+   * so the main query stays one set-based statement.
+   *
+   * @param \Drupal\Core\Database\Query\SelectInterface $query
+   *   The query; $entity_alias must be taxonomy_term_data (or, for revisions,
+   *   taxonomy_term_data_revision) with the columns tid and revision_id.
+   * @param string $field_name
+   *   The D7 field name (field_rank, field_aan_5, ...).
+   * @param string $alias
+   *   Alias of the joined field table in the query.
+   * @param string $entity_alias
+   *   Alias of the term (or term revision) table to join on.
+   * @param bool $revision
+   *   TRUE to join field_revision_<name> on (tid, revision_id) instead of
+   *   field_data_<name> on tid.
+   * @param string $entity_type
+   *   The D7 entity type the field is attached to ('taxonomy_term', or
+   *   'field_collection_item' for the vernacular-name sub-fields). Only a
+   *   term has a language of its own to prefer.
+   * @param string $id_column
+   *   The column of $entity_alias holding the entity id.
+   * @param string $revision_column
+   *   The column of $entity_alias holding the entity revision id.
+   */
+  protected function joinFieldTable(SelectInterface $query, string $field_name, string $alias, string $entity_alias, bool $revision = FALSE, string $entity_type = 'taxonomy_term', string $id_column = 'tid', string $revision_column = 'revision_id'): void {
+    $table = ($revision ? 'field_revision_' : 'field_data_') . $field_name;
+    $best_alias = 'best_' . $alias;
+
+    $best = $this->getDatabase()->select($table, 'f');
+    $best->addField('f', 'entity_id');
+    if ($entity_type === 'taxonomy_term') {
+      $best->innerJoin('taxonomy_term_data', 't', '[t].[tid] = [f].[entity_id]');
+      $rank = "CASE WHEN [f].[language] = [t].[language] THEN '0' WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+    }
+    else {
+      // Other entities (field collection items) have no language of their
+      // own to prefer.
+      $rank = "CASE WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+    }
+    $best->addExpression("SUBSTRING(MIN(CONCAT($rank, [f].[language])), 2)", 'language');
+    $best->condition('f.entity_type', $entity_type)
+      ->condition('f.deleted', 0)
+      ->condition('f.delta', 0)
+      ->groupBy('f.entity_id');
+    $on = "[$best_alias].[entity_id] = [$entity_alias].[$id_column]";
+    $join = "[$alias].[entity_type] = '$entity_type' AND [$alias].[entity_id] = [$entity_alias].[$id_column] AND [$alias].[deleted] = 0 AND [$alias].[delta] = 0 AND [$alias].[language] = [$best_alias].[language]";
+    if ($revision) {
+      $best->addField('f', 'revision_id');
+      $best->groupBy('f.revision_id');
+      $on .= " AND [$best_alias].[revision_id] = [$entity_alias].[$revision_column]";
+      $join .= " AND [$alias].[revision_id] = [$entity_alias].[$revision_column]";
+    }
+    $query->leftJoin($best, $best_alias, $on);
+    $query->leftJoin($table, $alias, $join);
   }
 
   /**

@@ -24,7 +24,10 @@ vernacular-name field collection, all in one SQL query, plus `published`
 (see below). The D7 database is the `migrate` connection (`$databases['migrate']`,
 the SqlBase default); `migrate_drupal` does not need to be installed.
 
-Instance configuration lives in `settings.local.php`:
+Instance configuration lives in the site's `settings.local.php`, which
+`scripts/new-instance.sh` generates from `instances/<slug>/instance.yml`
+(`source.vocabulary`, `source.database`, `source.unpublished_roots`) and
+`instances/<slug>/.env` (the credentials):
 
 ```php
 $databases['migrate']['default'] = [ /* the D7 database */ ];
@@ -35,6 +38,16 @@ $settings['taxanotes_import'] = [
   'unpublished_roots' => ['Deleted taxa'],
 ];
 ```
+
+Scratchpads fields are translatable, so a term (or a vernacular-name
+collection item) can carry a row per language for the same field: Myriatrix
+has `en`/`und` pairs with equal values, Mormyrids a term with an `en` and a
+`fr` row holding different authors and page numbers. Every field join picks
+exactly one row per term (`ScratchpadsD7Base::joinFieldTable()`): the row in
+the term's own language, else the `und` row, else the alphabetically first
+language (what the D7 site shows on its default path). Without this a term
+yielded one source row per language combination, i.e. the same GUID twice,
+and the last row won.
 
 Node `status` is mapped from the source property `published`: 0 for a term
 that is, or descends from, one of the `unpublished_roots`, 1 for everything

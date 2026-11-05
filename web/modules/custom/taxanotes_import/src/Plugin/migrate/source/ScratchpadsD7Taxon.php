@@ -27,7 +27,9 @@ use Drupal\migrate\Row;
  *   "associated accepted name" term reference;
  * - the scalar ITIS fields (rank, usage, unit names and indicators, authors,
  *   page number, unacceptability reason) joined in the main query rather than
- *   fetched per row, so a 30k-term vocabulary needs one SQL statement;
+ *   fetched per row, so a 30k-term vocabulary needs one SQL statement; one
+ *   row per field and term even when the D7 field holds a row per language
+ *   (see ScratchpadsD7Base::joinFieldTable() for which one);
  * - page_url / page_url_title (link field), reference_nid / reference_title /
  *   reference_guid (node_reference to a biblio node);
  * - created / changed: min and max taxonomy_term_data_revision.timestamp;
@@ -167,7 +169,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
       if (!$schema->tableExists($table)) {
         continue;
       }
-      $query->leftJoin($table, $alias, "[$alias].[entity_type] = 'taxonomy_term' AND [$alias].[entity_id] = [td].[tid] AND [$alias].[deleted] = 0 AND [$alias].[delta] = 0");
+      $this->joinFieldTable($query, $field_name, $alias, 'td');
       $query->addField($alias, $field_name . '_value', $alias);
     }
 
@@ -175,9 +177,8 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     // vocabulary id (field_aan_<vid>). Resolve it by vocabulary at query time.
     $aan_field = $this->acceptedNameField();
     if ($aan_field) {
-      $aan_table = 'field_data_' . $aan_field;
       $column = $aan_field . '_tid';
-      $query->leftJoin($aan_table, 'aan', "[aan].[entity_type] = 'taxonomy_term' AND [aan].[entity_id] = [td].[tid] AND [aan].[deleted] = 0 AND [aan].[delta] = 0");
+      $this->joinFieldTable($query, $aan_field, 'aan', 'td');
       $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
       $query->addField('aan', $column, 'accepted_tid');
       $query->addField('tda', 'name', 'accepted_name');
@@ -192,7 +193,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
 
     // Protologue reference (node_reference to a biblio node).
     if ($schema->tableExists('field_data_field_reference')) {
-      $query->leftJoin('field_data_field_reference', 'ref', "[ref].[entity_type] = 'taxonomy_term' AND [ref].[entity_id] = [td].[tid] AND [ref].[deleted] = 0 AND [ref].[delta] = 0");
+      $this->joinFieldTable($query, 'field_reference', 'ref', 'td');
       $query->leftJoin('node', 'refn', '[refn].[nid] = [ref].[field_reference_nid]');
       $query->addField('ref', 'field_reference_nid', 'reference_nid');
       $query->addField('refn', 'title', 'reference_title');
@@ -201,7 +202,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
 
     // Page URL (link field).
     if ($schema->tableExists('field_data_field_page_url')) {
-      $query->leftJoin('field_data_field_page_url', 'purl', "[purl].[entity_type] = 'taxonomy_term' AND [purl].[entity_id] = [td].[tid] AND [purl].[deleted] = 0 AND [purl].[delta] = 0");
+      $this->joinFieldTable($query, 'field_page_url', 'purl', 'td');
       $query->addField('purl', 'field_page_url_url', 'page_url');
       $query->addField('purl', 'field_page_url_title', 'page_url_title');
     }
@@ -372,16 +373,12 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     if (!empty($this->configuration['bundle'])) {
       $query->condition('c.bundle', (array) $this->configuration['bundle'], 'IN');
     }
-    $sub = [
-      'name' => ['field_data_field_vernacular_name', 'field_vernacular_name_value'],
-      'language' => ['field_data_field_language', 'field_language_value'],
-      'area' => ['field_data_field_vernacular_locality', 'field_vernacular_locality_value'],
-      'remarks' => ['field_data_field_vernacular_name_remarks', 'field_vernacular_name_remarks_value'],
-    ];
-    foreach ($sub as $alias => [$table, $column]) {
-      if ($schema->tableExists($table)) {
-        $query->leftJoin($table, $alias, "[$alias].[entity_type] = 'field_collection_item' AND [$alias].[entity_id] = [c].[field_vernacular_name_collection_value] AND [$alias].[deleted] = 0");
-        $query->addField($alias, $column, $alias);
+    // One row per sub-field and item, whatever languages it holds (see
+    // joinFieldTable()).
+    foreach (static::VERNACULAR_FIELDS as $alias => $field_name) {
+      if ($schema->tableExists('field_data_' . $field_name)) {
+        $this->joinFieldTable($query, $field_name, $alias, 'c', FALSE, 'field_collection_item', 'field_vernacular_name_collection_value');
+        $query->addField($alias, $field_name . '_value', $alias);
       }
     }
     foreach ($query->execute()->fetchAll() as $record) {
