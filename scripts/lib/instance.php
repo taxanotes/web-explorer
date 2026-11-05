@@ -32,7 +32,8 @@
  *
  * Defaults (applied in effective_instance(), the one place that knows them):
  *   drupal.sites_subdir = slug, drupal.database = slug,
- *   drupal.profile = standard.
+ *   drupal.profile = standard, site.colour = 047DB8 (six hex digits, the
+ *   accent colour of the classic view; a leading # is dropped).
  *
  * Hostnames have an environment axis: `hostnames: {ddev: [...],
  * production: [...]}`. A plain list is accepted as the ddev list. Only the
@@ -86,6 +87,13 @@ function effective_instance(array $data): array {
     'database' => $slug,
     'profile' => 'standard',
   ];
+  $data['site'] = (array) ($data['site'] ?? []);
+  // The accent colour of the classic view (the Scratchpads default).
+  $data['site'] += ['colour' => '047DB8'];
+  $data['site']['colour'] = strtoupper(ltrim(trim((string) $data['site']['colour']), '#'));
+  if (!preg_match('/^[0-9A-F]{6}$/', $data['site']['colour'])) {
+    fail("site.colour must be six hex digits (got '{$data['site']['colour']}')");
+  }
   $hosts = $data['hostnames'] ?? [];
   if (!is_array($hosts)) {
     $hosts = [$hosts];

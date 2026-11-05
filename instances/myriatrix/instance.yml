@@ -6,7 +6,11 @@ slug: myriatrix
 site:
   name: 'Taxanotes (Myriatrix dev)'
   slogan: ''
-  theme: olivero
+  # The classic view (web/themes/custom/taxanotes_classic): the Scratchpads
+  # front end; olivero is the alternative. colour: the accent colour, six hex
+  # digits (the Drupal 7 site's scratchpads_colour).
+  theme: taxanotes_classic
+  colour: '047DB8'
   admin_theme: claro
   # Front page, About page and footer texts (HTML), seeded through the
   # taxanotes_front recipe; see instances/README.md. The texts below are the

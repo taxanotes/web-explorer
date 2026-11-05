@@ -43,8 +43,10 @@
 #              dump holds the pre-upgrade state and the live code has the
 #              modules the recipe installs (an in-place upgrade, 0.2.0 ->
 #              0.3.0, keeps users, revisions, everything)
-#   content    the themes, recipes/taxanotes_front with the instance inputs,
-#              the logo (settings/assets/logo.png, outside git), the eleven
+#   content    recipes/taxanotes_front with the instance inputs, the themes
+#              and the theme's own recipe (recipes/taxanotes_classic: the
+#              classic view's blocks and accent colour, instance.yml
+#              site.colour), the logo (settings/assets/logo.png, outside git), the eleven
 #              Scratchpads migrations (the files and images only when
 #              instance.env SOURCE_FILES_DIR names the D7 files directory),
 #              cache rebuild; the drush cron crontab line
@@ -234,6 +236,7 @@ about_body="$(inst site.about_body)"
 footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
+colour="$(inst site.colour)"
 subdir="$(inst drupal.sites_subdir)"
 profile="$(inst drupal.profile)"
 db_name="$(inst drupal.database)"
@@ -582,17 +585,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-log "Themes"
-if [ -n "$theme" ]; then
-  drush theme:enable "$theme" --yes
-  drush config:set system.theme default "$theme" --yes
-fi
-if [ -n "$admin_theme" ]; then
-  drush theme:enable "$admin_theme" --yes
-  drush config:set system.theme admin "$admin_theme" --yes
-fi
-
-# ---------------------------------------------------------------------------
 log "Recipe: taxanotes_front (applies taxanotes_base: taxon type, roles, tree, import module, site identity; then front page, About page, menu, taxon page blocks)"
 recipe_inputs=(
   --input="taxanotes_base.site_name=$site_name"
@@ -604,6 +596,34 @@ recipe_inputs=(
 [ -n "$about_body" ] && recipe_inputs+=(--input="taxanotes_front.about_body=$about_body")
 [ -n "$footer_text" ] && recipe_inputs+=(--input="taxanotes_front.footer_text=$footer_text")
 drush recipe "$code/recipes/taxanotes_front" "${recipe_inputs[@]}"
+
+# ---------------------------------------------------------------------------
+log "Themes: $theme (default), $admin_theme (admin)"
+# After the front recipe, as in scripts/new-instance.sh: the recipe places
+# its blocks in the default theme of the moment (Olivero on a fresh install);
+# installing another theme then copies the default theme's blocks into it
+# (block_theme_initialize()), so a site that moves from Olivero to the
+# classic view and one built fresh with it get the same blocks. A second run
+# is a no-op.
+if [ -n "$theme" ]; then
+  drush theme:enable "$theme" --yes
+  drush config:set system.theme default "$theme" --yes
+fi
+if [ -n "$admin_theme" ]; then
+  drush theme:enable "$admin_theme" --yes
+  drush config:set system.theme admin "$admin_theme" --yes
+fi
+
+# ---------------------------------------------------------------------------
+# A theme with a recipe of its own name (recipes/taxanotes_classic) gets it
+# applied: its blocks, settings and the accent colour (instance.yml
+# site.colour) as the input <theme>.colour.
+if [ -n "$theme" ] && [ -f "$code/recipes/$theme/recipe.yml" ]; then
+  log "Recipe: $theme (the theme's blocks and settings)"
+  drush recipe "$code/recipes/$theme" --input="$theme.colour=$colour"
+else
+  log "Recipe: none for theme ${theme:-?}: skipped"
+fi
 
 # ---------------------------------------------------------------------------
 log "Logo: $settings_dir/assets/logo.png"

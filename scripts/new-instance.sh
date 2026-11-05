@@ -10,11 +10,12 @@
 # when missing) and then, step by step and only where something is missing:
 # registers the hostnames with ddev, maps them in web/sites/sites.php, creates
 # web/sites/<subdir>/ with the generic settings.php and a generated
-# settings.local.php, creates the database, installs Drupal, sets the themes,
-# applies the taxanotes_front recipe (which applies taxanotes_base: taxon
-# type, roles, literature, tree, import module, site identity; then the front
-# page, the About page, the menu and the taxon page blocks), installs the instance's
-# logo, runs the eleven Scratchpads migrations (taxa, literature, then the
+# settings.local.php, creates the database, installs Drupal, applies the
+# taxanotes_front recipe (which applies taxanotes_base: taxon type, roles,
+# literature, tree, import module, site identity; then the front page, the
+# About page, the menu and the taxon page blocks), sets the themes and applies
+# the theme's own recipe when it has one (recipes/taxanotes_classic: the
+# classic view's blocks and accent colour), installs the instance's logo, runs the eleven Scratchpads migrations (taxa, literature, then the
 # species pages and images), rebuilds caches and prints the URL. Re-running it on an existing instance changes nothing that is already
 # in place (migrations only import rows that changed in Drupal 7; the recipe
 # creates blocks and views only when they are missing and re-seeds the site
@@ -96,6 +97,7 @@ about_body="$(inst site.about_body)"
 footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
+colour="$(inst site.colour)"
 subdir="$(inst drupal.sites_subdir)"
 profile="$(inst drupal.profile)"
 db_name="$(inst drupal.database)"
@@ -230,9 +232,11 @@ if [ ! -f "$site_dir/settings.php" ]; then
   note "settings.php copied from scripts/templates/settings.php"
 elif cmp -s scripts/templates/settings.php "$site_dir/settings.php"; then
   note "settings.php is the generic template"
-elif grep -Eq '^\$(databases\[|settings\[.hash_salt.\])' "$site_dir/settings.php"; then
+elif grep -Eq "^\\\$databases\\[|^\\\$settings\\['hash_salt'\\] *= *'[^']" "$site_dir/settings.php"; then
   # The installer's own writes (see the restore after site:install below): a
   # credential or salt in a file that is committed. Never carried on with.
+  # (An empty salt, `$settings['hash_salt'] = '';` as the hand-built
+  # Myriatrix site's committed settings.php has it, is not one.)
   die "$site_dir/settings.php holds database credentials or a hash salt: restore it with 'cp scripts/templates/settings.php $site_dir/settings.php' (both come from .env through settings.local.php) and run again"
 else
   note "settings.php exists and is not the generic template: left alone"
@@ -326,18 +330,6 @@ if [ "$install" -eq 1 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-log "Themes"
-# Before the recipe: its blocks are placed in the default theme.
-if [ -n "$theme" ]; then
-  in_web drush --uri="$url" theme:enable "$theme" --yes
-  in_web drush --uri="$url" config:set system.theme default "$theme" --yes
-fi
-if [ -n "$admin_theme" ]; then
-  in_web drush --uri="$url" theme:enable "$admin_theme" --yes
-  in_web drush --uri="$url" config:set system.theme admin "$admin_theme" --yes
-fi
-
-# ---------------------------------------------------------------------------
 log "Recipe: taxanotes_front (applies taxanotes_base: taxon type, roles, tree, import module, site identity; then front page, About page, menu, taxon page blocks)"
 croot="$(in_web pwd)"
 recipe_inputs=(
@@ -352,6 +344,37 @@ recipe_inputs=(
 [ -n "$about_body" ] && recipe_inputs+=(--input="taxanotes_front.about_body=$about_body")
 [ -n "$footer_text" ] && recipe_inputs+=(--input="taxanotes_front.footer_text=$footer_text")
 in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_front" "${recipe_inputs[@]}"
+
+# ---------------------------------------------------------------------------
+log "Themes: $theme (default), $admin_theme (admin)"
+# After the front recipe, on purpose: the recipe places its blocks in the
+# theme that is the default when it runs (Olivero on a fresh install, as the
+# standard profile leaves it). Installing another theme then copies every
+# block of the default theme into it (block_theme_initialize(), ids
+# <theme>_<block id>, regions of the same name), so an instance that moves
+# from Olivero to the classic view, and one built fresh with it, end up with
+# the same blocks, and the Olivero ones stay as they were. A second run is a
+# no-op: an installed theme is not copied into again.
+if [ -n "$theme" ]; then
+  in_web drush --uri="$url" theme:enable "$theme" --yes
+  in_web drush --uri="$url" config:set system.theme default "$theme" --yes
+fi
+if [ -n "$admin_theme" ]; then
+  in_web drush --uri="$url" theme:enable "$admin_theme" --yes
+  in_web drush --uri="$url" config:set system.theme admin "$admin_theme" --yes
+fi
+
+# ---------------------------------------------------------------------------
+# A theme that ships a recipe of its own name (recipes/taxanotes_classic for
+# the classic view) gets it applied now: its blocks, its switch-offs of the
+# Olivero front page blocks, and the accent colour from instance.yml
+# (site.colour, default 047DB8) as the input <theme>.colour.
+if [ -n "$theme" ] && [ -f "recipes/$theme/recipe.yml" ]; then
+  log "Recipe: $theme (the theme's blocks and settings)"
+  in_web drush --uri="$url" recipe "$croot/recipes/$theme" --input="$theme.colour=$colour"
+else
+  log "Recipe: none for theme ${theme:-?} (recipes/$theme/recipe.yml does not exist): skipped"
+fi
 
 # ---------------------------------------------------------------------------
 log "Logo: $inst_dir/assets/logo.png"
