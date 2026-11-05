@@ -5,12 +5,14 @@ Migrations that bring taxa into the shared `taxon` content type (recipe
 
 ## Drupal 7 Scratchpads track
 
-Two plugin migrations, run in order, both keyed on the Scratchpads GUID:
+Four plugin migrations in group `taxanotes`, run in this order:
 
 | id | what it does |
 |---|---|
-| `taxanotes_d7_taxon` | one `taxon` node per term of the source vocabulary; all scalar fields, GUIDs of parent / accepted name kept as strings |
+| `taxanotes_d7_user` | one user per D7 account (uid kept), with the phpass password hash and the roles mapped onto the `recipes/taxanotes_users` roles |
+| `taxanotes_d7_taxon` | one `taxon` node per term of the source vocabulary, keyed on the Scratchpads GUID; all scalar fields, GUIDs of parent / accepted name kept as strings |
 | `taxanotes_d7_taxon_parent` | second pass: resolves `field_parent_taxon_reference` and `field_accepted_name` through the first migration's id map |
+| `taxanotes_d7_taxon_revision` | the term revision history (Scratchpads `taxonomy_revision` tables) as node revisions, oldest first; the D7 current revision becomes the node's default revision |
 
 Source plugin `scratchpads_d7_taxon` is built on core migrate's `SqlBase`
 (not on the `migrate_drupal` d7 sources, which are deprecated in Drupal 11.3
@@ -49,6 +51,42 @@ joined on; both migrations therefore set `track_changes: true` and
 `ignore_map: true` (either alone keeps the map out of the source query, the
 second makes it explicit). Do not remove them.
 
+### Users
+
+Source plugin `scratchpads_d7_user` reads `users`, `users_roles` and `role`.
+uid 0 is never a row and uid 1 is skipped (on every instance uid 1 is the
+local administrator; core's `entity:user` destination would keep its
+password but replace its name, mail and roles with the D7 site owner's);
+`include_root: true` in the source configuration migrates it anyway. D7 uid
+1's revisions map to uid 1 through the fallback in the revision migration.
+Passwords are the D7 `$S$` hashes, stored pre-hashed; core's Password
+Compatibility (`phpass`) module, part of Drupal 11 core and installed by the
+standard profile, verifies them on login, after which core re-hashes with
+the current algorithm. Roles: `maintainer` and `administrator` ->
+`administrator`, `editor` -> `editor`, `contributor` -> `contributor` (the
+`static_map` in `taxanotes_d7_user.yml`); apply `recipes/taxanotes_users`
+first so the roles exist.
+
+### Revisions
+
+Source plugin `scratchpads_d7_taxon_revision` yields one row per
+`taxonomy_term_data_revision` row of the vocabulary, ordered by
+`revision_id`, with the revisioned values read from the `field_revision_*`
+tables and `is_current` = 1 for the revision `taxonomy_term_data.revision_id`
+points at. The destination `taxanotes_entity_revision` (a subclass of core's
+`entity_revision`) saves every row as a new node revision; the `is_current`
+row becomes the default revision and the placeholder revision that
+`taxanotes_d7_taxon` wrote (log "Migrated from Scratchpads GUID ...") is
+deleted, so the history holds exactly the D7 revisions in order, with the
+D7 timestamp, author and log, and the current field values do not change.
+Fields D7 does not revision (GUID, legacy tid, parent, status, author) keep
+the node's current value in every revision. Rolling the revision migration
+back deletes the non-default revisions; the default revision cannot be
+deleted, so its log is reset to "Scratchpads revision history rolled back",
+which the next import replaces again. Run it after both taxon passes (it
+requires them) and after `taxanotes_d7_user` (optional dependency: without
+it every revision author is uid 1).
+
 ## Local ddev setup for the D7 track
 
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to the
@@ -61,12 +99,16 @@ up before `ddev start`; instances without a local D7 stack delete that file.
 Run:
 
 ```
+drush recipe recipes/taxanotes_taxon
+drush recipe recipes/taxanotes_users
 drush migrate:status --group=taxanotes
+drush migrate:import taxanotes_d7_user
 drush migrate:import taxanotes_d7_taxon
 drush migrate:import taxanotes_d7_taxon_parent
+drush migrate:import taxanotes_d7_taxon_revision --feedback=2000
 ```
 
-Both migrations are idempotent (`track_changes: true`): re-running imports
+All migrations are idempotent (`track_changes: true`): re-running imports
 only rows whose source hash changed. Rolling back the parent pass removes
 only its id-map rows (its map rows carry `rollback_action = preserve`
 because it updates nodes it did not create): `field_parent_taxon_reference`
