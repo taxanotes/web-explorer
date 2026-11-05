@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\taxanotes_import\Plugin\migrate\destination;
 
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\migrate\Attribute\MigrateDestination;
@@ -47,11 +48,16 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class TaxanotesEntityRevision extends EntityRevision {
 
   /**
+   * The time service (for the timestamp of a reset default revision).
+   */
+  protected ?TimeInterface $time = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
     $entity_type = $configuration['entity_type'] ?? 'node';
-    return new static(
+    $instance = new static(
       $configuration,
       $plugin_id,
       $plugin_definition,
@@ -63,6 +69,8 @@ final class TaxanotesEntityRevision extends EntityRevision {
       $container->get('account_switcher'),
       $container->get('entity_type.bundle.info'),
     );
+    $instance->time = $container->get('datetime.time');
+    return $instance;
   }
 
   /**
@@ -176,7 +184,7 @@ final class TaxanotesEntityRevision extends EntityRevision {
     $revision->setNewRevision(FALSE);
     $revision->setRevisionLogMessage((string) $log);
     $revision->setRevisionUserId(1);
-    $revision->setRevisionCreationTime(\Drupal::time()->getRequestTime());
+    $revision->setRevisionCreationTime($this->time ? $this->time->getRequestTime() : time());
     $revision->setSyncing(TRUE);
     $revision->save();
   }
