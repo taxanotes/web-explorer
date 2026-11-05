@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_page_number_synonymy
+    - node.type.taxon
+id: node.taxon.field_page_number_synonymy
+field_name: field_page_number_synonymy
+entity_type: node
+bundle: taxon
+label: 'Page number (synonymy)'
+description: 'The page of the synonymy reference. Scratchpads: field_page_number_synonymy.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

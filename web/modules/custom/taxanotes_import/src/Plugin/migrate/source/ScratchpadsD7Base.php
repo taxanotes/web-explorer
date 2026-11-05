@@ -55,6 +55,66 @@ abstract class ScratchpadsD7Base extends SqlBase {
   protected const UNIT_POSITIONS = 4;
 
   /**
+   * The nomenclature term fields: D7 field name => [D11 field name, kind].
+   *
+   * The term fields a Scratchpads vocabulary may carry beyond the ITIS set
+   * (SCALAR_FIELDS, the accepted name, the protologue reference, the page
+   * URL and the vernacular names): Mormyrids has the type material, type
+   * locality, original combination, free-text synonym lists and taxonomic
+   * notes; Anthophila the synonymy and designation fields, the family-level
+   * name origins, the type material notes and the biological notes. Each
+   * lands in the generic optional field of the taxon type named here
+   * (recipes/taxanotes_taxon, the two references in
+   * recipes/taxanotes_literature); three D7 names are misleading and are
+   * renamed (field_description_taxa holds the type material,
+   * field_type_species the type material notes, field_designation_method
+   * the designation reference). The kind says how the value travels:
+   * - string: one plain value (D7 text, 255 characters) as the property;
+   * - text: the items as a list of {value, format} (D7 text_long, or a
+   *   text field longer than 255 characters), the format mapped like the
+   *   term description (NULL and plain_text -> plain_text, filtered_html ->
+   *   basic_html, full_html -> full_html);
+   * - reference: a node_reference to a biblio node; the property
+   *   <D11 name>_guid carries the node uuid (and <D11 name>_nid the nid), to
+   *   be resolved through the biblio migration by the reference pass.
+   * A vocabulary's term field that is not in this table is not migrated
+   * (scripts/verify-instance.php lists such fields).
+   */
+  protected const EXTRA_FIELDS = [
+    'field_description_taxa' => ['field_type_material', 'text'],
+    'field_type_species' => ['field_type_material_notes', 'text'],
+    'field_type_locality' => ['field_type_locality', 'text'],
+    'field_original_combination' => ['field_original_combination', 'string'],
+    'field_synonyms' => ['field_synonyms_homotypic', 'text'],
+    'field_synonyms_heterotypic' => ['field_synonyms_heterotypic', 'text'],
+    'field_synonymy_by' => ['field_synonymy_by', 'string'],
+    'field_page_number_synonymy' => ['field_page_number_synonymy', 'string'],
+    'field_synonymy_reference' => ['field_synonymy_reference', 'reference'],
+    'field_designation_by' => ['field_designation_by', 'string'],
+    'field_page_number_designation' => ['field_page_number_designation', 'string'],
+    'field_designation_method' => ['field_designation_reference', 'reference'],
+    'field_family_level_name_origins' => ['field_family_level_name_origins', 'text'],
+    'field_taxonomic_notes' => ['field_taxonomic_notes', 'text'],
+    'field_biological_notes' => ['field_biological_notes', 'text'],
+  ];
+
+  /**
+   * D7 text format => D11 text format of a nomenclature text value.
+   */
+  protected const TEXT_FORMATS = [
+    'filtered_html' => 'basic_html',
+    'full_html' => 'full_html',
+    'plain_text' => 'plain_text',
+  ];
+
+  /**
+   * The nomenclature fields the vocabulary has, resolved once.
+   *
+   * @var array<string, array{string, string}>|null
+   */
+  protected ?array $extraFields = NULL;
+
+  /**
    * Sub-fields of a vernacular-name collection item: source key => D7 field.
    */
   protected const VERNACULAR_FIELDS = [
@@ -472,6 +532,177 @@ abstract class ScratchpadsD7Base extends SqlBase {
       ];
     }
     return $items;
+  }
+
+  /**
+   * The nomenclature term fields of the vocabulary: D7 name => [D11, kind].
+   *
+   * The subset of EXTRA_FIELDS that has an instance on the configured
+   * vocabulary (field_config_instance) and a data table. Nothing for a
+   * vocabulary without them (Myriatrix): its rows carry no extra property,
+   * so their hashes do not change.
+   *
+   * @return array<string, array{string, string}>
+   *   D7 field name => [D11 field name, kind], in EXTRA_FIELDS order.
+   */
+  protected function extraFields(): array {
+    if ($this->extraFields !== NULL) {
+      return $this->extraFields;
+    }
+    $this->extraFields = [];
+    $schema = $this->getDatabase()->schema();
+    if (empty($this->configuration['bundle']) || !$schema->tableExists('field_config_instance')) {
+      return $this->extraFields;
+    }
+    $names = $this->select('field_config_instance', 'fci')
+      ->fields('fci', ['field_name'])
+      ->condition('fci.entity_type', 'taxonomy_term')
+      ->condition('fci.bundle', (array) $this->configuration['bundle'], 'IN')
+      ->condition('fci.deleted', 0)
+      ->execute()
+      ->fetchCol();
+    foreach (static::EXTRA_FIELDS as $d7_name => $target) {
+      if (in_array($d7_name, $names, TRUE) && $schema->tableExists('field_data_' . $d7_name)) {
+        $this->extraFields[$d7_name] = $target;
+      }
+    }
+    return $this->extraFields;
+  }
+
+  /**
+   * Loads the values of every nomenclature field of the vocabulary, once.
+   *
+   * One query per field over field_data_<name> (keyed by tid) or
+   * field_revision_<name> (keyed by term revision id), every delta of the
+   * row set in the term's own language, else `und`, else the first
+   * language (the rule of joinFieldTable()), shaped per kind (EXTRA_FIELDS):
+   * a string, a list of {value, format}, or for a reference the uuid and
+   * nid of the biblio node under <D11 name>_guid / <D11 name>_nid. A term
+   * (or revision) without a value for a field gets NULL for that property,
+   * so every row of the vocabulary carries the same property set.
+   *
+   * @param bool $revision
+   *   TRUE for the field_revision_* tables, keyed by term revision id.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Source properties keyed by tid or revision id.
+   */
+  protected function loadExtraFieldValues(bool $revision): array {
+    $values = [];
+    $fields = $this->extraFields();
+    if (!$fields) {
+      return $values;
+    }
+    $schema = $this->getDatabase()->schema();
+    $prefix = $revision ? 'field_revision_' : 'field_data_';
+    $key = $revision ? 'revision_id' : 'entity_id';
+    foreach ($fields as $d7_name => [$name, $kind]) {
+      $table = $prefix . $d7_name;
+      if (!$schema->tableExists($table)) {
+        continue;
+      }
+      // The best language per term (and revision), as joinFieldTable() ranks
+      // it, over every delta of the field.
+      $best = $this->getDatabase()->select($table, 'f');
+      $best->addField('f', 'entity_id');
+      if ($this->termsHaveLanguage()) {
+        $best->innerJoin('taxonomy_term_data', 't', '[t].[tid] = [f].[entity_id]');
+        $rank = "CASE WHEN [f].[language] = [t].[language] THEN '0' WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+      }
+      else {
+        $rank = "CASE WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+      }
+      $best->addExpression("SUBSTRING(MIN(CONCAT($rank, [f].[language])), 2)", 'language');
+      $best->condition('f.entity_type', 'taxonomy_term')
+        ->condition('f.deleted', 0)
+        ->condition('f.bundle', (array) $this->configuration['bundle'], 'IN')
+        ->groupBy('f.entity_id');
+      $on = '[best].[entity_id] = [d].[entity_id] AND [best].[language] = [d].[language]';
+      if ($revision) {
+        $best->addField('f', 'revision_id');
+        $best->groupBy('f.revision_id');
+        $on .= ' AND [best].[revision_id] = [d].[revision_id]';
+      }
+      $query = $this->select($table, 'd')
+        ->fields('d', ['entity_id', 'revision_id', 'delta'])
+        ->condition('d.entity_type', 'taxonomy_term')
+        ->condition('d.deleted', 0)
+        ->condition('d.bundle', (array) $this->configuration['bundle'], 'IN')
+        ->orderBy('d.' . $key)
+        ->orderBy('d.delta');
+      $query->innerJoin($best, 'best', $on);
+      if ($kind === 'reference') {
+        $query->addField('d', $d7_name . '_nid', 'nid');
+        $query->leftJoin('node', 'n', "[n].[nid] = [d].[{$d7_name}_nid]");
+        $query->addField('n', 'uuid', 'uuid');
+      }
+      else {
+        $query->addField('d', $d7_name . '_value', 'value');
+        if ($schema->fieldExists($table, $d7_name . '_format')) {
+          $query->addField('d', $d7_name . '_format', 'format');
+        }
+      }
+      foreach ($query->execute()->fetchAll() as $record) {
+        $id = (int) $record[$key];
+        if ($kind === 'reference') {
+          if (!isset($values[$id][$name . '_guid']) && $record['nid']) {
+            $values[$id][$name . '_nid'] = (int) $record['nid'];
+            $values[$id][$name . '_guid'] = $record['uuid'] ?: NULL;
+          }
+          continue;
+        }
+        $value = $record['value'];
+        if ($value === NULL || trim((string) $value) === '') {
+          continue;
+        }
+        if ($kind === 'string') {
+          if (!isset($values[$id][$name])) {
+            $values[$id][$name] = (string) $value;
+          }
+          continue;
+        }
+        $values[$id][$name][] = [
+          'value' => (string) $value,
+          'format' => static::TEXT_FORMATS[$record['format'] ?? ''] ?? 'plain_text',
+        ];
+      }
+    }
+    return $values;
+  }
+
+  /**
+   * The source property names of the nomenclature fields of the vocabulary.
+   *
+   * @return string[]
+   *   One name per non-reference field, two (<name>_guid, <name>_nid) per
+   *   reference field.
+   */
+  protected function extraFieldProperties(): array {
+    $properties = [];
+    foreach ($this->extraFields() as [$name, $kind]) {
+      if ($kind === 'reference') {
+        $properties[] = $name . '_guid';
+        $properties[] = $name . '_nid';
+      }
+      else {
+        $properties[] = $name;
+      }
+    }
+    return $properties;
+  }
+
+  /**
+   * Sets the nomenclature properties of a row (NULL where the term has none).
+   *
+   * @param \Drupal\migrate\Row $row
+   *   The row.
+   * @param array<string, mixed> $values
+   *   The term's (or revision's) values from loadExtraFieldValues().
+   */
+  protected function setExtraFieldProperties(Row $row, array $values): void {
+    foreach ($this->extraFieldProperties() as $property) {
+      $row->setSourceProperty($property, $values[$property] ?? NULL);
+    }
   }
 
   /**

@@ -40,7 +40,13 @@ use Drupal\migrate\Row;
  * - published: 0 when the term is, or descends from, one of the
  *   unpublished_roots, else 1. Derived from the hierarchy in prepareRow() and
  *   therefore part of the track_changes row hash, so moving a subtree into or
- *   out of "Deleted taxa" in D7 re-imports every affected descendant.
+ *   out of "Deleted taxa" in D7 re-imports every affected descendant;
+ * - the nomenclature fields the vocabulary has (EXTRA_FIELDS of the base
+ *   class: type material, type locality, synonym lists, synonymy and
+ *   designation, notes), one property per field named after the D11
+ *   field, loaded once for the vocabulary (loadExtraFieldValues()); a
+ *   vocabulary without them adds no property, so its row hashes do not
+ *   change.
  *
  * Configuration keys:
  * - bundle: the D7 vocabulary machine name. When omitted it is read from
@@ -50,9 +56,10 @@ use Drupal\migrate\Row;
  *   imported unpublished (Scratchpads parks removed names under a root called
  *   "Deleted taxa", which is the default). Overridable per instance with
  *   $settings['taxanotes_import']['unpublished_roots'].
- * - with_reference_only: TRUE restricts the rows to the terms whose
- *   protologue reference (field_reference) is set, for the pass that links
- *   the taxon to the migrated reference entity (taxanotes_d7_taxon_reference)
+ * - with_reference_only: TRUE restricts the rows to the terms that point at
+ *   a biblio node: the protologue reference (field_reference) or one of the
+ *   nomenclature references (synonymy, designation), for the pass that links
+ *   the taxon to the migrated reference entities (taxanotes_d7_taxon_reference)
  *   after the literature import; it saves only those nodes.
  * - key / database_state_key, track_changes, ignore_map, constants: see
  *   SqlBase and SourcePluginBase.
@@ -93,6 +100,13 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
    * @var array<int, true>|null
    */
   protected ?array $unpublishedRootTids = NULL;
+
+  /**
+   * The nomenclature field values keyed by tid, loaded once.
+   *
+   * @var array<int, array<string, mixed>>|null
+   */
+  protected ?array $extraValues = NULL;
 
   /**
    * {@inheritdoc}
@@ -175,12 +189,29 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     $this->joinItisFields($query, 'td');
 
     if (!empty($this->configuration['with_reference_only'])) {
-      if (!$schema->tableExists('field_data_field_reference')) {
+      // The protologue, or one of the nomenclature references the
+      // vocabulary has (the synonymy and designation references of
+      // Anthophila): a term with any of them is a row.
+      $or = $db->condition('OR');
+      if ($schema->tableExists('field_data_field_reference')) {
+        $or->isNotNull('ref.field_reference_nid');
+      }
+      foreach ($this->extraFields() as $d7_name => [, $kind]) {
+        if ($kind === 'reference') {
+          $with = $db->select('field_data_' . $d7_name, 'x');
+          $with->addField('x', 'entity_id');
+          $with->condition('x.entity_type', 'taxonomy_term')
+            ->condition('x.deleted', 0)
+            ->isNotNull('x.' . $d7_name . '_nid');
+          $or->condition('td.tid', $with, 'IN');
+        }
+      }
+      if ($or->count() === 0) {
         // No reference field on the D7 site: no term has a reference.
         $query->alwaysFalse();
       }
       else {
-        $query->isNotNull('ref.field_reference_nid');
+        $query->condition($or);
       }
     }
 
@@ -219,7 +250,8 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
       'vernacular' => $this->t('Vernacular names: array of name, language, area, remarks.'),
       'unit_names' => $this->t('Unit names: array of indicator, name, one per non-empty unit position (1-4), in order.'),
       'published' => $this->t('1, or 0 when the term is, or descends from, an unpublished root.'),
-    ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value', ['@field' => $f]), static::SCALAR_FIELDS));
+    ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value', ['@field' => $f]), static::SCALAR_FIELDS))
+    + array_combine($this->extraFieldProperties(), array_map(fn($p) => $this->t('Nomenclature field @p (see EXTRA_FIELDS).', ['@p' => $p]), $this->extraFieldProperties()));
   }
 
   /**
@@ -243,6 +275,7 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     $row->setSourceProperty('unit_names', $this->unitNames($row));
     $row->setSourceProperty('parent', array_filter([(int) $row->getSourceProperty('parent_tid')]));
     $row->setSourceProperty('published', $this->isUnderUnpublishedRoot($tid) ? 0 : 1);
+    $this->setExtraFieldProperties($row, $this->extraValues()[$tid] ?? []);
     return parent::prepareRow($row);
   }
 
@@ -343,6 +376,16 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
       $this->vernacular = $this->loadVernacularNames(FALSE);
     }
     return $this->vernacular;
+  }
+
+  /**
+   * Loads the current nomenclature field values of the vocabulary, once.
+   */
+  protected function extraValues(): array {
+    if ($this->extraValues === NULL) {
+      $this->extraValues = $this->loadExtraFieldValues(FALSE);
+    }
+    return $this->extraValues;
   }
 
 }
