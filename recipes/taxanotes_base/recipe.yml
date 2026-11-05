@@ -63,3 +63,15 @@ config:
     update.settings:
       simpleConfigUpdate:
         notification.emails: []
+    # Composition of taxon + literature on the taxon page: the protologue is
+    # the link to the reference entity (taxanotes_literature), not the
+    # Scratchpads title text (taxanotes_taxon). Both sub-recipes set this
+    # display in their own actions; applied as one chain the taxon recipe's
+    # text won (seen on a fresh build), so the composed result is set here,
+    # after every sub-recipe, where it cannot be overtaken.
+    core.entity_view_display.node.taxon.default:
+      setComponents:
+        - name: field_reference
+          options: { type: entity_reference_label, label: inline, weight: 11, region: content, settings: { link: true }, third_party_settings: {  } }
+      hideComponents:
+        - field_reference_title
