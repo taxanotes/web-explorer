@@ -23,4 +23,16 @@ final class PageHooks {
     $attachments['#attached']['library'][] = 'taxanotes_front/front';
   }
 
+  /**
+   * Implements hook_theme().
+   */
+  #[Hook('theme')]
+  public function theme(): array {
+    return [
+      'taxanotes_front_recent_columns' => [
+        'variables' => ['columns' => [], 'empty' => ''],
+      ],
+    ];
+  }
+
 }

@@ -4,6 +4,7 @@ taxanotes_front.front:
     _controller: '\Drupal\taxanotes_front\Controller\FrontController::front'
     _title_callback: '\Drupal\taxanotes_front\Controller\FrontController::frontTitle'
   requirements:
+    # A public page: the texts are the site's own, shown to everyone.
     _access: 'TRUE'
 
 taxanotes_front.about:
@@ -12,6 +13,7 @@ taxanotes_front.about:
     _controller: '\Drupal\taxanotes_front\Controller\FrontController::about'
     _title_callback: '\Drupal\taxanotes_front\Controller\FrontController::aboutTitle'
   requirements:
+    # A public page: the texts are the site's own, shown to everyone.
     _access: 'TRUE'
 
 taxanotes_front.settings:
@@ -21,3 +23,15 @@ taxanotes_front.settings:
     _title: 'Front page and site texts'
   requirements:
     _permission: 'administer site configuration'
+
+# The header search (block taxanotes_front_header_search): "Taxonomy" is
+# redirected to the taxa list, "All" renders a results page across taxa,
+# literature, species pages and pages.
+taxanotes_front.search:
+  path: '/find'
+  defaults:
+    _controller: '\Drupal\taxanotes_front\Controller\SearchController::find'
+    _title_callback: '\Drupal\taxanotes_front\Controller\SearchController::title'
+  requirements:
+    # A public page: the texts are the site's own, shown to everyone.
+    _access: 'TRUE'

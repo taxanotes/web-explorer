@@ -1,0 +1,33 @@
+{#
+/**
+ * @file
+ * The three recent-content columns of the classic front page.
+ *
+ * Available variables:
+ * - columns: a list of columns, each with:
+ *   - heading: the column title.
+ *   - items: a list of items, each with title, url, meta ("author - date")
+ *     and summary (may be empty).
+ * - empty: the text of a column without items.
+ */
+#}
+<div class="taxanotes-recent-columns">
+  {% for column in columns %}
+    <div class="taxanotes-recent-columns__column">
+      <h2>{{ column.heading }}</h2>
+      {% if column.items %}
+        <ul>
+          {% for item in column.items %}
+            <li>
+              <div class="taxanotes-recent-columns__title"><a href="{{ item.url.toString() }}">{{ item.title }}</a></div>
+              {% if item.meta %}<p class="description">{{ item.meta }}</p>{% endif %}
+              {% if item.summary %}<p class="taxanotes-recent-columns__summary">{{ item.summary }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="taxanotes-recent-columns__empty">{{ empty }}</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>

@@ -33,3 +33,18 @@ block.settings.taxanotes_front_search:
 block.settings.taxanotes_front_summary:
   type: block_settings
   label: 'Taxon summary block'
+
+block.settings.taxanotes_front_header_search:
+  type: block_settings
+  label: 'Header search block'
+
+block.settings.taxanotes_front_recent:
+  type: block_settings
+  label: 'Recent content columns block'
+  mapping:
+    node_type:
+      type: string
+      label: 'Node type of the first column (page when absent)'
+    items:
+      type: integer
+      label: 'Items per column'

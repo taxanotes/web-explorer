@@ -105,3 +105,11 @@
 .field--type-custom th {
   text-align: left;
 }
+
+/* The "All" search results page (/find): one list per kind. */
+.taxanotes-search-results__section {
+  margin-bottom: 1.5rem;
+}
+.taxanotes-search-results__more {
+  margin-top: 0.25rem;
+}
