@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - node.type.taxon
+  module:
+    - node
+    - system
+id: contributor
+label: Contributor
+weight: 2
+is_admin: false
+permissions:
+  - 'access content'
+  - 'access content overview'
+  - 'create taxon content'
+  - 'delete own taxon content'
+  - 'edit own taxon content'
+  - 'view own unpublished content'
+  - 'view taxon revisions'
+  - 'view the administration theme'

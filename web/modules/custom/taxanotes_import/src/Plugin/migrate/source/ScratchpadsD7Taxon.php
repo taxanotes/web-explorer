@@ -6,8 +6,6 @@ namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
 use Drupal\Core\Site\Settings;
 use Drupal\migrate\Attribute\MigrateSource;
-use Drupal\migrate\Exception\RequirementsException;
-use Drupal\migrate\Plugin\migrate\source\SqlBase;
 use Drupal\migrate\Row;
 
 /**
@@ -60,26 +58,7 @@ use Drupal\migrate\Row;
 #[MigrateSource(
   id: 'scratchpads_d7_taxon',
 )]
-final class ScratchpadsD7Taxon extends SqlBase {
-
-  /**
-   * Scalar D7 fields joined into the query: source alias => D7 field name.
-   */
-  protected const SCALAR_FIELDS = [
-    'field_authors' => 'field_authors',
-    'field_page_number' => 'field_page_number',
-    'field_rank' => 'field_rank',
-    'field_unacceptability_reason' => 'field_unacceptability_reason',
-    'field_unit_indicator1' => 'field_unit_indicator1',
-    'field_unit_indicator2' => 'field_unit_indicator2',
-    'field_unit_indicator3' => 'field_unit_indicator3',
-    'field_unit_indicator4' => 'field_unit_indicator4',
-    'field_unit_name1' => 'field_unit_name1',
-    'field_unit_name2' => 'field_unit_name2',
-    'field_unit_name3' => 'field_unit_name3',
-    'field_unit_name4' => 'field_unit_name4',
-    'field_usage' => 'field_usage',
-  ];
+final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
 
   /**
    * Root term names whose subtree is imported unpublished, unless configured.
@@ -111,31 +90,11 @@ final class ScratchpadsD7Taxon extends SqlBase {
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state) {
-    $instance = Settings::get('taxanotes_import', []);
-    if (empty($configuration['bundle']) && !empty($instance['source_vocabulary'])) {
-      $configuration['bundle'] = $instance['source_vocabulary'];
-    }
     if (!isset($configuration['unpublished_roots'])) {
+      $instance = Settings::get('taxanotes_import', []);
       $configuration['unpublished_roots'] = $instance['unpublished_roots'] ?? static::DEFAULT_UNPUBLISHED_ROOTS;
     }
     parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state);
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Besides the database connection, a Scratchpads source needs a GUID per
-   * term: feeds_item (Feeds) or taxonomy_term_data.uuid (uuid module).
-   */
-  public function checkRequirements() {
-    parent::checkRequirements();
-    $schema = $this->getDatabase()->schema();
-    if (!$schema->tableExists('taxonomy_term_data') || !$schema->tableExists('taxonomy_vocabulary')) {
-      throw new RequirementsException('The migrate database is not a Drupal 7 database (taxonomy tables are missing).');
-    }
-    if (!$schema->tableExists('feeds_item') && !$schema->fieldExists('taxonomy_term_data', 'uuid')) {
-      throw new RequirementsException('The source needs feeds_item or taxonomy_term_data.uuid to provide a GUID per term; neither exists.');
-    }
   }
 
   /**
@@ -157,9 +116,7 @@ final class ScratchpadsD7Taxon extends SqlBase {
     if ($schema->fieldExists('taxonomy_vocabulary', 'i18n_mode')) {
       $query->addField('tv', 'i18n_mode');
     }
-    if (isset($this->configuration['bundle'])) {
-      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
-    }
+    $this->addBundleCondition($query);
 
     // GUID: Feeds GUID first, term uuid as the fallback.
     if ($has_feeds) {
@@ -216,9 +173,10 @@ final class ScratchpadsD7Taxon extends SqlBase {
 
     // Associated accepted name: a term reference whose field name carries the
     // vocabulary id (field_aan_<vid>). Resolve it by vocabulary at query time.
-    $aan_table = $this->acceptedNameTable();
-    if ($aan_table) {
-      $column = substr($aan_table, strlen('field_data_')) . '_tid';
+    $aan_field = $this->acceptedNameField();
+    if ($aan_field) {
+      $aan_table = 'field_data_' . $aan_field;
+      $column = $aan_field . '_tid';
       $query->leftJoin($aan_table, 'aan', "[aan].[entity_type] = 'taxonomy_term' AND [aan].[entity_id] = [td].[tid] AND [aan].[deleted] = 0 AND [aan].[delta] = 0");
       $query->leftJoin('taxonomy_term_data', 'tda', "[tda].[tid] = [aan].[$column]");
       $query->addField('aan', $column, 'accepted_tid');
@@ -249,35 +207,6 @@ final class ScratchpadsD7Taxon extends SqlBase {
     }
 
     return $query;
-  }
-
-  /**
-   * SQL for "Feeds GUID, else the term uuid" over the given aliases.
-   */
-  protected function guidExpression(string $feeds_alias, string $term_alias, bool $has_uuid): string {
-    return $has_uuid
-      ? "COALESCE(NULLIF([$feeds_alias].[guid], ''), [$term_alias].[uuid])"
-      : "NULLIF([$feeds_alias].[guid], '')";
-  }
-
-  /**
-   * Finds the field_data_field_aan_<vid> table for the configured vocabulary.
-   */
-  protected function acceptedNameTable(): ?string {
-    $db = $this->getDatabase();
-    if (empty($this->configuration['bundle'])) {
-      return NULL;
-    }
-    $vid = $this->select('taxonomy_vocabulary', 'tv')
-      ->fields('tv', ['vid'])
-      ->condition('machine_name', (array) $this->configuration['bundle'], 'IN')
-      ->execute()
-      ->fetchField();
-    if (!$vid) {
-      return NULL;
-    }
-    $table = 'field_data_field_aan_' . $vid;
-    return $db->schema()->tableExists($table) ? $table : NULL;
   }
 
   /**
@@ -347,9 +276,7 @@ final class ScratchpadsD7Taxon extends SqlBase {
   protected function doCount() {
     $query = $this->select('taxonomy_term_data', 'td');
     $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
-    if (isset($this->configuration['bundle'])) {
-      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
-    }
+    $this->addBundleCondition($query);
     return (int) $query->countQuery()->execute()->fetchField();
   }
 
@@ -390,9 +317,7 @@ final class ScratchpadsD7Taxon extends SqlBase {
     $query = $this->select('taxonomy_term_hierarchy', 'th')->fields('th', ['tid', 'parent']);
     $query->innerJoin('taxonomy_term_data', 'td', '[td].[tid] = [th].[tid]');
     $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
-    if (isset($this->configuration['bundle'])) {
-      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
-    }
+    $this->addBundleCondition($query);
     foreach ($query->execute()->fetchAllKeyed(0, 1) as $tid => $parent) {
       $this->parents[(int) $tid] = (int) $parent;
     }
@@ -418,9 +343,7 @@ final class ScratchpadsD7Taxon extends SqlBase {
     $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
     $query->innerJoin('taxonomy_term_hierarchy', 'th', '[th].[tid] = [td].[tid] AND [th].[parent] = 0');
     $query->condition('td.name', $names, 'IN');
-    if (isset($this->configuration['bundle'])) {
-      $query->condition('tv.machine_name', (array) $this->configuration['bundle'], 'IN');
-    }
+    $this->addBundleCondition($query);
     foreach ($query->execute()->fetchCol() as $tid) {
       $this->unpublishedRootTids[(int) $tid] = TRUE;
     }
