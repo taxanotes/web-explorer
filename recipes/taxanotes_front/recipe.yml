@@ -69,6 +69,7 @@ config:
         plugin: taxanotes_front_search
         region:
           olivero: sidebar
+          taxanotes_classic: sidebar
         default_region: content
         weight: -10
         settings:
@@ -86,6 +87,7 @@ config:
         plugin: block-node-tree-hierarchicaltaxontree
         region:
           olivero: sidebar
+          taxanotes_classic: sidebar
         default_region: content
         weight: -5
         settings:
@@ -103,6 +105,7 @@ config:
         plugin: taxanotes_front_summary
         region:
           olivero: sidebar
+          taxanotes_classic: sidebar
         default_region: content
         weight: 0
         settings:
@@ -120,6 +123,7 @@ config:
         plugin: 'views_block:taxanotes_recent-added'
         region:
           olivero: content_below
+          taxanotes_classic: content_below
         default_region: content
         weight: 0
         settings:
@@ -139,6 +143,7 @@ config:
         plugin: 'views_block:taxanotes_recent-updated'
         region:
           olivero: content_below
+          taxanotes_classic: content_below
         default_region: content
         weight: 1
         settings:
@@ -158,6 +163,7 @@ config:
         plugin: taxanotes_front_text
         region:
           olivero: footer_top
+          taxanotes_classic: footer_top
         default_region: content
         weight: 0
         settings:
@@ -173,6 +179,7 @@ config:
         plugin: 'views_block:taxanotes_taxon_page-children'
         region:
           olivero: content
+          taxanotes_classic: content
         default_region: content
         weight: 10
         settings:

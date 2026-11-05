@@ -1331,8 +1331,8 @@ display:
           label: ''
           exclude: false
           alter:
-            alter_text: false
-            text: ''
+            alter_text: true
+            text: '({{ bibcite_year }})'
             make_link: false
             path: ''
             absolute: false
@@ -1514,8 +1514,10 @@ display:
         type: fields
         options:
           default_field_elements: true
-          inline: {  }
-          separator: ''
+          inline:
+            author: author
+            bibcite_year: bibcite_year
+          separator: ' '
           hide_empty: false
       query:
         type: views_query

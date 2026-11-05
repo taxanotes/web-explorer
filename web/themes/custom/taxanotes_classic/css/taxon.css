@@ -1,0 +1,145 @@
+/**
+ * Taxanotes classic: the taxon page.
+ *
+ * The Scratchpads taxon page: the name as the title (authors as a subtitle),
+ * tabs across the top (Overview, Descriptions, Media, Literature …), the
+ * fields as a stripy group, the classification tree in the sidebar. Here
+ * the tabs are built by js/classic.js from the content region's blocks
+ * (taxanotes_classic_preprocess_block() marks them); without JavaScript the
+ * sections follow each other down the page.
+ */
+
+/* The tab bar built by the script sits where the Drupal 7 primary tabs did. */
+.taxanotes-tabs {
+  margin: 0 0 20px;
+}
+
+.js .taxanotes-tab-panel[hidden] {
+  display: none;
+}
+
+/* The tabbed blocks keep their title bar inside the panel. */
+.taxanotes-tab-panel > .block {
+  margin-top: 0;
+}
+
+/* The taxon's fields: the Scratchpads stripy group (label column,
+   zebra rows). The node's own fields are inline-labelled divs. The species
+   page (taxon_description) in the Descriptions tab uses the same group, as
+   the Drupal 7 SPM node did. */
+.node--type-taxon .node__content,
+.node--type-taxon-description .node__content {
+  margin: 20px 0;
+  border-top: 1px solid var(--sp-rule);
+}
+
+.node--type-taxon .node__content > .field,
+.node--type-taxon-description .node__content > .field {
+  display: flex;
+  border: 1px solid var(--sp-rule);
+  border-top: none;
+  margin: 0;
+  background: #fff;
+}
+
+.node--type-taxon .node__content > .field:nth-child(odd),
+.node--type-taxon-description .node__content > .field:nth-child(odd) {
+  background: var(--sp-stripe);
+}
+
+.node--type-taxon .node__content > .field > .field__label,
+.node--type-taxon-description .node__content > .field > .field__label {
+  flex: 0 0 200px;
+  width: 200px;
+  text-align: right;
+  font-weight: bold;
+  padding: 5px 5px 10px;
+  border-right: 1px solid var(--sp-rule);
+  box-sizing: border-box;
+}
+
+.node--type-taxon .node__content > .field > .field__item,
+.node--type-taxon-description .node__content > .field > .field__item,
+.node--type-taxon .node__content > .field > .field__items,
+.node--type-taxon-description .node__content > .field > .field__items {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 5px 10px;
+  overflow-wrap: anywhere;
+}
+
+.node--type-taxon .node__content > .field > .field__items .field__item,
+.node--type-taxon-description .node__content > .field > .field__items .field__item {
+  padding: 0;
+}
+
+.node--type-taxon .node__content > .field p,
+.node--type-taxon-description .node__content > .field p {
+  margin-bottom: 0;
+}
+
+/* A field without a label (the authors under the name) spans the row. */
+.node--type-taxon .node__content > .field.field--label-hidden,
+.node--type-taxon-description .node__content > .field.field--label-hidden,
+.node--type-taxon .node__content > .field.field--label-visually_hidden,
+.node--type-taxon-description .node__content > .field.field--label-visually_hidden {
+  padding: 5px;
+}
+
+.node--type-taxon .node__content > .field--name-field-authors,
+.node--type-taxon-description .node__content > .field--name-field-authors {
+  border: none;
+  background: none;
+  font-style: italic;
+  margin-bottom: 10px;
+}
+
+.node--type-taxon .node__content > .field table,
+.node--type-taxon-description .node__content > .field table {
+  margin: 0;
+}
+
+@media (max-width: 739px) {
+  .node--type-taxon .node__content > .field {
+    flex-direction: column;
+  }
+
+  .node--type-taxon .node__content > .field > .field__label {
+    flex-basis: auto;
+    width: auto;
+    text-align: left;
+    border-right: none;
+    padding-bottom: 0;
+  }
+}
+
+/* Child taxa and literature lists on the taxon page. */
+.taxanotes-recent .views-row {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Image gallery tiles: the Images tab (view taxanotes_media) and the
+   species page's media field (the Drupal 7 Media block's grid). */
+.taxanotes-images .views-row {
+  margin: 0 10px 10px 0;
+  border: 1px solid #999;
+}
+
+.node--type-taxon-description .field--name-field-media > .field__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.node--type-taxon-description .field--name-field-media .field__item {
+  flex: 0 0 auto;
+  border: 1px solid #999;
+}
+
+.node--type-taxon-description .field--name-field-media img {
+  display: block;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+}

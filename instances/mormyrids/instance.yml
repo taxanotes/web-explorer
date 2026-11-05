@@ -5,20 +5,29 @@ slug: mormyrids
 site:
   name: 'Mormyridae - African weakly electric fishes'
   slogan: 'Mintotom mi ne vé ?'
-  theme: olivero
+  # The classic view (web/themes/custom/taxanotes_classic): the Scratchpads
+  # front end; olivero is the alternative. colour: the accent colour, six hex
+  # digits (the Drupal 7 site's custom scratchpads_colour, its brown).
+  theme: taxanotes_classic
+  colour: '9F8247'
+  # The first front page column listed the blog on the Drupal 7 site
+  # (front_page_block_1_node_type: blog); pages until the blog type arrives.
+  front_first_column: blog
   admin_theme: claro
   # Front page, About page and footer texts (HTML), seeded through the
   # taxanotes_front recipe; see instances/README.md. The welcome text is the
   # Drupal 7 site's own (front_page_welcome_* variables).
   front_title: 'Welcome, mormyrophile!'
   front_intro: |
-    <p><strong>Looking for information on mormyrid fishes?</strong> You're in the right place. Here you'll find a classification reflecting the most recent published changes to mormyrid taxonomy, and a page for each mormyrid genus and species. The photographs of type specimens, the electric organ discharge waveforms (EOD) and the bibliography of original species descriptions and other important works on mormyrids follow with later migrations. We hope this site is useful to the specialist and general public alike. Have something to contribute? Say hello and request an account at the login link (upper right). This is an ongoing labor of love. Check back often to see what's been added.</p>
+    <p><strong>Looking for information on mormyrid fishes?</strong> You're in the right place. Here you'll find a classification reflecting the most recent published changes to mormyrid taxonomy, a page for each mormyrid genus and species, and a bibliography of original species descriptions and other important works on mormyrids. The photographs of type specimens and the electric organ discharge waveforms (EOD) follow with later migrations. We hope this site is useful to the specialist and general public alike. Have something to contribute? Say hello and request an account at the login link (upper right). This is an ongoing labor of love. Check back often to see what's been added.</p>
     <p><strong>How to use this site:</strong> Use the search box if you know the name of the taxon you're looking for, or start from the classification tree.</p>
   about_body: |
     <p>A Scratchpad of the African weakly electric fishes (Mormyridae): a classification reflecting the most recent published changes to mormyrid taxonomy, with a page for each genus and species.</p>
-    <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history have been carried over from the Scratchpads site; the literature, pages, media and biographies follow with later migrations.</p>
+    <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history, the literature and the species pages have been carried over from the Scratchpads site; the pages, media and biographies follow with later migrations.</p>
+  # The licence is the Drupal 7 site's (creative_commons_block_licence_type:
+  # CC BY-SA), as its footer states it.
   footer_text: |
-    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
+    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution, Share Alike (CC BY-SA) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
 # Hostnames per environment; the first of each list is the canonical URL.
 # ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
 # production: one checkout per instance (see instances/README.md).

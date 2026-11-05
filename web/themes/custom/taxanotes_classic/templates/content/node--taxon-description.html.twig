@@ -1,0 +1,46 @@
+{#
+/**
+ * @file
+ * Theme override for the species page (taxon_description) node.
+ *
+ * The Scratchpads species page: the SPM fields as a labelled group
+ * (css/taxon.css). On the taxon page the node is rendered by the
+ * taxanotes_species view's taxon block (the Descriptions tab) under the
+ * block's own title bar, so, unlike node.html.twig, no title is printed
+ * here: the taxon name already heads the page, and the block bar is the
+ * section's heading. On its own page the title is the page title block.
+ *
+ * @see node.html.twig for the variables.
+ */
+#}
+{%
+  set classes = [
+    'node',
+    'node--type-' ~ node.bundle|clean_class,
+    node.isPromoted() ? 'node--promoted',
+    node.isSticky() ? 'node--sticky',
+    not node.isPublished() ? 'node--unpublished',
+    view_mode ? 'node--view-mode-' ~ view_mode|clean_class,
+  ]
+%}
+{{ attach_library('starterkit_theme/node') }}
+<article{{ attributes.addClass(classes) }}>
+
+  {{ title_prefix }}
+  {{ title_suffix }}
+
+  {% if display_submitted %}
+    <footer class="node__meta">
+      {{ author_picture }}
+      <div{{ author_attributes.addClass('node__submitted') }}>
+        {% trans %}Submitted by {{ author_name }} on {{ date }}{% endtrans %}
+        {{ metadata }}
+      </div>
+    </footer>
+  {% endif %}
+
+  <div{{ content_attributes.addClass('node__content') }}>
+    {{ content }}
+  </div>
+
+</article>

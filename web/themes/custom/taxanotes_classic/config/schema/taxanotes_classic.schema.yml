@@ -1,0 +1,9 @@
+taxanotes_classic.settings:
+  type: theme_settings
+  label: 'Taxanotes classic settings'
+  mapping:
+    colour:
+      type: string
+      label: 'Accent colour (six hex digits, without #)'
+      constraints:
+        Regex: '/^[0-9A-Fa-f]{6}$/'

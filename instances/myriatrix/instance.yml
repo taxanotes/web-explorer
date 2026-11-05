@@ -4,9 +4,14 @@
 # settings.local.php was written by hand and is left alone by the script.
 slug: myriatrix
 site:
-  name: 'Taxanotes (Myriatrix dev)'
-  slogan: ''
-  theme: olivero
+  # The Drupal 7 site's own name and slogan (site_name, site_slogan variables).
+  name: 'Myriatrix'
+  slogan: 'The Fellegship of the Rings'
+  # The classic view (web/themes/custom/taxanotes_classic): the Scratchpads
+  # front end; olivero is the alternative. colour: the accent colour, six hex
+  # digits (the Drupal 7 site's scratchpads_colour).
+  theme: taxanotes_classic
+  colour: '047DB8'
   admin_theme: claro
   # Front page, About page and footer texts (HTML), seeded through the
   # taxanotes_front recipe; see instances/README.md. The texts below are the

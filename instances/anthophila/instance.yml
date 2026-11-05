@@ -5,7 +5,11 @@ slug: anthophila
 site:
   name: 'World Bee Catalogue (Hymenoptera: Apoidea, Anthophila)'
   slogan: ''
-  theme: olivero
+  # The classic view (web/themes/custom/taxanotes_classic): the Scratchpads
+  # front end; olivero is the alternative. colour: the accent colour, six hex
+  # digits (the Drupal 7 site's scratchpads_colour).
+  theme: taxanotes_classic
+  colour: '047DB8'
   admin_theme: claro
   # Front page, About page and footer texts (HTML), seeded through the
   # taxanotes_front recipe; see instances/README.md. The welcome text is the
@@ -17,8 +21,10 @@ site:
   about_body: |
     <p>A Scratchpad of the bees (Hymenoptera: Apoidea, Anthophila): a classification of the bee families, subfamilies, tribes, genera and subgenera, kept current since Michener's "The Bees of the World" (2007).</p>
     <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history have been carried over from the Scratchpads site; the literature, pages, media and biographies follow with later migrations.</p>
+  # The licence is the Drupal 7 site's (creative_commons_block_licence_type:
+  # CC BY-NC-ND), as its footer stated it.
   footer_text: |
-    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
+    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution, Non-Commercial, No Derivative Works (CC BY-NC-ND) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
 # Hostnames per environment; the first of each list is the canonical URL.
 # ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
 # production: one checkout per instance (see instances/README.md); no DNS yet.

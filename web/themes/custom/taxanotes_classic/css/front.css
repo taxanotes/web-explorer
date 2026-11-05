@@ -1,0 +1,228 @@
+/**
+ * Taxanotes classic: the front page.
+ *
+ * The Scratchpads front page (scratchpads_front module, GPL-2): the welcome
+ * title and text in 4 columns on the left, the slideshow in 8 on the right,
+ * then three equal columns of recent content, each a dated list under a
+ * block title bar. The welcome block is the page title block + the main
+ * content block, the slideshow a views block (taxanotes_slideshow, recipe
+ * taxanotes_classic), the columns one block (taxanotes_front_recent).
+ */
+
+/* Welcome (title + text) beside the slideshow: the two regions' blocks are
+   laid out as one grid. Without a slideshow block the welcome spans the
+   width. */
+.path-frontpage .layout-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-rows: auto 1fr;
+  gap: 0 20px;
+  align-items: start;
+}
+
+.path-frontpage .layout-content > .region {
+  display: contents;
+}
+
+.path-frontpage .layout-content .block-page-title-block {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.path-frontpage .layout-content .block-system-main-block {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.path-frontpage .layout-content .block-views-blocktaxanotes-slideshow-block {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.path-frontpage .layout-content > .region > .block:not(.block-page-title-block):not(.block-system-main-block):not(.block-views-blocktaxanotes-slideshow-block) {
+  grid-column: 1 / -1;
+}
+
+.path-frontpage .layout-content:not(:has(.block-views-blocktaxanotes-slideshow-block)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.path-frontpage .layout-content:not(:has(.block-views-blocktaxanotes-slideshow-block)) .block-page-title-block,
+.path-frontpage .layout-content:not(:has(.block-views-blocktaxanotes-slideshow-block)) .block-system-main-block {
+  grid-column: 1;
+}
+
+.path-frontpage h1.page-title {
+  font-size: 2.4em;
+}
+
+/* Slideshow: one slide shown at a time, the thumbnails as a pager under it
+   (js/classic.js); the image title appears over the image on hover. */
+.taxanotes-slideshow {
+  background: #fff;
+  max-width: 774px;
+}
+
+/* With the script: the slide (619 px) with the thumbnails in a column at
+   its right (154 px), as the Scratchpads laid them out. */
+.js .taxanotes-slideshow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.js .taxanotes-slideshow .view-content {
+  flex: 0 1 619px;
+  min-width: 0;
+}
+
+.taxanotes-slideshow .views-row {
+  position: relative;
+}
+
+.js .taxanotes-slideshow .views-row {
+  display: none;
+}
+
+.js .taxanotes-slideshow .views-row.is-active {
+  display: block;
+}
+
+.taxanotes-slideshow .views-field-field-media-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.taxanotes-slideshow .views-field-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 7px 10px;
+  font-size: 1.2em;
+  display: none;
+}
+
+.taxanotes-slideshow .views-row:hover .views-field-name {
+  display: block;
+}
+
+.taxanotes-slideshow .views-field-name a {
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Thumbnails: in the rows without JS (under each image), in the pager with. */
+.taxanotes-slideshow .views-field-field-media-image-1 {
+  margin: 1px 1px 0 0;
+}
+
+.taxanotes-slideshow .slideshow-pager {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 154px;
+  gap: 1px;
+}
+
+.taxanotes-slideshow .slideshow-pager .views-field-field-media-image-1 {
+  margin: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.taxanotes-slideshow .slideshow-pager img {
+  display: block;
+  width: 154px;
+  height: 115px;
+  object-fit: cover;
+}
+
+.taxanotes-slideshow .slideshow-pager .is-active img {
+  outline: 3px solid #000;
+  outline-offset: -3px;
+}
+
+@media (max-width: 739px) {
+  .path-frontpage .layout-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .path-frontpage .layout-content .block-views-blocktaxanotes-slideshow-block {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .js .taxanotes-slideshow {
+    flex-direction: column;
+  }
+
+  .js .taxanotes-slideshow .view-content {
+    flex-basis: auto;
+  }
+
+  .taxanotes-slideshow .slideshow-pager {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-basis: auto;
+    margin-top: 1px;
+  }
+
+  .taxanotes-slideshow .slideshow-pager img {
+    width: 23vw;
+    height: 17vw;
+  }
+}
+
+/* The three columns of recent content. */
+.taxanotes-recent-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 20px;
+}
+
+@media (max-width: 739px) {
+  .taxanotes-recent-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.taxanotes-recent-columns__column {
+  min-width: 0;
+}
+
+.taxanotes-recent-columns ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.taxanotes-recent-columns li {
+  margin: 2px 0 10px 10px;
+  padding: 0;
+}
+
+.taxanotes-recent-columns li p {
+  margin: 5px 0;
+}
+
+.taxanotes-recent-columns .taxanotes-recent-columns__empty {
+  margin: 0 10px;
+  color: #6a6a6a;
+}
+
+/* Olivero's front-page blocks, when an instance keeps them enabled here
+   (block layout): side by side under the columns. */
+#region-content-below .region-content-below {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0 20px;
+  align-items: start;
+}
+
+#region-content-below .region-content-below > .block-taxanotes-front-recent {
+  grid-column: 1 / -1;
+}

@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: {  }
+name: taxanotes_slideshow_thumbnail
+label: 'Slideshow thumbnail (154x115, cropped)'
+effects:
+  ac585971-2bcf-4b86-b716-6ff78e92906e:
+    uuid: ac585971-2bcf-4b86-b716-6ff78e92906e
+    id: image_scale_and_crop
+    weight: 1
+    data:
+      width: 154
+      height: 115
+      anchor: center-center

@@ -1,0 +1,34 @@
+name: 'Taxanotes classic'
+type: theme
+description: 'The classic view: the Scratchpads (Drupal 7) front end reproduced on Drupal 11. Coloured header with logo, site name and slogan, the header search (All / Taxonomy), the tabbed main menu, the front page as welcome text + slideshow + three recent-content columns, the taxon page with its tabs and the classification tree in the sidebar, the footer menu and licence line. The accent colour is a theme setting (taxanotes_classic.settings:colour, the Scratchpads scratchpads_colour), seeded from instances/<slug>/instance.yml by the taxanotes_classic recipe. Markup is Drupal core''s (no base theme, the Starterkit way); the CSS is ported from the GPL-2 Scratchpads theme.'
+package: Taxanotes
+core_version_requirement: ^11
+# No base theme (as a theme generated from core's Starterkit): the markup is
+# the modules' own templates, overridden where the Drupal 7 layout needs it.
+base theme: false
+logo: logo.png
+libraries:
+  - core/normalize
+  - taxanotes_classic/global
+# Region machine names follow Olivero's where the role is the same (header,
+# primary_menu, secondary_menu, highlighted, breadcrumb, content_above,
+# content, sidebar, content_below, footer_top, footer_bottom): when an
+# instance switches from Olivero, block_theme_initialize() copies its blocks
+# into the regions of the same name, so nothing has to be re-placed. The
+# labels name the Drupal 7 Scratchpads zones they reproduce. "content" is
+# first: it is the default region a block lands in when its region does not
+# exist here.
+regions:
+  content: 'Main content'
+  content_above: 'Content above (page title)'
+  highlighted: 'Highlighted (messages, system tabs)'
+  help: 'Help'
+  breadcrumb: 'Breadcrumb'
+  secondary_menu: 'Slide top (account links)'
+  header: 'Branding (logo, site name, slogan)'
+  search: 'Header (search)'
+  primary_menu: 'Menu (main menu)'
+  sidebar: 'Sidebar'
+  content_below: 'Content below (front page columns)'
+  footer_top: 'Footer'
+  footer_bottom: 'Footer bottom'

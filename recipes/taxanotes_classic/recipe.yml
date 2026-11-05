@@ -1,0 +1,166 @@
+name: 'Taxanotes classic view'
+description: 'Gives an instance the classic view: the Scratchpads (Drupal 7) front end reproduced by the taxanotes_classic theme. Installs the theme and makes it the default, seeds its accent colour (input colour, from instances/<slug>/instance.yml site.colour) and the node type of the first front page column (input first_column, site.front_first_column: page, or blog as on Mormyrids), places the classic blocks (header search, front page slideshow and recent-content columns, the classification tree beside the taxon page, the footer menu) and switches off the Olivero front page blocks that the classic front page replaces (the copies block_theme_initialize() made when the theme was installed; the Olivero originals stay, so site.theme: olivero still gives the Olivero front page). scripts/new-instance.sh applies it after taxanotes_front when instance.yml names this theme; nothing here names an instance, and re-applying changes nothing that is in place (blocks are created only when missing, the view and image styles left alone once they exist) except the colour and the first column''s node type, which follow instance.yml.'
+type: 'Theme'
+install:
+  - taxanotes_classic
+input:
+  colour:
+    data_type: string
+    description: 'The accent colour, six hex digits (the Scratchpads scratchpads_colour; 047DB8 was its default).'
+    constraints:
+      Regex: '/^[0-9A-Fa-f]{6}$/'
+    form:
+      '#type': textfield
+      '#title': 'Accent colour'
+    default:
+      source: config
+      config: ['taxanotes_classic.settings', 'colour']
+      fallback: '047DB8'
+  first_column:
+    data_type: string
+    description: 'The node type the first front page column lists (the Scratchpads front_page_block_1_node_type: page, or blog); the column falls back to page while the type does not exist.'
+    constraints:
+      Regex: '/^[a-z0-9_]+$/'
+    form:
+      '#type': textfield
+      '#title': 'First front page column (node type)'
+    default:
+      source: config
+      config: ['block.block.taxanotes_classic_recent', 'settings.node_type']
+      fallback: page
+config:
+  # The slideshow view and its image styles are a starting point an instance
+  # may tailor: once they exist they are left alone.
+  strict: false
+  actions:
+    system.theme:
+      simpleConfigUpdate:
+        default: taxanotes_classic
+    taxanotes_classic.settings:
+      simpleConfigUpdate:
+        colour: ${colour}
+    # The Olivero front page (sidebar search, tree and numbers; recent and
+    # updated taxa, newest images, recent literature and species pages below)
+    # is replaced on the classic front page by the welcome + slideshow + the
+    # three columns. The blocks were copied into this theme when it was
+    # installed (ids taxanotes_classic_<olivero id>); they are switched off,
+    # not deleted, so an instance can turn any of them back on in the block
+    # layout. "?" makes each optional: nothing to do on a site that never had
+    # the block.
+    '?block.block.taxanotes_classic_taxanotes_front_search':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_tree':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_summary':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_recent_added':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_recent_updated':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_images':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_recent_literature':
+      setStatus: false
+    '?block.block.taxanotes_classic_taxanotes_front_recent_species':
+      setStatus: false
+    # Olivero's help block sits above the content; the classic page has a
+    # region for it, so it stays. Its "Powered by Drupal" line stays too, in
+    # the footer where the Scratchpads had the Drupal logo.
+    #
+    # The classic blocks. placeBlockInDefaultTheme creates a block only when
+    # it does not exist; the regions name this theme's and, should the recipe
+    # ever be applied under Olivero, its nearest counterpart.
+    block.block.taxanotes_classic_header_search:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_header_search
+        region:
+          taxanotes_classic: search
+          olivero: secondary_menu
+        default_region: content
+        weight: 0
+        settings:
+          id: taxanotes_front_header_search
+          label: 'Search'
+          label_display: '0'
+          provider: taxanotes_front
+    block.block.taxanotes_classic_slideshow:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_slideshow-block'
+        region:
+          taxanotes_classic: content
+          olivero: content
+        default_region: content
+        weight: 5
+        settings:
+          id: 'views_block:taxanotes_slideshow-block'
+          label: ''
+          label_display: '0'
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_classic_recent:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_recent
+        region:
+          taxanotes_classic: content_below
+          olivero: content_below
+        default_region: content
+        weight: 0
+        settings:
+          id: taxanotes_front_recent
+          label: 'Recent content'
+          label_display: '0'
+          provider: taxanotes_front
+          node_type: ${first_column}
+          items: 3
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+      # The block exists after the first apply; the column's node type
+      # follows instance.yml on every apply, as the colour does.
+      setProperties:
+        settings.node_type: ${first_column}
+    block.block.taxanotes_classic_taxon_tree:
+      placeBlockInDefaultTheme:
+        plugin: block-node-tree-hierarchicaltaxontree
+        region:
+          taxanotes_classic: sidebar
+          olivero: sidebar
+        default_region: content
+        weight: 0
+        settings:
+          id: block-node-tree-hierarchicaltaxontree
+          label: 'Classification'
+          label_display: visible
+          provider: node_tree
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
+    block.block.taxanotes_classic_footer_menu:
+      placeBlockInDefaultTheme:
+        plugin: 'system_menu_block:main'
+        region:
+          taxanotes_classic: footer_top
+          olivero: footer_top
+        default_region: content
+        weight: -5
+        settings:
+          id: 'system_menu_block:main'
+          label: 'Footer menu'
+          label_display: '0'
+          provider: system
+          level: 1
+          depth: 1
+          expand_all_items: false
