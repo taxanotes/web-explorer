@@ -1,0 +1,30 @@
+{% extends "block.html.twig" %}
+{#
+/**
+ * @file
+ * The branding block the Scratchpads way: the logo (60 px) floated left of
+ * the site name and the italic slogan (Omega's branding-data markup).
+ *
+ * Available variables: site_logo, site_name, site_slogan (each only when
+ * enabled in the block configuration).
+ */
+#}
+{% block content %}
+  <div class="branding-data clearfix">
+    {% if site_logo %}
+      <div class="logo-img">
+        <a href="{{ path('<front>') }}" rel="home" title="{{ 'Home'|t }}"><img src="{{ site_logo }}" alt="{{ site_name ?: 'Home'|t }}" id="logo" fetchpriority="high" /></a>
+      </div>
+    {% endif %}
+    {% if site_name or site_slogan %}
+      <div class="site-name-slogan">
+        {% if site_name %}
+          <div class="site-name"><a href="{{ path('<front>') }}" title="{{ 'Home'|t }}" rel="home">{{ site_name }}</a></div>
+        {% endif %}
+        {% if site_slogan %}
+          <div class="site-slogan">{{ site_slogan }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

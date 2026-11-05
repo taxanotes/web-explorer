@@ -1,0 +1,84 @@
+{#
+/**
+ * @file
+ * The page: the Scratchpads (Drupal 7, Omega) layout.
+ *
+ * Header zone (accent colour): the slide-top account links, branding
+ * (8 columns) beside the header search (4 columns), the tabbed main menu
+ * across 12 columns. Content zone: the breadcrumb, then the sidebar
+ * (4 columns, only when it has blocks) beside the content (8, or 12 without
+ * a sidebar); under it the content_below region (the front page's three
+ * columns). Footer zone (grey): the footer menu, the licence text, the
+ * footer bottom. The Drupal 7 ids (#page, #section-header, #zone-header,
+ * #region-branding, #region-header, #region-menu, #region-content,
+ * #region-sidebar, #section-footer, #zone-footer-wrapper) are kept so the
+ * ported stylesheets apply unchanged.
+ *
+ * Available variables: the regions in page.*, has_sidebar (see
+ * taxanotes_classic_preprocess_page()), is_front, logged_in.
+ */
+#}
+<div id="page" class="page">
+
+  <header id="section-header" class="section section-header">
+    <div id="zone-slide-top-wrapper" class="zone-wrapper zone-slide-top-wrapper">
+      <div class="container">
+        {{ page.secondary_menu }}
+      </div>
+    </div>
+    <div id="zone-header-wrapper" class="zone-wrapper zone-header-wrapper">
+      <div id="zone-header" class="zone zone-header container">
+        <div class="grid-row">
+          <div id="region-branding" class="grid-8">
+            {{ page.header }}
+          </div>
+          <div id="region-header" class="grid-4">
+            {{ page.search }}
+          </div>
+          <div id="region-menu" class="grid-12">
+            {{ page.primary_menu }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="section-content" class="section section-content">
+    <div id="zone-content" class="zone zone-content container{{ has_sidebar ? ' has-sidebar' }}">
+      {{ page.breadcrumb }}
+      <div class="grid-row">
+        {% if has_sidebar %}
+          <aside id="region-sidebar" class="grid-4">
+            <div class="region-inner">
+              {{ page.sidebar }}
+            </div>
+          </aside>
+        {% endif %}
+        <div id="region-content" class="{{ has_sidebar ? 'grid-8' : 'grid-12' }}">
+          <a id="main-content" tabindex="-1"></a>
+          <div class="layout-content">
+            {{ page.content_above }}
+            {{ page.highlighted }}
+            {{ page.help }}
+            {{ page.content }}
+          </div>
+        </div>
+      </div>
+      {% if page.content_below %}
+        <div id="region-content-below" class="grid-12-plain">
+          {{ page.content_below }}
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <footer id="section-footer" class="section section-footer">
+    <div id="zone-footer-wrapper" class="zone-wrapper zone-footer-wrapper">
+      <div id="zone-footer" class="zone zone-footer container">
+        {{ page.footer_top }}
+        {{ page.footer_bottom }}
+      </div>
+    </div>
+  </footer>
+
+</div>

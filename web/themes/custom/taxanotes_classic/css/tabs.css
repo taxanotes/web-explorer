@@ -1,0 +1,177 @@
+/**
+ * Taxanotes classic: the main menu tabs and the system tabs.
+ *
+ * Ported from sites/all/themes/scratchpads/css/tabs.css of Scratchpads 2
+ * (GPL-2, Natural History Museum, London). The main menu is the menu block
+ * in the primary_menu region (Drupal 7: #main-menu); the system tabs are
+ * the local tasks (templates/navigation/menu-local-tasks.html.twig keeps
+ * the div.tabs > ul.tabs.primary markup). Below 740 px the menu is a
+ * stacked list behind a toggle button (js/classic.js).
+ */
+
+/* --------------- Main menu ------------ */
+
+#region-menu .block {
+  margin: 0;
+}
+
+#region-menu h2 {
+  display: none;
+}
+
+#region-menu ul.menu {
+  font-size: 0.929em;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#region-menu ul.menu li {
+  list-style: none;
+  padding: 0 1px;
+  margin: 0 1px;
+}
+
+#region-menu ul.menu li:first-child {
+  margin-left: 0;
+}
+
+#region-menu ul.menu a {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  display: block;
+  height: 30px;
+  line-height: 30px;
+  padding: 0 0.8em;
+  text-decoration: none;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+#region-menu ul.menu a:hover, #region-menu ul.menu a:focus,
+#region-menu ul.menu a:active, #region-menu ul.menu a.is-active {
+  background: #fff;
+  color: var(--sp-text);
+}
+
+/* The toggle (inserted by js/classic.js) shows only on a phone. */
+#region-menu .menu-toggle {
+  display: none;
+  margin: 10px 0 0;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 0 0.8em;
+  height: 30px;
+  line-height: 30px;
+  text-transform: uppercase;
+  font: 11px/30px Verdana, Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+
+@media (max-width: 739px) {
+  #region-menu .menu-toggle {
+    display: inline-block;
+  }
+
+  .js #region-menu ul.menu {
+    display: none;
+    margin-top: 0;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .js #region-menu.menu-open ul.menu {
+    display: block;
+  }
+
+  #region-menu ul.menu li {
+    margin: 0;
+    padding: 0;
+  }
+
+  #region-menu ul.menu a {
+    background: transparent;
+    border-radius: 0;
+    height: auto;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* --------------- System tabs (View, Edit, …) --------------- */
+
+.tabs {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin-bottom: 20px;
+}
+
+ul.tabs.primary {
+  padding: 0 3px;
+  margin: 0;
+  overflow: hidden;
+  border: none;
+  list-style: none;
+  background: transparent url(../images/tabs-border.png) repeat-x left bottom;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+ul.tabs.primary li {
+  display: block;
+  margin: 0 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+ul.tabs.primary li a {
+  color: #000;
+  background-color: #ededed;
+  height: 1.8em;
+  line-height: 1.9;
+  display: block;
+  padding: 0 10px 3px;
+  margin: 0;
+  text-decoration: none;
+  text-shadow: 0 1px 0 #fff;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+ul.tabs.primary li.is-active a, ul.tabs.primary li a.is-active {
+  background-color: #fff;
+  border-bottom: 1px solid #fff;
+}
+
+ul.tabs.primary a:hover {
+  background: #FAFAFA;
+}
+
+ul.tabs.secondary {
+  border-bottom: none;
+  padding: 0.5em 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+ul.tabs.secondary li {
+  display: block;
+  margin: 0;
+  padding: 0 0.5em 0 0;
+}
+
+ul.tabs.secondary li a {
+  padding: 0.25em 0.5em;
+  text-decoration: none;
+}
+
+ul.tabs.secondary li a.is-active, ul.tabs.secondary li.is-active a {
+  background: #f2f2f2;
+  border-radius: 5px;
+}

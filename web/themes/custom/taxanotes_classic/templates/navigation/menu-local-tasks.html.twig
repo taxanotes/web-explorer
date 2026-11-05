@@ -1,0 +1,21 @@
+{#
+/**
+ * @file
+ * The system tabs (View, Edit, …) in the Scratchpads markup:
+ * div.tabs > ul.tabs.primary, styled by css/tabs.css.
+ *
+ * Available variables: primary, secondary (the rendered tab items).
+ */
+#}
+{% if primary or secondary %}
+  <div class="tabs clearfix">
+    {% if primary %}
+      <h2 class="visually-hidden">{{ 'Primary tabs'|t }}</h2>
+      <ul class="tabs primary clearfix">{{ primary }}</ul>
+    {% endif %}
+    {% if secondary %}
+      <h2 class="visually-hidden">{{ 'Secondary tabs'|t }}</h2>
+      <ul class="tabs secondary clearfix">{{ secondary }}</ul>
+    {% endif %}
+  </div>
+{% endif %}

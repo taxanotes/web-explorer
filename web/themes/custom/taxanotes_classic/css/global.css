@@ -1,0 +1,819 @@
+/**
+ * Taxanotes classic: the Scratchpads (Drupal 7) theme's styles on Drupal 11.
+ *
+ * Ported from sites/all/themes/scratchpads/css/global.css of Scratchpads 2
+ * (https://github.com/NaturalHistoryMuseum/scratchpads2), an Omega 3
+ * sub-theme. Copyright (C) Natural History Museum, London, and the
+ * Scratchpads contributors; GNU General Public License version 2 or later,
+ * as the original. The Omega base rules the sub-theme relied on
+ * (alpha-reset, omega-text, omega-branding, omega-visuals: body font, link
+ * colours, table zebra, .description) are folded in. Selectors follow this
+ * theme's markup; page.html.twig keeps the Drupal 7 ids. Rules for Drupal 7
+ * modules with no counterpart here (forums, slickgrid, popups, events,
+ * comments, contact forms, facets, biblio export) are left out.
+ *
+ * The accent colour (Scratchpads scratchpads_colour) is --sp-colour, set on
+ * :root by taxanotes_classic_preprocess_html() from the theme setting.
+ */
+
+:root {
+  --sp-colour: #047DB8;
+  --sp-text: #3E3E3E;
+  --sp-rule: #D9DADD;
+  --sp-stripe: #F1F4FB;
+  --sp-grey: #EDEDED;
+  --sp-footer: #F1F1F1;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/Inter/Inter-Medium.woff2') format('woff2'),
+       url('../fonts/Inter/Inter-Medium.woff') format('woff'),
+       url('../fonts/Inter/Inter-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: fallback;
+}
+
+/* Omega's text base, then the Scratchpads' 12px Verdana. */
+body {
+  font: 12px/1.5 Verdana, Helvetica, Arial, sans-serif;
+  color: var(--sp-text);
+  letter-spacing: normal;
+  background: #fff;
+  min-height: 100%;
+}
+
+a:link, a:visited {
+  color: var(--sp-colour);
+  text-decoration: underline;
+}
+
+a:hover, a:active {
+  color: #202124;
+  text-decoration: none;
+}
+
+p, dl, hr, h1, h2, h3, h4, h5, h6, ol, ul, pre, table, address, fieldset {
+  margin: 0 0 20px;
+}
+
+ol {
+  list-style: decimal;
+}
+
+ul {
+  list-style: disc;
+}
+
+ul ul, ol ol {
+  padding-top: 0.5em;
+}
+
+img {
+  vertical-align: bottom;
+  max-width: 100%;
+  height: auto;
+}
+
+blockquote {
+  padding-left: 10px;
+  font-style: italic;
+}
+
+blockquote em, blockquote i {
+  font-style: normal;
+}
+
+i, em {
+  font-style: italic;
+}
+
+b, strong {
+  font-weight: bold;
+}
+
+label {
+  font-weight: bold;
+}
+
+/* Headings: Inter for h1/h3, upper-case Verdana block titles. */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal;
+  letter-spacing: normal;
+}
+
+h1, h3, .site-name {
+  font-family: 'Inter', Arial, sans-serif;
+}
+
+h1, .site-name {
+  font-size: 2.6em;
+  line-height: 1.2em;
+  text-transform: none;
+  color: var(--sp-colour);
+}
+
+h2, #region-sidebar h3 {
+  text-transform: uppercase;
+  font: 14px/1 Verdana, Helvetica, Arial, sans-serif;
+}
+
+h3 {
+  font-size: 1.6em;
+  margin: 10px 0 5px;
+}
+
+h4 {
+  font-size: 1.2em;
+  margin: 10px 0 5px;
+}
+
+h1.page-title {
+  line-height: 1.1em;
+  margin: 0 0 8px;
+  position: relative;
+  top: -3px;
+}
+
+/* Subtitle (the authors after a taxon name). */
+h1 span.subtitle {
+  font-size: 0.5em;
+  padding-left: 6px;
+}
+
+sup, sub {
+  height: 0;
+  vertical-align: baseline;
+  position: relative;
+  font-size: 90%;
+}
+
+sup {
+  bottom: 1ex;
+}
+
+sub {
+  top: 0.5ex;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px);
+  overflow: hidden;
+  height: 1px;
+  width: 1px;
+  word-wrap: normal;
+}
+
+.visually-hidden.focusable:active, .visually-hidden.focusable:focus {
+  position: static !important;
+  clip: auto;
+  overflow: visible;
+  height: auto;
+  width: auto;
+}
+
+.clearfix::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.description, .tips {
+  font-size: 10px;
+  color: #6a6a6a;
+}
+
+/************************ Header *********************/
+
+.section-header {
+  background-color: var(--sp-colour);
+}
+
+.section-header a, .section-header a:hover {
+  color: #fff;
+}
+
+/* Slide top: the Scratchpads' dark strip with the "Log in" tab hanging
+   from it (the account menu block). */
+#zone-slide-top-wrapper {
+  background: #262626;
+  text-align: right;
+  min-height: 1px;
+}
+
+#zone-slide-top-wrapper .container {
+  position: relative;
+}
+
+#zone-slide-top-wrapper ul.menu {
+  position: absolute;
+  right: 0;
+  top: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+#zone-slide-top-wrapper ul.menu li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#zone-slide-top-wrapper ul.menu a {
+  display: block;
+  padding: 0 10px;
+  height: 20px;
+  font-size: 11px;
+  line-height: 16px;
+  background: #262626;
+  color: #fff;
+  text-decoration: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+#zone-header {
+  padding-top: 25px;
+  position: relative;
+}
+
+/* Branding (Omega's omega-branding.css + the Scratchpads' sizes). */
+.branding-data {
+  display: flex;
+  align-items: flex-start;
+}
+
+.logo-img {
+  flex: 0 0 auto;
+  margin: 0 20px 0 0;
+}
+
+.logo-img img {
+  max-height: 60px;
+  width: auto;
+  display: block;
+}
+
+.site-name-slogan {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.site-name {
+  font-size: 40px;
+  line-height: 1em;
+  margin: 14px 0 8px;
+}
+
+.site-name a, .site-name a:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.site-slogan {
+  color: #fff;
+  font-style: italic;
+  font-size: 1.2em;
+  word-spacing: 0.1em;
+  margin: 8px 0 5px;
+  line-height: 1em;
+}
+
+/* Header search (the search block, 4 columns on the right). */
+#region-header {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+#region-header .block {
+  margin: 0;
+}
+
+#region-header form {
+  max-width: 380px;
+  margin-left: auto;
+}
+
+#region-header .taxanotes-header-search__row {
+  display: flex;
+  gap: 0;
+}
+
+#region-header input[type="search"], #region-header input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  margin: 1px 6px 0 0;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  font: 12px Verdana, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+#region-header button, #region-header input[type="submit"] {
+  flex: 0 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  border: none;
+  text-shadow: none;
+  padding: 7px 12px;
+  text-transform: uppercase;
+  font: 11px Verdana, Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+
+#region-header button:hover, #region-header input[type="submit"]:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+#region-header .taxanotes-header-search__facets {
+  margin-top: 4px;
+}
+
+#region-header .taxanotes-header-search__facets label {
+  color: #fff;
+  font-weight: normal;
+  margin-right: 12px;
+}
+
+#region-header .taxanotes-header-search__facets input {
+  margin: 0 4px 0 0;
+  vertical-align: middle;
+}
+
+/************************ Content *********************/
+
+#zone-content .region {
+  margin-bottom: 30px;
+}
+
+#zone-content .region-highlighted, #zone-content .region-content-above,
+#zone-content .region-help, #zone-content .region-breadcrumb {
+  margin-bottom: 0;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin: 13px 0 11px;
+  color: #898A8C;
+}
+
+.breadcrumb ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.breadcrumb li {
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb li + li::before {
+  content: " » ";
+  padding: 0 0.5em;
+}
+
+/* No breadcrumb on the front page: the gap stays. */
+.path-frontpage #section-content {
+  margin-top: 30px;
+}
+
+/* Sidebar */
+#region-sidebar .region-inner {
+  background-color: var(--sp-grey);
+  padding: 15px;
+}
+
+#region-sidebar h2, #region-sidebar h3 {
+  padding: 0 0 5px;
+  margin: 0 0 5px;
+  border-bottom: 1px solid #D6D6D6;
+}
+
+#region-sidebar .block {
+  margin-bottom: 15px;
+}
+
+#region-sidebar ul.menu {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+#region-sidebar ul.menu li {
+  margin: 10px 0;
+  list-style: none;
+  padding: 0;
+}
+
+#region-sidebar ul.menu ul li {
+  list-style: disc inside;
+  margin-left: 10px;
+  color: var(--sp-colour);
+}
+
+/* Block titles in the content region: white on the accent colour. */
+#region-content h2, #region-content-below h2 {
+  color: #fff;
+  background-color: var(--sp-colour);
+  line-height: 14px;
+  padding: 7px 10px 9px;
+  margin-bottom: 15px;
+}
+
+#region-content h2 a, #region-content-below h2 a {
+  color: #fff;
+}
+
+#region-content article header h2 {
+  margin-top: 35px;
+}
+
+#region-content .block {
+  margin-top: 10px;
+  margin-bottom: 25px;
+}
+
+#region-content .block-page-title-block, #region-content .block-system-main-block {
+  margin-top: 0;
+}
+
+/* Messages */
+.messages {
+  padding: 10px 15px;
+  margin: 0 0 15px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+}
+
+.messages--status {
+  border-color: #c9e1bd;
+  background: #f3faef;
+}
+
+.messages--warning {
+  border-color: #ebd38a;
+  background: #fdf8ed;
+}
+
+.messages--error {
+  border-color: #ebb2a9;
+  background: #fcf4f2;
+}
+
+.messages ul {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+/* Lists in content */
+.item-list ul, .node ul, .node ol {
+  padding-left: 2em;
+}
+
+.item-list ul {
+  list-style: disc;
+}
+
+/* Embedded images in body text */
+#zone-content .field--type-text-with-summary img, #zone-content .field--type-text-long img {
+  margin: 0;
+}
+
+#zone-content .field--type-text-with-summary img[align^=left], #zone-content .field--type-text-long img[align^=left] {
+  margin: 0 20px 5px 5px;
+}
+
+#zone-content .field--type-text-with-summary img[align^=right], #zone-content .field--type-text-long img[align^=right] {
+  margin: 0 5px 5px 5px;
+}
+
+/************************ Nodes: the stripy field groups *********************/
+
+/* The Scratchpads' "stripy-div-group": label column, cell borders, zebra. */
+.stripy-div-group {
+  margin: 20px 0;
+  border-top: 1px solid var(--sp-rule);
+  border-collapse: collapse;
+}
+
+.stripy-div-group .field {
+  display: flex;
+  border: 1px solid var(--sp-rule);
+  border-top: none;
+  margin: 0;
+}
+
+.stripy-div-group .field:nth-child(odd) {
+  background: var(--sp-stripe);
+}
+
+.stripy-div-group .field__label {
+  flex: 0 0 200px;
+  width: 200px;
+  text-align: right;
+  font-weight: bold;
+  padding: 5px 5px 10px;
+  border-right: 1px solid var(--sp-rule);
+  box-sizing: border-box;
+}
+
+.stripy-div-group .field__item, .stripy-div-group .field__items {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 5px 10px;
+  overflow-wrap: anywhere;
+}
+
+.stripy-div-group .field__items .field__item {
+  padding: 0;
+}
+
+.stripy-div-group .field p {
+  margin-bottom: 0;
+}
+
+.node .submitted {
+  color: #888;
+  font-size: 0.9em;
+  text-align: right;
+}
+
+/************************ Tables *********************/
+
+table {
+  width: 100%;
+  border-width: 1px;
+  border-color: var(--sp-rule);
+  border-style: solid solid none solid;
+  border-collapse: collapse;
+  border-spacing: 0;
+  vertical-align: middle;
+}
+
+table thead tr {
+  background: #EBEDED;
+}
+
+table td, table th {
+  padding: 6px 5px;
+  vertical-align: middle;
+  text-align: left;
+  border-bottom: 1px solid var(--sp-rule);
+}
+
+table th {
+  font-weight: bold;
+}
+
+table th a {
+  text-decoration: none;
+  color: var(--sp-text);
+  display: block;
+}
+
+table th a img {
+  position: relative;
+  top: -2px;
+  margin-left: 2px;
+}
+
+table tbody tr {
+  background: #fff;
+}
+
+table tbody tr:nth-child(odd) {
+  background: var(--sp-stripe);
+}
+
+table tr:hover td {
+  background: #FFFEEE;
+}
+
+table.views-table {
+  border-bottom: 1px solid #CCCCCC;
+}
+
+table.views-table ul {
+  list-style-position: inside;
+  margin-left: 0;
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
+.node table th, .node table td {
+  border: 1px solid #ACACAC;
+}
+
+/* The reference page (bibcite renders its fields as a table): the label
+   column as the biblio table had it. */
+.bibcite-reference table td:first-child {
+  width: 200px;
+  text-align: right;
+  border-right: 1px solid var(--sp-rule);
+  font-weight: bold;
+}
+
+/************************ Forms *********************/
+
+input[type="text"], input[type="search"], input[type="email"], input[type="password"], textarea, select {
+  font: 12px Verdana, Helvetica, Arial, sans-serif;
+  border: 1px solid #ccc;
+  padding: 3px 5px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+input[type="submit"], button, .button {
+  font: 12px Verdana, Helvetica, Arial, sans-serif;
+  padding: 4px 10px;
+  border: 1px solid #bbb;
+  background: #eee;
+  color: #333;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+input[type="submit"]:hover, button:hover, .button:hover {
+  background: #fff;
+}
+
+.form-item {
+  margin: 0 0 1em;
+}
+
+.form-item label {
+  display: block;
+}
+
+.form-item--inline, .form--inline .form-item {
+  display: inline-block;
+  margin-right: 0.5em;
+  vertical-align: top;
+}
+
+.form-item .description {
+  margin-top: 2px;
+}
+
+/************************ Pager *********************/
+
+.pager {
+  padding-top: 10px;
+}
+
+.pager__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+.pager__item {
+  margin: 0;
+}
+
+.pager__item a, .pager__item.is-active a {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  text-decoration: none;
+  background: #f7f7f7;
+}
+
+.pager__item.is-active a {
+  background: var(--sp-colour);
+  color: #fff;
+  border-color: var(--sp-colour);
+}
+
+.pager__item a:hover {
+  background: #fff;
+}
+
+/************************ Footer *********************/
+
+.zone-footer-wrapper {
+  background: var(--sp-footer);
+  padding: 20px 0 30px;
+}
+
+.zone-footer-wrapper p {
+  text-align: center;
+}
+
+.zone-footer-wrapper .block {
+  margin-bottom: 12px;
+}
+
+/* The footer menu: the main menu's links inline, separated by bars. */
+.zone-footer-wrapper nav.menu--main {
+  margin-bottom: 20px;
+}
+
+.zone-footer-wrapper nav.menu--main ul.menu {
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zone-footer-wrapper nav.menu--main ul.menu li {
+  display: inline;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: #ACACAC;
+}
+
+.zone-footer-wrapper nav.menu--main ul.menu li:not(:last-child)::after {
+  content: "|";
+}
+
+.zone-footer-wrapper nav.menu--main ul.menu li a {
+  padding: 0 5px 0 1px;
+}
+
+/* The licence line (the creative_commons block of the Scratchpads). */
+.zone-footer-wrapper .block-taxanotes-front-text {
+  max-width: 500px;
+  margin: 0 auto 12px;
+}
+
+.zone-footer-wrapper .block-taxanotes-front-text p {
+  color: #000;
+}
+
+.zone-footer-wrapper .block-system-powered-by-block {
+  text-align: center;
+  font-size: 10px;
+  color: #6a6a6a;
+}
+
+/************************ Admin bits *********************/
+
+/* Contextual links stay above the block title bars. */
+.contextual {
+  z-index: 2;
+}
+
+.action-links {
+  list-style: none;
+  margin: 0 0 1em;
+  padding: 0;
+}
+
+.action-links li {
+  display: inline-block;
+  margin-right: 1em;
+}
+
+/************************ Exposed filters, forms on a phone *********************/
+
+/* A views exposed form: the items in a row that wraps; each item no wider
+   than the form (an autocomplete field is sized by its size attribute). */
+.views-exposed-form .form--inline, .views-exposed-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1em;
+  align-items: flex-end;
+}
+
+.views-exposed-form .form-item, .views-exposed-form .form-actions {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.views-exposed-form .form-item input, .views-exposed-form .form-item select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 739px) {
+  .views-exposed-form .form-item {
+    display: block;
+    width: 100%;
+  }
+
+  .views-exposed-form .form-item input[type="text"], .views-exposed-form .form-item input[type="search"],
+  .views-exposed-form .form-item select {
+    width: 100%;
+  }
+}

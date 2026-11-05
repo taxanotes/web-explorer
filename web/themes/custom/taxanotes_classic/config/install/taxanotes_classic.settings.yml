@@ -1,0 +1,5 @@
+# The accent colour of the instance: six hex digits, the Scratchpads
+# scratchpads_colour (047DB8 was its default). Seeded per instance from
+# instances/<slug>/instance.yml site.colour by the taxanotes_classic recipe;
+# editable at /admin/appearance/settings/taxanotes_classic.
+colour: '047DB8'

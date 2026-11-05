@@ -1,0 +1,74 @@
+<?php
+
+/**
+ * @file
+ * The Taxanotes classic theme: the accent colour and the taxon page tabs.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Render\Markup;
+
+/**
+ * The accent colour of this instance: six upper-case hex digits.
+ *
+ * Read from taxanotes_classic.settings:colour; anything that is not six hex
+ * digits falls back to the Scratchpads default (047DB8, the
+ * scratchpads_colour module's).
+ */
+function taxanotes_classic_colour(): string {
+  $colour = ltrim(trim((string) theme_get_setting('colour', 'taxanotes_classic')), '#');
+  return preg_match('/^[0-9A-Fa-f]{6}$/', $colour) ? strtoupper($colour) : '047DB8';
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for html.html.twig.
+ *
+ * The Drupal 7 scratchpads_colour module wrote a stylesheet per colour and
+ * put the colour on the body as a class; here the colour is one CSS custom
+ * property (--sp-colour) the stylesheets use, plus the same body class.
+ */
+function taxanotes_classic_preprocess_html(array &$variables): void {
+  $colour = taxanotes_classic_colour();
+  $variables['attributes']['class'][] = 'scratchpad-colour-' . $colour;
+  $variables['#attached']['html_head'][] = [
+    [
+      '#tag' => 'style',
+      '#value' => Markup::create(':root{--sp-colour:#' . $colour . ';}'),
+    ],
+    'taxanotes_classic_colour',
+  ];
+  $variables['#cache']['tags'][] = 'config:taxanotes_classic.settings';
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for block.html.twig.
+ *
+ * On a taxon page the Scratchpads showed Descriptions, Media and Literature
+ * as tabs beside the Overview. The blocks that hold that content here are
+ * marked so js/classic.js can turn them into tabs (an empty block, hidden by
+ * its view, gives no tab); everything else in the content region is the
+ * Overview.
+ */
+function taxanotes_classic_preprocess_block(array &$variables): void {
+  $tabs = [
+    'views_block:taxanotes_species-taxon' => ['descriptions', t('Descriptions')],
+    'views_block:taxanotes_media-taxon' => ['images', t('Images')],
+    'views_block:taxanotes_literature-taxon' => ['literature', t('Literature')],
+  ];
+  $plugin = $variables['plugin_id'] ?? '';
+  if (isset($tabs[$plugin])) {
+    [$id, $label] = $tabs[$plugin];
+    $variables['attributes']['data-taxanotes-tab'] = $id;
+    $variables['attributes']['data-taxanotes-tab-label'] = (string) $label;
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for page.html.twig.
+ */
+function taxanotes_classic_preprocess_page(array &$variables): void {
+  // The classification tree sits beside the content (Drupal 7: the sidebar
+  // region, 4 of 12 columns) only on pages that have sidebar blocks.
+  $variables['has_sidebar'] = !empty($variables['page']['sidebar']);
+}

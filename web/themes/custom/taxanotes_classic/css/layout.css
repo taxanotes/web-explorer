@@ -1,0 +1,147 @@
+/**
+ * Taxanotes classic: the Omega "alpha_default" grid the Scratchpads theme was
+ * laid out on, as flex rows.
+ *
+ * Omega 3 (GPL-2) served a 12-column, 960 px container from 980 px (the
+ * "normal" layout: a column is 60 px, gutters 10 px each side), 1200 px
+ * from 1220 px ("wide"), 720 px from 740 px ("narrow"), and stacked
+ * everything below that (alpha-mobile.css). The same breakpoints here; the
+ * narrow and mobile layouts are fluid so nothing overflows a phone.
+ */
+
+.container {
+  margin: 0 auto;
+  width: auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 740px) {
+  .container {
+    width: 720px;
+    padding: 0;
+  }
+}
+
+@media (min-width: 980px) {
+  .container {
+    width: 960px;
+  }
+}
+
+@media (min-width: 1220px) {
+  .container {
+    width: 1200px;
+  }
+}
+
+.grid-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -10px;
+}
+
+.grid-4, .grid-8, .grid-12 {
+  box-sizing: border-box;
+  padding: 0 10px;
+  min-width: 0;
+}
+
+.grid-4 {
+  flex: 0 0 33.3333%;
+  max-width: 33.3333%;
+}
+
+.grid-8 {
+  flex: 0 0 66.6667%;
+  max-width: 66.6667%;
+}
+
+.grid-12 {
+  flex: 0 0 100%;
+  max-width: 100%;
+}
+
+/* Below Omega's narrow layout: everything stacks. */
+@media (max-width: 739px) {
+  .grid-4, .grid-8 {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+/* The page is at least the viewport high, the footer at the bottom. */
+#page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#section-content {
+  flex: 1 0 auto;
+}
+
+#section-footer {
+  margin-top: auto;
+}
+
+/* Content column: nothing in it may widen the page (a long word breaks; a
+   wide table scrolls inside the column). "break-word" rather than
+   "anywhere": the latter shrinks every table column's minimum width to one
+   character and an auto-layout table then gives the longest cell the room. */
+.layout-content {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.layout-content .view-content, .layout-content .bibcite-reference {
+  overflow-x: auto;
+}
+
+.layout-content .bibcite-reference td {
+  overflow-wrap: anywhere;
+}
+
+/* The literature table: the biblio table gave the authors a fixed column. */
+.view-taxanotes-literature th.views-field-title, .view-taxanotes-literature td.views-field-title {
+  width: 36%;
+}
+
+.view-taxanotes-literature td.views-field-author {
+  width: 28%;
+}
+
+.view-taxanotes-literature td.views-field-bibcite-year, .view-taxanotes-literature th.views-field-bibcite-year,
+.view-taxanotes-literature td.views-field-type {
+  white-space: nowrap;
+}
+
+/* The sidebar's tree scrolls in its box (node_tree sets 70vh). */
+#region-sidebar .node-tree-block {
+  background: #fff;
+  padding: 5px;
+}
+
+/* Header rows: the menu sits under branding and search. */
+#region-menu {
+  margin-top: 10px;
+}
+
+#region-content-below {
+  clear: both;
+}
+
+@media (max-width: 739px) {
+  #zone-header {
+    padding-top: 30px;
+  }
+
+  #region-header form {
+    max-width: none;
+    margin: 0;
+  }
+
+  #region-header {
+    margin-top: 10px;
+  }
+}
