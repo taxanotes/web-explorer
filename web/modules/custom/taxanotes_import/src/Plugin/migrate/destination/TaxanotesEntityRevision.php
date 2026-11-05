@@ -38,14 +38,27 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - every new revision is marked revision_translation_affected, so a
  *   historic revision whose values equal the current ones still shows in the
  *   Revisions tab;
- * - a revision this migration created is deleted on rollback. Core records
- *   "preserve" for every entity_revision row because the entity already
- *   existed, which makes migrate:rollback leave the revisions in place.
+ * - a revision this migration created is deleted on rollback (and stays so
+ *   when a later run updates it in place). Core records "preserve" for every
+ *   entity_revision row because the entity already existed, which makes
+ *   migrate:rollback leave the revisions in place.
+ *
+ * Process pipelines feeding this destination should map whole fields
+ * (`field_x: item`), not sub-properties (`field_x/uri: value`): when a
+ * sub-property's pipeline yields NULL, core records the *sub-property* as the
+ * empty destination and EntityContentBase::updateEntity() then assigns NULL
+ * to a property named "field_x/uri", which is not a field, so the revision
+ * silently keeps the value of the revision it was loaded from (the current
+ * one). A whole-field NULL clears the field.
  */
 #[MigrateDestination(
   id: 'taxanotes_entity_revision',
 )]
 final class TaxanotesEntityRevision extends EntityRevision {
+
+  use NonDerivedEntityDestinationTrait {
+    create as traitCreate;
+  }
 
   /**
    * The time service (for the timestamp of a reset default revision).
@@ -56,19 +69,7 @@ final class TaxanotesEntityRevision extends EntityRevision {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
-    $entity_type = $configuration['entity_type'] ?? 'node';
-    $instance = new static(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $migration,
-      $container->get('entity_type.manager')->getStorage($entity_type),
-      array_keys($container->get('entity_type.bundle.info')->getBundleInfo($entity_type)),
-      $container->get('entity_field.manager'),
-      $container->get('plugin.manager.field.field_type'),
-      $container->get('account_switcher'),
-      $container->get('entity_type.bundle.info'),
-    );
+    $instance = static::traitCreate($container, $configuration, $plugin_id, $plugin_definition, $migration);
     $instance->time = $container->get('datetime.time');
     return $instance;
   }
@@ -86,22 +87,13 @@ final class TaxanotesEntityRevision extends EntityRevision {
   /**
    * {@inheritdoc}
    *
-   * The trait derives the entity type from the plugin id ("entity_revision:
-   * node"); this plugin is not derived, so it asks the storage instead.
-   */
-  protected function getDefinitionFromEntity($key) {
-    $definitions = $this->entityFieldManager->getBaseFieldDefinitions($this->storage->getEntityTypeId());
-    $field_definition = $definitions[$key];
-    return ['type' => $field_definition->getType()] + $field_definition->getSettings();
-  }
-
-  /**
-   * {@inheritdoc}
+   * A revision this migration created is deleted on rollback, whether this
+   * run created it or updates it in place (a row that reaches the update path
+   * has a map row, i.e. was created by an earlier run).
    */
   public function import(Row $row, array $old_destination_id_values = []) {
-    $this->createdRevision = FALSE;
     $ids = parent::import($row, $old_destination_id_values);
-    if ($this->createdRevision) {
+    if ($this->createdRevision || $old_destination_id_values) {
       $this->rollbackAction = MigrateIdMapInterface::ROLLBACK_DELETE;
     }
     return $ids;
@@ -115,12 +107,10 @@ final class TaxanotesEntityRevision extends EntityRevision {
     $make_default = (bool) $row->getDestinationProperty($property);
     $row->removeDestinationProperty($property);
     $this->replacedRevisionId = NULL;
+    $this->createdRevision = FALSE;
 
     $entity = parent::getEntity($row, $old_destination_id_values);
-    if (!$entity instanceof ContentEntityInterface) {
-      return $entity;
-    }
-    if ($entity->isNewRevision()) {
+    if ($entity instanceof ContentEntityInterface && $entity->isNewRevision()) {
       $this->createdRevision = TRUE;
       if ($make_default) {
         $entity->isDefaultRevision(TRUE);
@@ -151,14 +141,15 @@ final class TaxanotesEntityRevision extends EntityRevision {
     if (!$prefixes) {
       return;
     }
-    $revision = $this->storage->loadRevision($revision_id);
+    $storage = $this->revisionableStorage();
+    $revision = $storage->loadRevision($revision_id);
     if (!$revision instanceof RevisionLogInterface || $revision->isDefaultRevision()) {
       return;
     }
     $log = (string) $revision->getRevisionLogMessage();
     foreach ($prefixes as $prefix) {
       if (str_starts_with($log, (string) $prefix)) {
-        $this->storage->deleteRevision($revision_id);
+        $storage->deleteRevision($revision_id);
         return;
       }
     }
@@ -166,15 +157,19 @@ final class TaxanotesEntityRevision extends EntityRevision {
 
   /**
    * {@inheritdoc}
+   *
+   * A revision that no longer exists (for example after a rollback of the
+   * entity migration deleted the entity) is simply skipped.
    */
   public function rollback(array $destination_identifier) {
     $revision_id = reset($destination_identifier);
-    $revision = $this->storage->loadRevision($revision_id);
+    $storage = $this->revisionableStorage();
+    $revision = $storage->loadRevision($revision_id);
     if (!$revision instanceof ContentEntityInterface) {
       return;
     }
     if (!$revision->isDefaultRevision()) {
-      $this->storage->deleteRevision($revision_id);
+      $storage->deleteRevision($revision_id);
       return;
     }
     $log = $this->configuration['rollback_log'] ?? NULL;

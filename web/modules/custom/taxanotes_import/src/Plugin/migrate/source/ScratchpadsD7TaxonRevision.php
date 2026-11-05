@@ -25,6 +25,15 @@ use Drupal\migrate\Row;
  *   reference and page URL as the taxon source, read from the revision
  *   tables; unit names are trimmed here (not in the pipeline) so NULL stays
  *   NULL;
+ * - page_url_item: the protologue page URL as one link item {uri, title},
+ *   NULL when the revision has no URL. The migration maps this whole item
+ *   rather than `field_page_url/uri`: a NULL sub-property does not clear the
+ *   field on the loaded (current) revision, a NULL field does;
+ * - changed: the value for the revision's `changed` column: the revision's
+ *   own timestamp, except for the current revision, which carries the term's
+ *   latest revision timestamp (`term_changed`), the same value the taxon
+ *   import writes, so the two migrations agree on the default revision and a
+ *   forced re-import of unchanged terms detects no change;
  * - vernacular: the vernacular-name collection items of the revision (each
  *   collection item revision is joined on the field_collection_item revision
  *   id stored with the term revision).
@@ -81,6 +90,15 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $this->addBundleCondition($query);
     $query->addExpression('CASE WHEN [td].[revision_id] = [r].[revision_id] THEN 1 ELSE 0 END', 'is_current');
     $this->addGuid($query, 'td', 'guid');
+
+    // The term's latest revision timestamp (what the taxon import writes as
+    // the node's `changed`); see prepareRow().
+    $latest = $this->select('taxonomy_term_data_revision', 'rl');
+    $latest->addField('rl', 'tid');
+    $latest->addExpression('MAX([rl].[timestamp])', 'term_changed');
+    $latest->groupBy('rl.tid');
+    $query->leftJoin($latest, 'latest', '[latest].[tid] = [r].[tid]');
+    $query->addField('latest', 'term_changed', 'term_changed');
 
     // Scalar ITIS fields from the revision tables.
     foreach (static::SCALAR_FIELDS as $alias => $field_name) {
@@ -153,6 +171,9 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
       'reference_guid' => $this->t('Protologue reference: node uuid.'),
       'page_url' => $this->t('Protologue page URL.'),
       'page_url_title' => $this->t('Protologue page URL title.'),
+      'page_url_item' => $this->t('Protologue page URL as one link item {uri, title}, or NULL.'),
+      'term_changed' => $this->t('Timestamp of the latest revision of the term.'),
+      'changed' => $this->t('The revision timestamp, or term_changed for the current revision (what the node revision stores as changed).'),
       'vernacular' => $this->t('Vernacular names of the revision: array of name, language, area, remarks.'),
     ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value as of this revision', ['@field' => $f]), static::SCALAR_FIELDS));
   }
@@ -174,8 +195,17 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
    */
   public function prepareRow(Row $row) {
     $revision_id = (int) $row->getSourceProperty('revision_id');
-    $row->setSourceProperty('is_current', (int) $row->getSourceProperty('is_current'));
+    $is_current = (int) $row->getSourceProperty('is_current');
+    $row->setSourceProperty('is_current', $is_current);
     $row->setSourceProperty('vernacular', $this->vernacularNames()[$revision_id] ?? []);
+    $url = $row->getSourceProperty('page_url');
+    $row->setSourceProperty('page_url_item', is_string($url) && $url !== '' ? [
+      'uri' => $url,
+      'title' => $row->getSourceProperty('page_url_title'),
+    ] : NULL);
+    $timestamp = (int) $row->getSourceProperty('timestamp');
+    $term_changed = $row->getSourceProperty('term_changed');
+    $row->setSourceProperty('changed', $is_current && $term_changed ? (int) $term_changed : $timestamp);
     foreach (static::TRIMMED as $property) {
       $value = $row->getSourceProperty($property);
       if (is_string($value)) {

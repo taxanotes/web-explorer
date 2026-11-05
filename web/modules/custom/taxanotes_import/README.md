@@ -65,7 +65,15 @@ standard profile, verifies them on login, after which core re-hashes with
 the current algorithm. Roles: `maintainer` and `administrator` ->
 `administrator`, `editor` -> `editor`, `contributor` -> `contributor` (the
 `static_map` in `taxanotes_d7_user.yml`); apply `recipes/taxanotes_users`
-first so the roles exist.
+first so the roles exist: the source's `required_roles` configuration lists
+them and the import refuses to run (requirements check) while any is
+missing. Two cautions for later runs: a second import of an account that has
+logged in here would write the D7 phpass hash back over the bcrypt re-hash
+(and over any password changed here), so before a second user sync remove
+`pass` from the process section or restrict it with `overwrite_properties`;
+and rolling the user migration back deletes the accounts (their taxon
+revisions keep pointing at the deleted uids), so follow a user rollback and
+re-import with `migrate:import taxanotes_d7_taxon_revision --update`.
 
 ### Revisions
 
@@ -88,6 +96,43 @@ deleted, so its log is reset to "Scratchpads revision history rolled back",
 which the next import replaces again. Run it after both taxon passes (it
 requires them) and after `taxanotes_d7_user` (optional dependency: without
 it every revision author is uid 1).
+
+The process pipeline maps whole fields, never sub-properties
+(`field_page_url: page_url_item`, built in the source plugin, rather than
+`field_page_url/uri`): core records a NULL sub-property as an empty
+destination named `field_page_url/uri`, which is not a field, so the
+revision silently kept the value loaded from the current revision (748
+historic revisions carried their node's current page URL until this was
+fixed). Keep it that way when adding fields. `changed` of the D7 current
+revision is the term's latest revision timestamp, the same value the node
+import writes, so the two migrations agree on the default revision.
+
+**Re-importing taxa after the history exists.** `taxanotes_d7_taxon` uses
+the destination `taxanotes_entity_node` (core `entity:node` plus one rule):
+when a re-import changes a node whose current revision is real history (an
+imported D7 revision, or an edit made here), the new values are saved as a
+new default revision with the log "Synced from Scratchpads GUID ..." (uid 1,
+time of the run) instead of overwriting that revision in place; placeholder
+revisions (logs "Migrated from Scratchpads GUID ...", "Synced from
+Scratchpads GUID ...", "Scratchpads revision history rolled back") are
+updated in place as core does, and a row that changes nothing (a forced
+`--update`) adds no revision and keeps the log. A sync revision is itself a
+placeholder: the next revision import replaces it with the D7 revision that
+caused the change (`replace_log_prefixes`), so a node's history stays
+exactly its D7 history. Without this rule, a pass-1 re-import after a D7
+edit would have overwritten the D7 current revision's log with the
+placeholder text and the next revision import would then have deleted that
+genuine revision.
+
+**Rollback order.** Rolling back `taxanotes_d7_taxon` deletes the nodes
+with all their revisions but leaves the revision migration's id map in
+place (its rows still hash as imported), so after re-importing both taxon
+passes a plain `migrate:import taxanotes_d7_taxon_revision` processes 0
+rows. Either roll the revision migration back first (slow: 577 s for
+39,429 rows, see above) or, after a pass-1 rollback and re-import, run the
+revision import with `--update` (a map row whose revision no longer exists
+falls back to creating it). The revision destination's rollback skips
+revisions that no longer exist.
 
 ## Local ddev setup for the D7 track
 

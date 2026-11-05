@@ -18,6 +18,7 @@ source:
   ignore_map: true
   constants:
     log_prefix: 'Migrated from Scratchpads GUID '
+    sync_log_prefix: 'Synced from Scratchpads GUID '
 process:
   type:
     plugin: default_value
@@ -54,6 +55,13 @@ process:
     plugin: concat
     source:
       - constants/log_prefix
+      - guid
+  # Log of the new revision the destination creates when a re-import changes
+  # a node whose current revision is real history (see the destination).
+  sync_revision_log:
+    plugin: concat
+    source:
+      - constants/sync_log_prefix
       - guid
   field_guid: guid
   field_legacy_tid: tid
@@ -116,8 +124,20 @@ process:
       area: area
       remarks: remarks
 destination:
-  plugin: 'entity:node'
+  # entity:node with one difference: a re-import of a node whose current
+  # revision is real history (a Scratchpads revision imported by
+  # taxanotes_d7_taxon_revision, or an edit made here) saves the changed
+  # values as a new revision instead of overwriting that revision; placeholder
+  # revisions (logs below) are updated in place as core does, and unchanged
+  # rows alter nothing.
+  plugin: taxanotes_entity_node
+  entity_type: node
   default_bundle: taxon
+  placeholder_log_prefixes:
+    - 'Migrated from Scratchpads GUID '
+    - 'Synced from Scratchpads GUID '
+    - 'Scratchpads revision history rolled back'
+  sync_uid: 1
 migration_dependencies:
   required: {  }
   optional: {  }

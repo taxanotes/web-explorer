@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\migrate\Attribute\MigrateSource;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Plugin\migrate\source\SqlBase;
+use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\Row;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Scratchpads (Drupal 7) user accounts with their role names.
@@ -26,6 +29,11 @@ use Drupal\migrate\Row;
  * Only the columns Drupal 11 keeps are selected; `pass` is the D7 phpass
  * hash, which the entity:user destination stores pre-hashed and core's
  * Password Compatibility (phpass) module verifies on login.
+ *
+ * `required_roles` (configuration, optional): role ids the migration's
+ * process pipeline assigns; the requirements check fails while any of them
+ * is missing, so the import cannot store references to roles that do not
+ * exist yet (apply the roles recipe first).
  */
 #[MigrateSource(
   id: 'scratchpads_d7_user',
@@ -40,6 +48,20 @@ final class ScratchpadsD7User extends SqlBase {
   protected ?array $roles = NULL;
 
   /**
+   * The user_role storage, for the required_roles check.
+   */
+  protected ?EntityStorageInterface $roleStorage = NULL;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
+    $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition, $migration);
+    $instance->roleStorage = $container->get('entity_type.manager')->getStorage('user_role');
+    return $instance;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function checkRequirements() {
@@ -48,6 +70,13 @@ final class ScratchpadsD7User extends SqlBase {
     foreach (['users', 'users_roles', 'role'] as $table) {
       if (!$schema->tableExists($table)) {
         throw new RequirementsException(sprintf('The migrate database is not a Drupal 7 database (table %s is missing).', $table));
+      }
+    }
+    $required = array_filter((array) ($this->configuration['required_roles'] ?? []));
+    if ($required && $this->roleStorage) {
+      $missing = array_diff($required, array_keys($this->roleStorage->loadMultiple($required)));
+      if ($missing) {
+        throw new RequirementsException(sprintf('The roles %s do not exist on this site; apply the roles recipe (recipes/taxanotes_users) before importing users.', implode(', ', $missing)));
       }
     }
   }
