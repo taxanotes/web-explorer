@@ -1,0 +1,65 @@
+id: taxanotes_d7_user
+label: 'Scratchpads (Drupal 7) user accounts'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_user
+  # uid 0 is never a row; uid 1 (the D7 site owner) is skipped so the local
+  # administrator of the instance keeps name, mail, password and roles. Its
+  # revisions map to uid 1 through the fallback in taxanotes_d7_taxon_revision.
+  # include_root: true would migrate it (core then still keeps the password).
+  track_changes: true
+  # Roles the process below assigns; the import refuses to run until they
+  # exist (apply recipes/taxanotes_users first).
+  required_roles:
+    - administrator
+    - editor
+    - contributor
+process:
+  uid: uid
+  name: name
+  # Drupal 7 phpass hashes ($S$...). entity:user stores them pre-hashed and
+  # core's Password Compatibility (phpass) module verifies them on login, after
+  # which core re-hashes with the current algorithm. A re-import would write
+  # the D7 hash back over that re-hash (or over a password changed here):
+  # before syncing users a second time, remove this line or restrict the
+  # update with overwrite_properties.
+  pass: pass
+  mail: mail
+  init: init
+  created: created
+  changed: changed
+  access: access
+  login: login
+  status: status
+  timezone: timezone
+  langcode:
+    plugin: default_value
+    source: language
+    default_value: en
+  preferred_langcode:
+    plugin: default_value
+    source: language
+    default_value: en
+  # D7 role names -> instance roles (recipes/taxanotes_users). A D7 account
+  # may hold several (contributor + editor is common); unknown names drop.
+  roles:
+    plugin: sub_process
+    source: roles
+    process:
+      target_id:
+        plugin: static_map
+        source: name
+        map:
+          administrator: administrator
+          maintainer: administrator
+          editor: editor
+          contributor: contributor
+        default_value: null
+destination:
+  plugin: 'entity:user'
+migration_dependencies:
+  required: {  }
+  optional: {  }

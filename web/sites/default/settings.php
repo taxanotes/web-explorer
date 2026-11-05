@@ -89,15 +89,6 @@
  * @endcode
  */
 
-// from keepass "work - my projects.kdbx"
-$databases['default']['default'] = array (
-  'database' => 'wmsstage',
-  'username' => 'wmsstage',
-  'password' => 'REDACTED',
-  'host' => 'localhost',
-  'port' => '3306',
-  'driver' => 'mysql',
-);
 
 /**
  * Customizing database settings.
@@ -312,7 +303,7 @@ $config_directories = array(
  *   $settings['hash_salt'] = file_get_contents('/home/example/salt.txt');
  * @endcode
  */
-$settings['hash_salt'] = 'CHANGE_THIS';
+$settings['hash_salt'] = '';  // Set in settings.local.php (never commit a real salt).
 
 /**
  * Deployment identifier.

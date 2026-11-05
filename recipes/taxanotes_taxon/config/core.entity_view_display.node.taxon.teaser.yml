@@ -1,0 +1,42 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - core.entity_view_mode.node.teaser
+    - field.field.node.taxon.field_authors
+    - field.field.node.taxon.field_rank
+    - field.field.node.taxon.field_usage
+    - node.type.taxon
+  module:
+    - options
+    - user
+id: node.taxon.teaser
+targetEntityType: node
+bundle: taxon
+mode: teaser
+content:
+  field_rank:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_authors:
+    type: string
+    label: inline
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_usage:
+    type: list_default
+    label: inline
+    settings: {  }
+    third_party_settings: {  }
+    weight: 3
+    region: content
+hidden:
+  field_weight: true
+  links: true

@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_legacy_tid
+    - node.type.taxon
+id: node.taxon.field_legacy_tid
+field_name: field_legacy_tid
+entity_type: node
+bundle: taxon
+label: 'Legacy term ID'
+description: 'Taxonomy term ID (tid) in the source Scratchpads (Drupal 7) site. Audit only.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

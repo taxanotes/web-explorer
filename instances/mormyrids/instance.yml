@@ -1,0 +1,31 @@
+# Instance definition: Mormyrids (the Scratchpad of African weakly electric
+# fishes, mormyrids.taxanotes.net). Committed, no secrets: credentials are in
+# .env next to it (see instances/.env.example). Schema: instances/README.md.
+slug: mormyrids
+site:
+  name: 'Mormyridae - African weakly electric fishes'
+  slogan: 'Mintotom mi ne vé ?'
+  theme: olivero
+  admin_theme: claro
+# Hostnames per environment; the first of each list is the canonical URL.
+# ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
+# production: one checkout per instance (see instances/README.md).
+hostnames:
+  ddev:
+    - mormyrids.taxanotes-dev.ddev.site
+  production:
+    - mormyrids.taxanotes.net
+drupal:
+  # web/sites/<sites_subdir> (default: slug); mapped from the ddev hostnames
+  # in web/sites/sites.php.
+  sites_subdir: mormyrids
+  profile: standard
+  database: mormyrids
+source:
+  type: scratchpads_d7
+  # D7 vocabulary machine name of the taxa, and the D7 database holding it.
+  vocabulary: mormyridae
+  database: mormyrids
+  # Root terms whose subtree is imported unpublished (Scratchpads convention).
+  unpublished_roots:
+    - 'Deleted taxa'

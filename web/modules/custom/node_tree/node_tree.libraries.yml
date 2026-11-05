@@ -1,4 +1,4 @@
-tree:
+node_tree:
   version: VERSION
   css:
     base:
@@ -11,4 +11,5 @@ tree:
     - core/drupal
     - core/drupalSettings
     - core/jquery
+    - core/once
 

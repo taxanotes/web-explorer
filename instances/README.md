@@ -1,0 +1,141 @@
+# Instances
+
+Taxanotes is one codebase that runs several sites. A site is an **instance**:
+the unchanged platform (modules, recipes, theme) plus three per-instance
+things, all in `instances/<slug>/`:
+
+| File | In git | Holds |
+|---|---|---|
+| `instance.yml` | yes | everything that describes the instance and is not secret (below) |
+| `.env` | **no** (`**/.env` is gitignored; the script keeps it mode 600) | hash salt, database credentials, site mail, optional admin password; template `instances/.env.example` |
+| `data-imports/` | **no** (`instances/*/data-imports/`, `*.sql`, `*.sql.gz` are gitignored) | source data: dumps, spreadsheets |
+
+Nothing else is per instance: no per-site config export, no per-site module
+or recipe, no fork. Site configuration lives in the instance's database (and
+its backups). Recipes are additive and are applied at creation; anything an
+instance later changes through the UI stays in its database.
+
+## Creating or updating a local instance
+
+```
+scripts/new-instance.sh <slug>
+```
+
+The script reads `instance.yml` and `.env` and performs, idempotently, the
+local ddev multisite setup: registers the hostnames (`.ddev/config.instances.yaml`,
+generated for all instances; ddev is restarted only when it changed), maps them
+in `web/sites/sites.php` (generated block), creates `web/sites/<sites_subdir>/`
+with the generic `settings.php` (a verbatim copy of
+`scripts/templates/settings.php`, identical for every instance) and a
+`settings.local.php` generated from `instance.yml` + `.env`, creates the
+database in the ddev db container, installs Drupal, applies
+`recipes/taxanotes_base` (which pulls in `taxanotes_taxon` and
+`taxanotes_users`), sets the themes, runs the four `taxanotes_import`
+migrations when `.env` names a Scratchpads database, rebuilds caches and
+prints the URL. A second run on the same instance changes nothing that is
+already in place; a changed `instance.yml`/`.env` regenerates
+`settings.local.php` (a hand-written one, like Myriatrix's, is left alone).
+
+A Drupal 7 source must be reachable from the web container: the local
+Scratchpads stack's MySQL is on the `scratchpads2_default` Docker network that
+`.ddev/docker-compose.scratchpads.yaml` attaches the web container to; load the
+instance's dump as its own database there (see the mormyrids report in
+`docs/planning/reports/`).
+
+## `instance.yml` schema
+
+```yaml
+slug: mormyrids                    # directory name under instances/; default for names below
+site:
+  name: 'Mormyridae - …'           # system.site:name (recipe input taxanotes_base.site_name)
+  slogan: '…'                      # system.site:slogan (may be empty)
+  theme: olivero                   # default theme (enabled and set by the script)
+  admin_theme: claro               # administration theme
+hostnames:                         # per environment; the first of each list is the canonical
+  ddev:                            # URL (https) and trusted_host_patterns are built from the list
+    - mormyrids.taxanotes-dev.ddev.site   # of the environment a script runs in. A plain list is
+  production:                      # read as the ddev list.
+    - mormyrids.taxanotes.net
+drupal:
+  sites_subdir: mormyrids          # web/sites/<subdir> (default: slug); "default" = the ddev project's own site
+  profile: standard                # install profile (default: standard)
+  database: mormyrids              # the instance's own database name (default: slug; credentials in .env)
+source:                            # omit for an instance without a Scratchpads database
+  type: scratchpads_d7
+  vocabulary: mormyridae           # D7 vocabulary machine name -> $settings['taxanotes_import']['source_vocabulary']
+  database: mormyrids              # D7 database name (credentials MIGRATE_DB_* in .env)
+  unpublished_roots:               # root terms imported unpublished with their subtree
+    - 'Deleted taxa'               #   -> $settings['taxanotes_import']['unpublished_roots']
+```
+
+Defaults are applied in one place, `scripts/lib/instance.php` (`get` prints
+the effective value), so every consumer, the script and the generated files
+alike, sees the same instance.
+
+`site.mail` is deliberately not here: addresses are not committed; `.env`
+`SITE_MAIL` carries it (default `webmaster@example.com`).
+
+## Environments: ddev and production
+
+The committed model is environment-aware only where it has to be, in the
+hostnames:
+
+| | ddev (local, this script) | production (the toolkit host) |
+|---|---|---|
+| layout | one checkout, one ddev project, Drupal multisite: `web/sites/<sites_subdir>/` per instance, routed by `web/sites/sites.php` | **one checkout per instance** under `/var/www/<category>/<domain>/` (plan decision D7), each on its own `sites/default`, an Apache vhost per domain |
+| hostnames | `hostnames.ddev` | `hostnames.production` |
+| `web/sites/sites.php`, `.ddev/config.instances.yaml` | generated from `hostnames.ddev` of every instance | **not used**: a single-site checkout needs no map; both files are ddev-only artifacts and stay committed for the local project |
+| `settings.local.php` | `instance.php settings-local <yml> <.env> ddev` | `instance.php settings-local <yml> <.env> production` (the hosting script's job; same template `settings.php`, same `.env` keys) |
+| `trusted_host_patterns` | the ddev list | the production list; a dev hostname never reaches a production site |
+
+So `hostnames.production` is schema (the hosting script and the vhost
+template read it), while the generated multisite map is a convenience of the
+local setup. A third instance copies this shape: both lists, its own
+`sites_subdir`.
+
+## Adding an instance
+
+1. `mkdir instances/<slug>` and write `instance.yml` (copy one of the existing
+   ones; pick unused hostnames).
+2. If the taxa come from a Scratchpads database, load its dump into the local
+   D7 MySQL as a database of its own and create a user for it.
+3. `scripts/new-instance.sh <slug>` once: it creates `.env` with a random hash
+   salt and stops short of the import; fill in `MIGRATE_DB_USER` /
+   `MIGRATE_DB_PASSWORD` (and `SITE_MAIL`, `ADMIN_PASSWORD` if wanted).
+4. `scripts/new-instance.sh <slug>` again: installs, applies recipes, imports.
+5. `ddev drush --uri=https://<ddev hostname> php:script scripts/verify-instance.php -- <vocabulary>`
+   compares every term's current field values with the D7 source and prints
+   the content checksums (see "Verifying" below).
+6. Commit `instances/<slug>/instance.yml`, `web/sites/sites.php` and
+   `.ddev/config.instances.yaml` (and `web/sites/<subdir>/settings.php`, which
+   is the unchanged template). Never `.env`, `settings.local.php`, `files/`,
+   `data-imports/` or dumps (`.gitignore` covers `instances/*/data-imports/`,
+   `*.sql`, `*.sql.gz`).
+
+The script never installs over data: Drupal is installed only into an
+**empty** database. A database with tables that does not bootstrap (db
+container down, broken `settings.local.php`, PHP fatal) or whose install never
+finished stops the run with the reason; `scripts/new-instance.sh <slug>
+--reinstall` is the one way to drop the tables and install again. Before any
+drush write it also checks that drush resolves the instance URL to
+`web/sites/<sites_subdir>` (an unmapped hostname lands on `sites/default`).
+
+## Verifying
+
+`scripts/verify-instance.php` (run with `drush php:script`, needs the
+`migrate` connection) prints, as JSON: the D7/D11 counts (terms, parents,
+orphans, roots, users, roles, revisions per node, accepted and vernacular
+names, weights, ranks, usages); a **full comparison of every term's current
+values** (name, weight, parent, the ITIS fields, accepted name, reference,
+page URL, description, vernacular-name count) against the D7 `field_data_*`
+tables, the ones the Scratchpads site renders, listing every mismatch; and a
+sha256 per content table (`node_field_data` without `vid`/`changed`, every
+`node__field_*` table without `revision_id`) so a before/after of the Myriatrix
+control is a checksum, not a count.
+
+## Instances
+
+| slug | site directory | hostnames (ddev / production) | source |
+|---|---|---|---|
+| `myriatrix` | `web/sites/default` (built by hand before this script; its `settings.local.php` is hand-written) | taxanotes-dev.ddev.site / myriatrix.taxanotes.net | D7 vocabulary `myriatrix`, database `myriatrix` |
+| `mormyrids` | `web/sites/mormyrids` | mormyrids.taxanotes-dev.ddev.site / mormyrids.taxanotes.net | D7 vocabulary `mormyridae`, database `mormyrids` |

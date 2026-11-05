@@ -1,0 +1,143 @@
+id: taxanotes_d7_taxon
+label: 'Scratchpads (Drupal 7) taxa to taxon nodes'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_taxon
+  # bundle: <D7 vocabulary machine name> — omitted on purpose; the plugin reads
+  # $settings['taxanotes_import']['source_vocabulary'] so this file serves every
+  # instance unchanged.
+  # The migration id `guid` is a SQL expression (COALESCE over feeds_item and
+  # taxonomy_term_data), which the id map cannot be joined on. track_changes
+  # keeps the map out of the source query (and gives idempotent re-runs:
+  # only rows whose hash changed are re-imported); ignore_map says so
+  # explicitly, independent of track_changes.
+  track_changes: true
+  ignore_map: true
+  constants:
+    log_prefix: 'Migrated from Scratchpads GUID '
+    sync_log_prefix: 'Synced from Scratchpads GUID '
+process:
+  type:
+    plugin: default_value
+    default_value: taxon
+  langcode:
+    plugin: default_value
+    default_value: en
+  title: name
+  uid:
+    plugin: default_value
+    default_value: 1
+  # Published, except the "Deleted taxa" subtree (source config
+  # unpublished_roots / $settings['taxanotes_import']['unpublished_roots']).
+  # `published` is derived from the D7 hierarchy in the source plugin and is
+  # part of the row hash, so moving a subtree in D7 re-imports its members.
+  status: published
+  created:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: created
+    -
+      plugin: callback
+      callable: intval
+  changed:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: changed
+    -
+      plugin: callback
+      callable: intval
+  revision_log:
+    plugin: concat
+    source:
+      - constants/log_prefix
+      - guid
+  # Log of the new revision the destination creates when a re-import changes
+  # a node whose current revision is real history (see the destination).
+  sync_revision_log:
+    plugin: concat
+    source:
+      - constants/sync_log_prefix
+      - guid
+  field_guid: guid
+  field_legacy_tid: tid
+  field_weight: weight
+  field_parent_guid: parent_guid
+  field_parent_term_name: parent_name
+  field_rank: field_rank
+  field_usage: field_usage
+  field_unacceptability_reason: field_unacceptability_reason
+  field_unit_indicator_1: field_unit_indicator1
+  field_unit_indicator_2: field_unit_indicator2
+  field_unit_indicator_3: field_unit_indicator3
+  field_unit_indicator_4: field_unit_indicator4
+  field_unit_name_1:
+    plugin: callback
+    callable: trim
+    source: field_unit_name1
+  field_unit_name_2:
+    plugin: callback
+    callable: trim
+    source: field_unit_name2
+  field_unit_name_3:
+    plugin: callback
+    callable: trim
+    source: field_unit_name3
+  field_unit_name_4:
+    plugin: callback
+    callable: trim
+    source: field_unit_name4
+  field_authors: field_authors
+  field_page_number: field_page_number
+  field_accepted_guid: accepted_guid
+  field_accepted_tid: accepted_tid
+  field_reference_nid: reference_nid
+  field_reference_title: reference_title
+  field_reference_guid: reference_guid
+  field_page_url/uri:
+    plugin: skip_on_empty
+    method: process
+    source: page_url
+  field_page_url/title: page_url_title
+  field_term_description/value:
+    plugin: skip_on_empty
+    method: process
+    source: description
+  field_term_description/format:
+    plugin: static_map
+    source: format
+    map:
+      plain_text: plain_text
+      filtered_html: basic_html
+      full_html: full_html
+    default_value: plain_text
+  field_vernacular_names:
+    plugin: sub_process
+    source: vernacular
+    process:
+      name: name
+      language: language
+      area: area
+      remarks: remarks
+destination:
+  # entity:node with one difference: a re-import of a node whose current
+  # revision is real history (a Scratchpads revision imported by
+  # taxanotes_d7_taxon_revision, or an edit made here) saves the changed
+  # values as a new revision instead of overwriting that revision; placeholder
+  # revisions (logs below) are updated in place as core does, and unchanged
+  # rows alter nothing.
+  plugin: taxanotes_entity_node
+  entity_type: node
+  default_bundle: taxon
+  placeholder_log_prefixes:
+    - 'Migrated from Scratchpads GUID '
+    - 'Synced from Scratchpads GUID '
+    - 'Scratchpads revision history rolled back'
+  sync_uid: 1
+migration_dependencies:
+  required: {  }
+  optional: {  }

@@ -1,0 +1,25 @@
+# Instance definition: Myriatrix (the first instance, built by hand before
+# scripts/new-instance.sh existed; described here so both instances read the
+# same way). It is the ddev project's default site (web/sites/default), whose
+# settings.local.php was written by hand and is left alone by the script.
+slug: myriatrix
+site:
+  name: 'Taxanotes (Myriatrix dev)'
+  slogan: ''
+  theme: olivero
+  admin_theme: claro
+hostnames:
+  ddev:
+    - taxanotes-dev.ddev.site
+  production:
+    - myriatrix.taxanotes.net
+drupal:
+  sites_subdir: default
+  profile: standard
+  database: db
+source:
+  type: scratchpads_d7
+  vocabulary: myriatrix
+  database: myriatrix
+  unpublished_roots:
+    - 'Deleted taxa'

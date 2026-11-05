@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies: {  }
+name: Taxon
+type: taxon
+description: 'A taxonomic name (any rank) in the classification. One node per name; homonyms are distinct nodes told apart by GUID, authors and parent.'
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: false

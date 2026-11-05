@@ -1,0 +1,27 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_accepted_name
+    - node.type.taxon
+id: node.taxon.field_accepted_name
+field_name: field_accepted_name
+entity_type: node
+bundle: taxon
+label: 'Associated accepted name'
+description: 'The valid or accepted taxon for a name that is in synonymy.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      taxon: taxon
+    sort:
+      field: title
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

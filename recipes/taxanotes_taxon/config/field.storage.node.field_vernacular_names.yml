@@ -1,0 +1,33 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - custom_field
+    - node
+id: node.field_vernacular_names
+field_name: field_vernacular_names
+entity_type: node
+type: custom
+settings:
+  columns:
+    name:
+      name: name
+      type: string
+      length: 255
+    language:
+      name: language
+      type: string
+      length: 12
+    area:
+      name: area
+      type: string_long
+    remarks:
+      name: remarks
+      type: string_long
+module: custom_field
+locked: false
+cardinality: -1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

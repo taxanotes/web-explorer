@@ -1,0 +1,113 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - options
+id: node.field_unacceptability_reason
+field_name: field_unacceptability_reason
+entity_type: node
+type: list_string
+settings:
+  allowed_values:
+    -
+      value: 'database artifact'
+      label: 'database artifact'
+    -
+      value: 'heterotypic (taxonomic) synonym'
+      label: 'heterotypic (taxonomic) synonym'
+    -
+      value: 'homonym (illegitimate)'
+      label: 'homonym (illegitimate)'
+    -
+      value: 'homonym & junior synonym'
+      label: 'homonym & junior synonym'
+    -
+      value: 'homotypic (nomenclatural) synonym'
+      label: 'homotypic (nomenclatural) synonym'
+    -
+      value: horticultural
+      label: horticultural
+    -
+      value: 'invalidly published, nomen nudum'
+      label: 'invalidly published, nomen nudum'
+    -
+      value: 'invalidly published, other'
+      label: 'invalidly published, other'
+    -
+      value: 'junior homonym'
+      label: 'junior homonym'
+    -
+      value: 'junior synonym'
+      label: 'junior synonym'
+    -
+      value: misapplied
+      label: misapplied
+    -
+      value: 'nomen dubium'
+      label: 'nomen dubium'
+    -
+      value: 'nomen oblitum'
+      label: 'nomen oblitum'
+    -
+      value: 'objective synonym'
+      label: 'objective synonym'
+    -
+      value: 'original name/combination'
+      label: 'original name/combination'
+    -
+      value: 'orthographic variant (misspelling)'
+      label: 'orthographic variant (misspelling)'
+    -
+      value: other
+      label: other
+    -
+      value: 'pro parte'
+      label: 'pro parte'
+    -
+      value: 'rejected name'
+      label: 'rejected name'
+    -
+      value: 'subjective synonym'
+      label: 'subjective synonym'
+    -
+      value: 'subsequent name/combination'
+      label: 'subsequent name/combination'
+    -
+      value: 'superfluous renaming (illegitimate)'
+      label: 'superfluous renaming (illegitimate)'
+    -
+      value: synonym
+      label: synonym
+    -
+      value: 'unavailable, database artifact'
+      label: 'unavailable, database artifact'
+    -
+      value: 'unavailable, incorrect original spelling'
+      label: 'unavailable, incorrect original spelling'
+    -
+      value: 'unavailable, literature misspelling'
+      label: 'unavailable, literature misspelling'
+    -
+      value: 'unavailable, nomen nudum'
+      label: 'unavailable, nomen nudum'
+    -
+      value: 'unavailable, other'
+      label: 'unavailable, other'
+    -
+      value: 'unavailable, suppressed by ruling'
+      label: 'unavailable, suppressed by ruling'
+    -
+      value: 'unjustified emendation'
+      label: 'unjustified emendation'
+    -
+      value: 'unnecessary replacement'
+      label: 'unnecessary replacement'
+  allowed_values_function: ''
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

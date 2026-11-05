@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_accepted_tid
+    - node.type.taxon
+id: node.taxon.field_accepted_tid
+field_name: field_accepted_tid
+entity_type: node
+bundle: taxon
+label: 'Associated accepted name (TID)'
+description: 'Legacy term ID of the associated accepted name. Audit only.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

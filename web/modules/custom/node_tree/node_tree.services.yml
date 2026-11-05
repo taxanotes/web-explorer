@@ -1,5 +1,1 @@
 services:
-  node_tree.commands:
-    class: Drupal\node_tree\Commands\NodeTreeCommands
-    tags:
-      - { name: drush.command }

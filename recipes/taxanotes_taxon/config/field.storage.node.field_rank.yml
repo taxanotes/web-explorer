@@ -1,0 +1,113 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - options
+id: node.field_rank
+field_name: field_rank
+entity_type: node
+type: list_string
+settings:
+  allowed_values:
+    -
+      value: Class
+      label: Class
+    -
+      value: Division
+      label: Division
+    -
+      value: Family
+      label: Family
+    -
+      value: Form
+      label: Form
+    -
+      value: Genus
+      label: Genus
+    -
+      value: Infraclass
+      label: Infraclass
+    -
+      value: Infraorder
+      label: Infraorder
+    -
+      value: Kingdom
+      label: Kingdom
+    -
+      value: Order
+      label: Order
+    -
+      value: Phylum
+      label: Phylum
+    -
+      value: Section
+      label: Section
+    -
+      value: Series
+      label: Series
+    -
+      value: Species
+      label: Species
+    -
+      value: Subclass
+      label: Subclass
+    -
+      value: Subdivision
+      label: Subdivision
+    -
+      value: Subfamily
+      label: Subfamily
+    -
+      value: Subform
+      label: Subform
+    -
+      value: Subgenus
+      label: Subgenus
+    -
+      value: Subkingdom
+      label: Subkingdom
+    -
+      value: Suborder
+      label: Suborder
+    -
+      value: Subphylum
+      label: Subphylum
+    -
+      value: Subsection
+      label: Subsection
+    -
+      value: Subseries
+      label: Subseries
+    -
+      value: Subspecies
+      label: Subspecies
+    -
+      value: Subtribe
+      label: Subtribe
+    -
+      value: Subvariety
+      label: Subvariety
+    -
+      value: Superclass
+      label: Superclass
+    -
+      value: Superfamily
+      label: Superfamily
+    -
+      value: Superorder
+      label: Superorder
+    -
+      value: Tribe
+      label: Tribe
+    -
+      value: Variety
+      label: Variety
+  allowed_values_function: ''
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

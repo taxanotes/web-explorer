@@ -1,0 +1,8 @@
+Term name,Parent Term Name,Term description,GUID,Parent GUID
+a,,,guid_a,
+b,a,,guid_b,guid_a
+c,b,,guid_c,guid_b
+d,b,,guid_d,guid_b
+e,c,,guid_e,guid_c
+f,e,,guid_f,guid_e
+g,e,,guid_g,guid_e

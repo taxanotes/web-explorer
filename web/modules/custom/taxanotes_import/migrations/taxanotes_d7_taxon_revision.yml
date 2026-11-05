@@ -1,0 +1,127 @@
+id: taxanotes_d7_taxon_revision
+label: 'Scratchpads (Drupal 7) taxa: revision history'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_taxon_revision
+  # One row per taxonomy_term_data_revision row of the instance vocabulary,
+  # oldest first. track_changes: D7 revisions are immutable, so a second run
+  # re-imports nothing; ignore_map keeps the source query identical to the
+  # sibling migrations (the id is a real column, so this is a choice).
+  track_changes: true
+  ignore_map: true
+process:
+  # The node created by taxanotes_d7_taxon; rows without one are skipped.
+  nid:
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      source: guid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  # The D7 current revision becomes the node's default revision (replacing the
+  # placeholder revision the node import wrote, see the destination); all
+  # older revisions are saved as non-default revisions.
+  is_default_revision: is_current
+  revision_timestamp: timestamp
+  revision_log: log
+  # The revision author: the migrated account; D7 uid 0 (a revision saved by
+  # an anonymous process, e.g. an import) stays anonymous; D7 uid 1 (the site
+  # owner, never migrated) and deleted accounts become the local admin.
+  _revision_uid_lookup:
+    plugin: migration_lookup
+    migration: taxanotes_d7_user
+    source: uid
+    no_stub: true
+  _revision_uid_fallback:
+    plugin: static_map
+    source: uid
+    map:
+      0: 0
+    default_value: 1
+  revision_uid:
+    plugin: null_coalesce
+    source:
+      - '@_revision_uid_lookup'
+      - '@_revision_uid_fallback'
+  # The revision's own timestamp; for the current revision the term's latest
+  # revision timestamp, which is what taxanotes_d7_taxon writes (see the
+  # source plugin), so both migrations agree on the default revision.
+  changed: changed
+  # Revisioned values. Every property below is always set (NULL clears the
+  # field in that revision); unmapped fields (GUID, legacy tid, parent,
+  # weight, status, author) keep the node's current value, because D7 does
+  # not revision them: the hierarchy table has no revision history, and the
+  # sibling order (taxonomy_term_data.weight) is written by drag-and-drop
+  # without a revision, so every revision row carries weight 0.
+  # Map whole fields, not sub-properties (field_x/uri): a NULL sub-property
+  # leaves the field as loaded from the current revision instead of clearing
+  # it (see the destination plugin). field_term_description is safe because
+  # its /format is always set, so the field itself is always assigned.
+  title: name
+  field_rank: field_rank
+  field_usage: field_usage
+  field_unacceptability_reason: field_unacceptability_reason
+  field_unit_indicator_1: field_unit_indicator1
+  field_unit_indicator_2: field_unit_indicator2
+  field_unit_indicator_3: field_unit_indicator3
+  field_unit_indicator_4: field_unit_indicator4
+  field_unit_name_1: field_unit_name1
+  field_unit_name_2: field_unit_name2
+  field_unit_name_3: field_unit_name3
+  field_unit_name_4: field_unit_name4
+  field_authors: field_authors
+  field_page_number: field_page_number
+  field_accepted_guid: accepted_guid
+  field_accepted_tid: accepted_tid
+  field_accepted_name:
+    plugin: migration_lookup
+    migration: taxanotes_d7_taxon
+    source: accepted_guid
+    no_stub: true
+  field_reference_nid: reference_nid
+  field_reference_title: reference_title
+  field_reference_guid: reference_guid
+  field_page_url: page_url_item
+  field_term_description/value: description
+  field_term_description/format:
+    plugin: static_map
+    source: format
+    map:
+      plain_text: plain_text
+      filtered_html: basic_html
+      full_html: full_html
+    default_value: plain_text
+  field_vernacular_names:
+    plugin: sub_process
+    source: vernacular
+    process:
+      name: name
+      language: language
+      area: area
+      remarks: remarks
+destination:
+  plugin: taxanotes_entity_revision
+  entity_type: node
+  default_bundle: taxon
+  # Placeholder revisions: once the D7 current revision is the default, the
+  # revision it replaced is deleted if its log starts with one of these (the
+  # node import's log, the log of a rolled-back history, or a sync revision
+  # the node import made for a term that changed in D7), so the history holds
+  # exactly the D7 revisions.
+  replace_log_prefixes:
+    - 'Migrated from Scratchpads GUID '
+    - 'Synced from Scratchpads GUID '
+    - 'Scratchpads revision history rolled back'
+  rollback_log: 'Scratchpads revision history rolled back'
+migration_dependencies:
+  required:
+    - taxanotes_d7_taxon
+    - taxanotes_d7_taxon_parent
+  optional:
+    - taxanotes_d7_user

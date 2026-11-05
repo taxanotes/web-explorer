@@ -1,0 +1,13 @@
+name: 'Taxanotes users'
+description: 'Provides the roles every Taxanotes instance uses for editing taxa: Contributor (creates taxa, edits and deletes their own), Editor (edits, deletes and reverts any taxon) and Administrator. Scratchpads roles map onto them when accounts are imported (maintainer -> administrator).'
+type: 'User role'
+recipes:
+  - core/recipes/administrator_role
+  - taxanotes_taxon
+install:
+  - node
+  - user
+config:
+  # Roles are instance policy; an instance that has already tailored them keeps
+  # its version.
+  strict: false

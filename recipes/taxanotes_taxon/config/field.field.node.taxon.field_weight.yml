@@ -1,0 +1,24 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_weight
+    - node.type.taxon
+id: node.taxon.field_weight
+field_name: field_weight
+entity_type: node
+bundle: taxon
+label: Weight
+description: 'Sort order among siblings in the tree: lower weights first, then alphabetical. 0 unless the source curated an order (Scratchpads term weight).'
+required: false
+translatable: false
+default_value:
+  -
+    value: 0
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

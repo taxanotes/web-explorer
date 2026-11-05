@@ -6,8 +6,8 @@
 !share/
 share/*
 !share/purpose.txt
+.ddev/traefik/
 
-data-imports
 drush/contrib/
 vendor
 web/core/
@@ -28,7 +28,7 @@ web/sites/*/settings.local.php
 /web/sites/*/files
 
 # ignore local services.yml settings
-web/sites/default/services.yml
+web/sites/*/services.yml
 
 # Ignore SimpleTest multi-site environment.
 /web/sites/simpletest
@@ -131,3 +131,18 @@ out/
 # not ignored at this time, may ignore useful files by mistake
 #target/
 
+
+# ddev/local overrides
+web/sites/*/settings.ddev.php
+web/sites/*/services.local.yml
+
+# Planning notes, reports and drafts contain personal data and local credentials; never committed.
+docs/planning/
+
+# Per-instance config export directories (backup targets, never a source of truth).
+config/instances/
+
+# Per-instance source data (Scratchpads dumps hold the users table) and any dump anywhere.
+instances/*/data-imports/
+*.sql
+*.sql.gz
