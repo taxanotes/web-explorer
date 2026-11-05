@@ -6,8 +6,10 @@ namespace Drupal\taxanotes_front\Controller;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Routing\RouteProviderInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -106,10 +108,14 @@ final class SearchController extends ControllerBase {
 
   /**
    * The page title.
+   *
+   * Returned as markup, as core title callbacks do: the placeholder escapes
+   * the query once; a string cast would drop the safe-markup and the title
+   * template would escape it again ("&" shown as "&amp;").
    */
-  public function title(Request $request): string {
+  public function title(Request $request): TranslatableMarkup {
     $q = trim((string) $request->query->get('q', ''));
-    return (string) $this->t('Search results for “@q”', ['@q' => $q]);
+    return $this->t('Search results for “@q”', ['@q' => $q]);
   }
 
   /**
@@ -122,10 +128,9 @@ final class SearchController extends ControllerBase {
       ->condition('type', $type)
       ->condition('status', NodeInterface::PUBLISHED)
       ->condition('title', $q, 'CONTAINS')
-      ->sort('title')
-      ->range(0, self::LIMIT);
+      ->sort('title');
     $count_query = clone $query;
-    $ids = $query->execute();
+    $ids = $this->firstMatches($query, 'title', $q);
     $metadata->addCacheTags(['node_list:' . $type]);
     $items = [];
     foreach ($storage->loadMultiple($ids) as $node) {
@@ -155,10 +160,9 @@ final class SearchController extends ControllerBase {
       ->accessCheck(TRUE)
       ->condition('status', 1)
       ->condition('title', $q, 'CONTAINS')
-      ->sort('title')
-      ->range(0, self::LIMIT);
+      ->sort('title');
     $count_query = clone $query;
-    $ids = $query->execute();
+    $ids = $this->firstMatches($query, 'title', $q);
     $metadata->addCacheTags(['bibcite_reference_list']);
     $items = [];
     foreach ($storage->loadMultiple($ids) as $reference) {
@@ -173,6 +177,26 @@ final class SearchController extends ControllerBase {
       }
     }
     return ['heading' => $this->t('Literature'), 'items' => $items, 'more' => $more];
+  }
+
+  /**
+   * The first LIMIT ids: the names that start with the terms, then the rest.
+   *
+   * An alphabetical "contains" list of 348 taxa does not show Scolopendra
+   * itself among the first ten (Cormocephalus, Hemiscolopendra …); the
+   * exact and prefix matches come first, the other matches fill up.
+   */
+  private function firstMatches(QueryInterface $contains, string $field, string $q): array {
+    $prefix = clone $contains;
+    $ids = $prefix->condition($field, $q, 'STARTS_WITH')->range(0, self::LIMIT)->execute();
+    if (count($ids) < self::LIMIT) {
+      $rest = clone $contains;
+      if ($ids) {
+        $rest->condition($rest->getEntityTypeId() === 'node' ? 'nid' : 'id', array_values($ids), 'NOT IN');
+      }
+      $ids += $rest->range(0, self::LIMIT - count($ids))->execute();
+    }
+    return $ids;
   }
 
 }
