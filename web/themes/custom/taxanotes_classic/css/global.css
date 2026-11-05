@@ -12,8 +12,11 @@
  * modules with no counterpart here (forums, slickgrid, popups, events,
  * comments, contact forms, facets, biblio export) are left out.
  *
- * The accent colour (Scratchpads scratchpads_colour) is --sp-colour, set on
- * :root by taxanotes_classic_preprocess_html() from the theme setting.
+ * The accent colour (Scratchpads scratchpads_colour) is --sp-colour, set as
+ * the style attribute of the html element by
+ * taxanotes_classic_preprocess_html() from the theme setting (an inline
+ * declaration beats this stylesheet; the value here is the fallback for a
+ * page rendered without that hook, the Scratchpads default).
  */
 
 :root {
@@ -271,9 +274,13 @@ sub {
 }
 
 .site-name {
-  font-size: 40px;
-  line-height: 1em;
+  /* Drupal 7: 2.6em of the 12 px base (31.2 px). A long name wraps as
+     words; one that still does not fit (375 px) breaks rather than
+     overflowing the page. */
+  font-size: 2.6em;
+  line-height: 1.2em;
   margin: 14px 0 8px;
+  overflow-wrap: anywhere;
 }
 
 .site-name a, .site-name a:hover {
@@ -807,6 +814,17 @@ input[type="submit"]:hover, button:hover, .button:hover {
 }
 
 @media (max-width: 739px) {
+  .site-name {
+    font-size: 2em;
+  }
+
+  /* Core's responsive table columns (views: priority low / medium) are
+     hidden on a phone, as core/drupal.tableresponsive does with its
+     toggle, so a table collapses instead of scrolling sideways. */
+  table .priority-low, table .priority-medium {
+    display: none;
+  }
+
   .views-exposed-form .form-item {
     display: block;
     width: 100%;
