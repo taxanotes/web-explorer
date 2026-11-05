@@ -1,0 +1,54 @@
+name: 'Taxanotes base'
+description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
+type: 'Site'
+recipes:
+  - taxanotes_taxon
+  - taxanotes_users
+install:
+  - migrate
+  - migrate_plus
+  - migrate_tools
+  - node_tree
+  - taxanotes_import
+input:
+  site_name:
+    data_type: string
+    description: 'The site name (system.site:name), shown in the page title and branding.'
+    constraints:
+      NotBlank: {}
+    form:
+      '#type': textfield
+      '#title': 'Site name'
+    default:
+      source: config
+      config: ['system.site', 'name']
+      fallback: 'Taxanotes'
+  site_slogan:
+    data_type: string
+    description: 'The site slogan (system.site:slogan); may be empty.'
+    form:
+      '#type': textfield
+      '#title': 'Site slogan'
+    default:
+      source: config
+      config: ['system.site', 'slogan']
+      fallback: ''
+  site_mail:
+    data_type: email
+    description: 'The address automated site mail is sent from (system.site:mail).'
+    constraints:
+      NotBlank: {}
+    form:
+      '#type': email
+      '#title': 'Site email address'
+    default:
+      source: config
+      config: ['system.site', 'mail']
+      fallback: 'webmaster@example.com'
+config:
+  actions:
+    system.site:
+      simpleConfigUpdate:
+        name: ${site_name}
+        slogan: ${site_slogan}
+        mail: ${site_mail}
