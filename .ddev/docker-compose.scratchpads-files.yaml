@@ -1,6 +1,6 @@
 # Mount the local Scratchpads (Drupal 7) files directory of Myriatrix into the
 # web container, read-only, so the taxanotes_d7_file migration can copy the
-# literature attachments (instances/myriatrix/instance.yml source.files.ddev
+# literature attachments and the images (instances/myriatrix/instance.yml source.files.ddev
 # = /mnt/scratchpads/myriatrix/files, which becomes
 # $settings['taxanotes_import']['source_files_dir']). The source is the
 # sibling checkout ../scratchpads-d7/data/files (7.4 GB, not in git; see the

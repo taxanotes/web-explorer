@@ -38,8 +38,9 @@
 #              one user <slug> and a random password printed once, certbot
 #   drupal     drush site:install only into an EMPTY database, the themes,
 #              recipes/taxanotes_front with the instance inputs, the logo
-#              (settings/assets/logo.png, outside git), the four Scratchpads
-#              migrations, cache rebuild
+#              (settings/assets/logo.png, outside git), the eleven Scratchpads
+#              migrations (the files and images only when instance.env
+#              SOURCE_FILES_DIR names the D7 files directory), cache rebuild
 #   live       `deploy <domain> live <version>` (backup, composer, docroot
 #              symlink flip, php-fpm reload, updb, cr) when live does not
 #              point at this release yet; the drush cron crontab line
@@ -276,6 +277,13 @@ case "$site_mail" in
     warn "SITE_MAIL=$site_mail in $env_file is a placeholder: receivers reject mail from example domains; set an address at $domain (or one a mailer can send from)" ;;
 esac
 admin_pass="$(env_get ADMIN_PASSWORD)"
+# The Scratchpads public files directory on this server (the deploy step
+# rsyncs the referenced subset there, scripts/list-source-files.php lists
+# it): instance.env SOURCE_FILES_DIR, else instance.yml
+# source.files.production. Empty: the attachments and images are skipped.
+source_files_dir="$(env_get SOURCE_FILES_DIR)"
+[ -n "$source_files_dir" ] || source_files_dir="$(inst source.files)"
+[ -z "$source_files_dir" ] || [ -d "$source_files_dir" ] || warn "SOURCE_FILES_DIR $source_files_dir does not exist on this server: every attachment and image will be skipped"
 [ -n "$db_pass" ] || die "DB_PASSWORD is empty in $env_file"
 for v in "$db_user" "$db_pass" "$migrate_user" "$migrate_pass"; do
   case "$v" in *"'"*|*"\\"*) die "a database credential in $env_file contains a quote or backslash; use letters, digits and punctuation" ;; esac
@@ -590,14 +598,25 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
-# Taxa first, then the literature (contributors, keywords, attachments,
-# references), then the pass that points each taxon at its protologue
-# reference entity; the attachments need source.files for this environment in
-# instance.yml, else they are skipped with a message and imported later.
+# Taxa first, then the literature (contributors, keywords, the files, the
+# references, the pass that points each taxon at its protologue reference
+# entity), then the images as media items and the species pages. The files
+# and the media items need the D7 files directory on this server
+# (source_files_dir above); without it they are skipped and the references
+# and species pages import without them (run the two migrations once the
+# files are there).
 if [ "$source_ready" -eq 1 ] && [ -n "$source_vocabulary" ]; then
-  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision \
-      taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword taxanotes_d7_file taxanotes_d7_biblio \
-      taxanotes_d7_taxon_reference; do
+  migrations=(taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision
+    taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword)
+  if [ -n "$source_files_dir" ]; then
+    note "D7 files: $source_files_dir"
+    migrations+=(taxanotes_d7_file taxanotes_d7_biblio taxanotes_d7_taxon_reference taxanotes_d7_media_image)
+  else
+    note "D7 files: none on this server (SOURCE_FILES_DIR unset in instance.env): the attachments and the images are skipped (taxanotes_d7_file, taxanotes_d7_media_image)"
+    migrations+=(taxanotes_d7_biblio taxanotes_d7_taxon_reference)
+  fi
+  migrations+=(taxanotes_d7_spm)
+  for m in "${migrations[@]}"; do
     note "migrate:import $m ($(date -u +%H:%M:%S))"
     drush migrate:import "$m" --feedback=2000
   done

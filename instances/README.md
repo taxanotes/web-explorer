@@ -91,8 +91,10 @@ source:                            # omit for an instance without a Scratchpads 
     - 'Deleted taxa'               #   -> $settings['taxanotes_import']['unpublished_roots']
   files:                           # optional: the D7 public files directory as PHP reaches it in
     ddev: /mnt/scratchpads/myriatrix/files   # this environment -> $settings['taxanotes_import']['source_files_dir'];
-                                   # the literature attachments are copied from it (taxanotes_d7_file).
-                                   # Absent: every attachment is skipped with a message, nothing fails.
+                                   # the literature attachments and the images are copied from it
+                                   # (taxanotes_d7_file, taxanotes_d7_media_image). .env SOURCE_FILES_DIR
+                                   # overrides it. Neither set: the scripts skip those two migrations with
+                                   # a line saying so; references and species pages import without them.
 ```
 
 Defaults are applied in one place, `scripts/lib/instance.php` (`get` prints
@@ -150,8 +152,9 @@ site, HSTS) with a self-signed certificate that certbot replaces, the
 htpasswd file with one user `<slug>` (password printed once), Drupal (only
 into an empty database; `--reinstall` dumps with `backup_db` and installs
 again), the themes, the recipe with the instance texts, the logo from
-`settings/assets/logo.png`, the nine migrations, `deploy <domain> live
-<version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
+`settings/assets/logo.png`, the eleven migrations (files and images only when `instance.env`
+`SOURCE_FILES_DIR` names the server's copy of the D7 files), `deploy <domain>
+live <version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
 Scratchpads dump as `s_<slug>` beforehand (keep the dump 0600 and delete it
 afterwards: it holds the users table). The headers of both scripts have the
 details; the next release of an existing site is the same command with the
@@ -222,7 +225,18 @@ applied, the literature: D7/D11 counts of references (per type),
 contributors, keywords, author and keyword rows, taxon links, protologue
 links and attachments (with the number of files the import could not find
 locally), and a **comparison of every reference's** title, year, type and
-author list against its D7 biblio node.
+author list against its D7 biblio node; and, once the species recipe is
+applied, the species pages and images: D7/D11 counts of species pages, their
+taxa, the images the import selects (placed on a species page or tagged with
+a taxon of the vocabulary, renderable by the image toolkit, present under the
+files directory), their taxon links and licences, the images placed on pages,
+the bytes copied, and a **comparison of every species page's** title, status,
+taxon and text sections against its D7 spm node. The checksums cover the
+taxon nodes only, so a species page import leaves them unchanged.
+
+`scripts/list-source-files.php` prints the D7 files the import would copy
+(relative paths, with `sizes` the bytes too): the list to rsync to the
+server's `SOURCE_FILES_DIR` before the files and media migrations run there.
 
 ## Instances
 

@@ -16,19 +16,26 @@
  * - fields: a comparison of EVERY term's current values with the D7
  *   field_data_* tables (what the Scratchpads site renders), one entry per
  *   mismatching (term, field), so an empty list is a value-by-value proof;
- * - checksums: a sha256 per content table (node_field_data without vid and,
- *   with the argument "nochanged", without changed; every node__field_*
- *   table without revision_id) to compare an instance before and after a
- *   platform change, e.g. the Myriatrix control while another instance is
- *   built;
+ * - checksums: a sha256 per content table over the TAXON nodes (node_field_data
+ *   without vid and, with the argument "nochanged", without changed; every
+ *   node__field_* table without revision_id) to compare an instance before
+ *   and after a platform change, e.g. the Myriatrix control while another
+ *   instance is built; other content types (species pages) are left out so
+ *   their import does not move the taxon checksums;
  * - literature (when the literature recipe is applied and the D7 site has
  *   biblio): the D7 and D11 counts of references, contributors, keywords,
  *   author rows, taxon links, protologue links and attachments, and a
  *   reference-by-reference comparison of title, year, type and authors for
- *   every D7 biblio node.
+ *   every D7 biblio node;
+ * - species (when the species recipe is applied and the D7 site has spm
+ *   nodes): the D7 and D11 counts of species pages and images (with the
+ *   rule the image import applies), their taxon links and licences, and a
+ *   page-by-page comparison of title, status, taxon and every text section
+ *   for every D7 spm node.
  */
 
 use Drupal\Core\Database\Database;
+use Drupal\Core\Site\Settings;
 
 $vocab = $extra[0] ?? NULL;
 if (!$vocab) {
@@ -280,10 +287,13 @@ foreach ($d11->schema()->findTables('node__field_%') as $t) {
 sort($tables);
 $sums = [];
 foreach ($tables as $t) {
-  $order = $t === 'node_field_data' ? 'nid, langcode' : 'entity_id, langcode, delta';
+  // Taxon nodes only (node_field_data.type, or the owning node's type).
+  $sql = $t === 'node_field_data'
+    ? "SELECT * FROM {node_field_data} WHERE type = 'taxon' ORDER BY nid, langcode"
+    : "SELECT f.* FROM {{$t}} f JOIN {node_field_data} n ON n.nid = f.entity_id AND n.type = 'taxon' ORDER BY f.entity_id, f.langcode, f.delta";
   $h = hash_init('sha256');
   $n = 0;
-  foreach ($d11->query("SELECT * FROM {{$t}} ORDER BY $order") as $row) {
+  foreach ($d11->query($sql) as $row) {
     $row = (array) $row;
     foreach ($skip as $col) {
       unset($row[$col]);
@@ -422,4 +432,246 @@ if ($d11->schema()->tableExists('bibcite_reference') && $d7->schema()->tableExis
   $lit['mismatch list'] = $lit_mismatches;
 }
 
-echo json_encode(['counts' => $c, 'fields' => $f, 'checksums' => $sums, 'literature' => $lit], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
+// ---------------------------------------------------------------------------
+// Species pages (taxon_description <- spm) and images (media <- image files).
+$spm = NULL;
+if ($d11->schema()->tableExists('node__field_general_description') && $d7->schema()->tableExists('node') && $d7->schema()->tableExists('field_config_instance')) {
+  $spm = [];
+  $spm['d7 spm nodes'] = (int) $d7->query("SELECT COUNT(*) FROM {node} WHERE type = 'spm'")->fetchField();
+  $spm['d7 spm nodes by status'] = $d7->query("SELECT status, COUNT(*) c FROM {node} WHERE type = 'spm' GROUP BY status")->fetchAllKeyed();
+  $spm['d11 species pages'] = (int) $d11->query("SELECT COUNT(*) FROM {node_field_data} WHERE type = 'taxon_description'")->fetchField();
+  $spm['d11 species pages by status'] = $d11->query("SELECT status, COUNT(*) c FROM {node_field_data} WHERE type = 'taxon_description' GROUP BY status")->fetchAllKeyed();
+  $spm['d11 species page revisions'] = (int) $d11->query("SELECT COUNT(*) FROM {node_revision} r JOIN {node_field_data} n ON n.nid = r.nid WHERE n.type = 'taxon_description'")->fetchField();
+  $spm['d7 spm revisions (not migrated)'] = (int) $d7->query("SELECT COUNT(*) FROM {node_revision} r JOIN {node} n ON n.nid = r.nid WHERE n.type = 'spm'")->fetchField();
+
+  // One row per spm node of a node field (the node language rule), by nid.
+  $d7_node_field = function (string $field, array $columns, string $bundle = 'spm', bool $all_deltas = FALSE) use ($d7): array {
+    $values = [];
+    if (!$d7->schema()->tableExists('field_data_' . $field)) {
+      return $values;
+    }
+    $cols = implode(', ', array_map(fn($c) => "f.$c", $columns));
+    $delta = $all_deltas ? '' : 'AND f.delta = 0';
+    $rows = $d7->query("SELECT f.entity_id, f.delta, $cols FROM {field_data_$field} f JOIN (SELECT f2.entity_id, SUBSTRING(MIN(CONCAT(CASE WHEN f2.language = n2.language THEN '0' WHEN f2.language = 'und' THEN '1' ELSE '2' END, f2.language)), 2) lang FROM {field_data_$field} f2 JOIN {node} n2 ON n2.nid = f2.entity_id WHERE f2.entity_type = 'node' AND f2.bundle = :b AND f2.deleted = 0 GROUP BY f2.entity_id) best ON best.entity_id = f.entity_id AND best.lang = f.language WHERE f.entity_type = 'node' AND f.bundle = :b AND f.deleted = 0 $delta ORDER BY f.entity_id, f.delta", [':b' => $bundle]);
+    foreach ($rows as $r) {
+      $r = (array) $r;
+      $nid = (int) $r['entity_id'];
+      if ($all_deltas) {
+        $values[$nid][] = $r;
+      }
+      else {
+        $values[$nid] = $r;
+      }
+    }
+    return $values;
+  };
+
+  // The taxon: the lowest-delta vocabulary term of field_taxonomic_name.
+  $vocab_tids = $d7->query('SELECT tid FROM {taxonomy_term_data} WHERE vid = :v', [':v' => $vid])->fetchCol();
+  $vocab_tids = array_flip(array_map('intval', $vocab_tids));
+  $spm_taxon = [];
+  foreach ($d7_node_field('field_taxonomic_name', ['field_taxonomic_name_tid'], 'spm', TRUE) as $nid => $items) {
+    foreach ($items as $item) {
+      $tid = (int) $item['field_taxonomic_name_tid'];
+      if (isset($vocab_tids[$tid])) {
+        $spm_taxon[$nid] = $tid;
+        break;
+      }
+    }
+  }
+  $d7_spm = $d7->query("SELECT nid, uuid, title, status FROM {node} WHERE type = 'spm'")->fetchAllAssoc('nid');
+  $spm['d7 spm nodes with a vocabulary taxon'] = count($spm_taxon);
+  $spm['d7 spm nodes without (skipped by the import)'] = count($d7_spm) - count($spm_taxon);
+  $spm['d7 spm taxonomic_name rows beyond the first vocabulary term (dropped)'] = (int) $d7->query("SELECT COUNT(*) FROM {field_data_field_taxonomic_name} f WHERE f.entity_type = 'node' AND f.bundle = 'spm' AND f.deleted = 0")->fetchField() - count($spm_taxon);
+  $spm['d11 species pages with a taxon'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_taxonomic_name} f JOIN {node_field_data} n ON n.nid = f.entity_id WHERE n.type = 'taxon_description'")->fetchField();
+  $spm['d11 species pages whose taxon is not a taxon node'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_taxonomic_name} f JOIN {node_field_data} n ON n.nid = f.entity_id LEFT JOIN {node_field_data} t ON t.nid = f.field_taxonomic_name_target_id AND t.type = 'taxon' WHERE n.type = 'taxon_description' AND t.nid IS NULL")->fetchField();
+  $spm['d11 taxa with more than one species page'] = (int) $d11->query("SELECT COUNT(*) FROM (SELECT f.field_taxonomic_name_target_id FROM {node__field_taxonomic_name} f JOIN {node_field_data} n ON n.nid = f.entity_id WHERE n.type = 'taxon_description' GROUP BY f.field_taxonomic_name_target_id HAVING COUNT(*) > 1) x")->fetchField();
+
+  // Page by page: title, status, taxon (legacy tid) and every text section
+  // of the D7 node type (value and the mapped format), by uuid.
+  $text_fields = $d7->query("SELECT DISTINCT fci.field_name FROM {field_config_instance} fci JOIN {field_config} fc ON fc.id = fci.field_id WHERE fci.entity_type = 'node' AND fci.bundle = 'spm' AND fci.deleted = 0 AND fc.type = 'text_long' ORDER BY fci.field_name")->fetchCol();
+  $format_map = ['filtered_html' => 'basic_html', 'full_html' => 'full_html', 'plain_text' => 'plain_text'];
+  $d11_pages = $d11->query("SELECT nb.uuid, n.nid, n.title, n.status, l.field_legacy_tid_value taxon_tid FROM {node_field_data} n JOIN {node} nb ON nb.nid = n.nid LEFT JOIN {node__field_taxonomic_name} f ON f.entity_id = n.nid LEFT JOIN {node__field_legacy_tid} l ON l.entity_id = f.field_taxonomic_name_target_id WHERE n.type = 'taxon_description'")->fetchAllAssoc('uuid');
+  $spm_mismatches = [];
+  $spm_compared = 0;
+  $spm['d7 text sections not in the species page type'] = [];
+  $d11_texts = [];
+  foreach ($text_fields as $field) {
+    if (!$d11->schema()->tableExists("node__$field")) {
+      $spm['d7 text sections not in the species page type'][] = $field;
+      continue;
+    }
+    $d11_texts[$field] = $d11->query("SELECT nb.uuid, f.{$field}_value v, f.{$field}_format fmt FROM {node__$field} f JOIN {node_field_data} n ON n.nid = f.entity_id JOIN {node} nb ON nb.nid = n.nid WHERE n.type = 'taxon_description'")->fetchAllAssoc('uuid');
+  }
+  $d7_texts = [];
+  foreach (array_keys($d11_texts) as $field) {
+    $d7_texts[$field] = $d7_node_field($field, ["{$field}_value", "{$field}_format"]);
+  }
+  foreach ($d7_spm as $nid => $node) {
+    if (!isset($spm_taxon[$nid])) {
+      // Skipped by the import (no vocabulary taxon): must not exist.
+      if (isset($d11_pages[$node->uuid])) {
+        $spm_mismatches[] = [
+          'nid' => (int) $nid,
+          'd11 nid' => (int) $d11_pages[$node->uuid]->nid,
+          'field' => 'imported without a taxon',
+          'd7' => NULL,
+          'd11' => $d11_pages[$node->uuid]->taxon_tid,
+        ];
+      }
+      continue;
+    }
+    $page = $d11_pages[$node->uuid] ?? NULL;
+    $expected = [
+      'title' => (string) $node->title,
+      'status' => (int) $node->status,
+      'taxon_tid' => (int) $spm_taxon[$nid],
+    ];
+    foreach (array_keys($d11_texts) as $field) {
+      $t = $d7_texts[$field][$nid] ?? NULL;
+      $value = $t["{$field}_value"] ?? NULL;
+      $expected["$field value"] = ($value === NULL || $value === '') ? NULL : $value;
+      $expected["$field format"] = ($value === NULL || $value === '') ? NULL : ($format_map[$t["{$field}_format"] ?? ''] ?? 'basic_html');
+    }
+    $got = NULL;
+    if ($page) {
+      $got = ['title' => (string) $page->title, 'status' => (int) $page->status, 'taxon_tid' => (int) $page->taxon_tid];
+      foreach (array_keys($d11_texts) as $field) {
+        $got["$field value"] = $d11_texts[$field][$node->uuid]->v ?? NULL;
+        $got["$field format"] = $d11_texts[$field][$node->uuid]->fmt ?? NULL;
+      }
+    }
+    foreach ($expected as $what => $e) {
+      $spm_compared++;
+      $a = $got[$what] ?? NULL;
+      if ($got === NULL || (string) $e !== (string) $a) {
+        $spm_mismatches[] = [
+          'nid' => (int) $nid,
+          'd11 nid' => $page ? (int) $page->nid : NULL,
+          'field' => $what,
+          'd7' => $e,
+          'd11' => $a,
+        ];
+      }
+    }
+  }
+  $spm['pages compared'] = count($spm_taxon);
+  $spm['comparisons (page x value)'] = $spm_compared;
+  $spm['mismatches'] = count($spm_mismatches);
+  $spm['mismatch list'] = $spm_mismatches;
+
+  // Images: the rule of the import. Used = placed on an spm node (field_media)
+  // or tagged with a vocabulary term (field_taxonomic_name on the file);
+  // renderable = extension the image toolkit handles; present = under
+  // $settings['taxanotes_import']['source_files_dir'] on this machine.
+  $used = [];
+  if ($d7->schema()->tableExists('field_data_field_media')) {
+    foreach ($d7->query("SELECT DISTINCT m.field_media_fid fid FROM {field_data_field_media} m JOIN {file_managed} fm ON fm.fid = m.field_media_fid WHERE m.entity_type = 'node' AND m.bundle = 'spm' AND m.deleted = 0 AND fm.type = 'image'")->fetchCol() as $fid) {
+      $used[(int) $fid] = TRUE;
+    }
+  }
+  if ($d7->schema()->tableExists('field_data_field_taxonomic_name')) {
+    foreach ($d7->query("SELECT DISTINCT t.entity_id FROM {field_data_field_taxonomic_name} t JOIN {taxonomy_term_data} td ON td.tid = t.field_taxonomic_name_tid JOIN {file_managed} fm ON fm.fid = t.entity_id WHERE t.entity_type = 'file' AND t.deleted = 0 AND td.vid = :v AND fm.type = 'image'", [':v' => $vid])->fetchCol() as $fid) {
+      $used[(int) $fid] = TRUE;
+    }
+  }
+  $toolkit_ext = array_map('strtolower', \Drupal::service('image.toolkit.manager')->getDefaultToolkit()->getSupportedExtensions());
+  $files_dir = Settings::get('taxanotes_import', [])['source_files_dir'] ?? NULL;
+  $spm['d7 image files'] = (int) $d7->query("SELECT COUNT(*) FROM {file_managed} WHERE type = 'image'")->fetchField();
+  $spm['d7 images used (placed on an spm node or tagged with a vocabulary taxon)'] = count($used);
+  $renderable = 0;
+  $present = 0;
+  $present_fids = [];
+  if ($used) {
+    foreach ($d7->query('SELECT fid, uri FROM {file_managed} WHERE fid IN (:fids[])', [':fids[]' => array_keys($used)]) as $file) {
+      $ext = strtolower(pathinfo($file->uri, PATHINFO_EXTENSION));
+      if (!in_array($ext, $toolkit_ext, TRUE)) {
+        continue;
+      }
+      $renderable++;
+      $relative = str_starts_with($file->uri, 'public://') ? substr($file->uri, 9) : NULL;
+      if ($relative !== NULL && is_string($files_dir) && $files_dir !== '' && is_file(rtrim($files_dir, '/') . '/' . $relative)) {
+        $present++;
+        $present_fids[(int) $file->fid] = TRUE;
+      }
+    }
+  }
+  $spm['d7 images used and renderable by the image toolkit'] = $renderable;
+  $spm['d7 images used, renderable and present under source_files_dir'] = $present;
+  $spm['source_files_dir configured'] = is_string($files_dir) && $files_dir !== '';
+  $spm['d11 media items (image)'] = (int) $d11->query("SELECT COUNT(*) FROM {media_field_data} WHERE bundle = 'image'")->fetchField();
+  $spm['d11 media items whose file is missing on disk'] = 0;
+  $spm['d11 media items whose id is not the D7 fid of their file'] = (int) $d11->query('SELECT COUNT(*) FROM {media__field_media_image} i WHERE i.entity_id <> i.field_media_image_target_id')->fetchField();
+  foreach ($d11->query('SELECT fm.uri FROM {media__field_media_image} i JOIN {file_managed} fm ON fm.fid = i.field_media_image_target_id') as $r) {
+    if (!is_file(\Drupal::service('file_system')->realpath($r->uri))) {
+      $spm['d11 media items whose file is missing on disk']++;
+    }
+  }
+  // Taxon links of the imported images (distinct vocabulary terms, und
+  // first, else the first language, as the source plugin does).
+  $d7_image_links = 0;
+  if ($present_fids && $d7->schema()->tableExists('field_data_field_taxonomic_name')) {
+    $sql = "SELECT COUNT(DISTINCT t.entity_id, t.field_taxonomic_name_tid) FROM {field_data_field_taxonomic_name} t"
+      . " JOIN (SELECT f2.entity_id, SUBSTRING(MIN(CONCAT(CASE WHEN f2.language = 'und' THEN '1' ELSE '2' END, f2.language)), 2) lang"
+      . " FROM {field_data_field_taxonomic_name} f2 WHERE f2.entity_type = 'file' AND f2.deleted = 0 GROUP BY f2.entity_id) best"
+      . " ON best.entity_id = t.entity_id AND best.lang = t.language"
+      . " JOIN {taxonomy_term_data} td ON td.tid = t.field_taxonomic_name_tid"
+      . " WHERE t.entity_type = 'file' AND t.deleted = 0 AND td.vid = :v AND t.entity_id IN (:fids[])";
+    $d7_image_links = (int) $d7->query($sql, [
+      ':v' => $vid,
+      ':fids[]' => array_keys($present_fids),
+    ])->fetchField();
+  }
+  $spm['d7 image taxon links (imported images, vocabulary terms, distinct)'] = $d7_image_links;
+  $spm['d11 media taxon links'] = (int) $d11->query('SELECT COUNT(*) FROM {media__field_taxonomic_name}')->fetchField();
+  $spm['d11 media with taxa'] = (int) $d11->query('SELECT COUNT(DISTINCT entity_id) FROM {media__field_taxonomic_name}')->fetchField();
+  $spm['d11 media links whose target is not a taxon node'] = (int) $d11->query("SELECT COUNT(*) FROM {media__field_taxonomic_name} f LEFT JOIN {node_field_data} t ON t.nid = f.field_taxonomic_name_target_id AND t.type = 'taxon' WHERE t.nid IS NULL")->fetchField();
+  $licence_map = [
+    1 => 'all_rights_reserved',
+    2 => 'cc_by',
+    3 => 'cc_by_sa',
+    4 => 'cc_by_nd',
+    5 => 'cc_by_nc',
+    6 => 'cc_by_nc_sa',
+    7 => 'cc_by_nc_nd',
+    8 => 'cc0',
+    9 => 'public_domain',
+  ];
+  $d7_licences = [];
+  if ($present_fids && $d7->schema()->tableExists('field_data_field_cc_licence')) {
+    $sql = "SELECT field_cc_licence_licence l, COUNT(*) c FROM {field_data_field_cc_licence}"
+      . " WHERE entity_type = 'file' AND deleted = 0 AND delta = 0 AND entity_id IN (:fids[]) GROUP BY field_cc_licence_licence";
+    foreach ($d7->query($sql, [':fids[]' => array_keys($present_fids)]) as $r) {
+      $d7_licences[$licence_map[(int) $r->l] ?? "unknown {$r->l}"] = (int) $r->c;
+    }
+  }
+  ksort($d7_licences);
+  $spm['d7 licences of the imported images'] = $d7_licences;
+  $spm['d11 media by licence'] = $d11->query('SELECT field_cc_licence_value, COUNT(*) c FROM {media__field_cc_licence} GROUP BY field_cc_licence_value ORDER BY field_cc_licence_value')->fetchAllKeyed();
+  $spm['d11 media with a credit'] = (int) $d11->query('SELECT COUNT(*) FROM {media__field_credit}')->fetchField();
+  $spm['d11 media with a description'] = (int) $d11->query('SELECT COUNT(*) FROM {media__field_description}')->fetchField();
+  // Images placed on pages.
+  $placed = 0;
+  foreach ($d7_node_field('field_media', ['field_media_fid'], 'spm', TRUE) as $nid => $items) {
+    if (!isset($spm_taxon[$nid])) {
+      continue;
+    }
+    foreach ($items as $item) {
+      if (isset($present_fids[(int) $item['field_media_fid']])) {
+        $placed++;
+      }
+    }
+  }
+  $spm['d7 spm field_media rows whose image was imported'] = $placed;
+  $spm['d11 species page media rows'] = (int) $d11->query('SELECT COUNT(*) FROM {node__field_media}')->fetchField();
+  $spm['d11 files under public://scratchpads/ (count, bytes)'] = $d11->query("SELECT COUNT(*) c, COALESCE(SUM(filesize), 0) b FROM {file_managed} WHERE uri LIKE 'public://scratchpads/%'")->fetchAssoc();
+  $spm['d11 image files under public://scratchpads/ (count, bytes)'] = $d11->query("SELECT COUNT(*) c, COALESCE(SUM(filesize), 0) b FROM {file_managed} WHERE uri LIKE 'public://scratchpads/%' AND filemime LIKE 'image/%'")->fetchAssoc();
+  $spm['files skipped by taxanotes_d7_file: not available locally'] = $d11->schema()->tableExists('migrate_message_taxanotes_d7_file')
+    ? (int) $d11->query("SELECT COUNT(*) FROM {migrate_message_taxanotes_d7_file} WHERE message LIKE '%Source file is not available%'")->fetchField() : 0;
+  $spm['files skipped by taxanotes_d7_file: image type not renderable'] = $d11->schema()->tableExists('migrate_message_taxanotes_d7_file')
+    ? (int) $d11->query("SELECT COUNT(*) FROM {migrate_message_taxanotes_d7_file} WHERE message LIKE '%Image type%'")->fetchField() : 0;
+  $spm['media skipped by taxanotes_d7_media_image (file not imported)'] = $d11->schema()->tableExists('migrate_message_taxanotes_d7_media_image')
+    ? (int) $d11->query('SELECT COUNT(*) FROM {migrate_message_taxanotes_d7_media_image}')->fetchField() : 0;
+}
+
+echo json_encode(['counts' => $c, 'fields' => $f, 'checksums' => $sums, 'literature' => $lit, 'species' => $spm], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
