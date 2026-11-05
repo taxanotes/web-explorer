@@ -60,8 +60,17 @@ A taxon called *Mormyrus caballus bumbanus* is three items, `Mormyrus`,
 `caballus`, `bumbanus`; a variety carries its marker in the third item's
 indicator (`var.`). The eight D7 columns are part of the `track_changes` row
 hash, so a unit edited in Drupal 7 re-imports the term. An instance built
-before this field existed is converted with `scripts/convert-unit-names.php`
-(see its header).
+before this field existed is converted in place: snapshot the database,
+`drush recipe recipes/taxanotes_taxon` (adds the field beside the old ones),
+`migrate:import taxanotes_d7_taxon_revision --update`, then
+`migrate:import taxanotes_d7_taxon --update` (that order: the revision
+import fills the default revision too, so the taxon import creates no sync
+revision), then `scripts/convert-unit-names.php` (deletes and purges the
+eight old fields, reloads the `/taxa` view). Run the imports in the
+foreground, one at a time; if one is interrupted it stays "Importing":
+`migrate:reset-status <id>` and run the same `--update` import again (it
+resumes the rows still marked needs-update), or restore the snapshot. The
+script's header has the details.
 
 Node `status` is mapped from the source property `published`: 0 for a term
 that is, or descends from, one of the `unpublished_roots`, 1 for everything

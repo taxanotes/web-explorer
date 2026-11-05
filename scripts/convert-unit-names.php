@@ -12,21 +12,34 @@
  * column (a recipe never changes config that already exists). This script
  * deletes the eight fields, purges their data and reloads views.view.taxa
  * from the recipe's config directory. The rest of the conversion is the
- * ordinary tooling:
+ * ordinary tooling, in this order (each command with
+ * --uri=https://<hostname> of the instance):
  *
- *   drush php:script scripts/convert-unit-names.php
+ *   ddev export-db --database=<db> --file=<somewhere>/before.sql.gz
  *   drush recipe recipes/taxanotes_taxon
  *   drush migrate:import taxanotes_d7_taxon_revision --update
  *   drush migrate:import taxanotes_d7_taxon --update
+ *   drush php:script scripts/convert-unit-names.php
  *
- * (each with --uri=https://<hostname> of the instance).
+ * The recipe adds field_unit_names with its widget and display beside the
+ * old fields (they coexist); the revision import fills it on every revision
+ * (the default one included) and the taxon import then finds nothing
+ * changed, so no sync revision is created and node changed times stay as
+ * they are. The other order of the two imports would create one sync
+ * revision per node. This script runs last, so the old values are still in
+ * the database until the new field is filled: an interrupted import leaves
+ * nothing lost. Safe to run again: fields already gone are skipped, the view
+ * is reloaded.
  *
- * The recipe adds field_unit_names with its widget and display; the revision
- * import fills it on every revision (the default one included) and the taxon
- * import then finds nothing changed, so no sync revision is created and
- * node changed times stay as they are. The other order would create one
- * sync revision per node. Safe to run again: fields already gone are
- * skipped, the view is reloaded.
+ * Run the imports in the foreground (or under nohup): a process killed
+ * mid-import leaves the migration "Importing", with the rows it did not
+ * reach marked needs-update. Recovery: drush migrate:reset-status <id>,
+ * then the same migrate:import ... --update again (it resumes the rows
+ * still marked, finished rows are hashed and skipped); the snapshot is the
+ * fallback (ddev import-db --database=<db> --file=before.sql.gz). On a large
+ * instance run the two imports one at a time and nothing else against the
+ * Drupal 7 database meanwhile (the revision import holds the whole source
+ * result set, and the D7 MySQL container has been OOM-killed under load).
  */
 
 use Drupal\Core\Config\FileStorage;
