@@ -33,7 +33,9 @@
  * Defaults (applied in effective_instance(), the one place that knows them):
  *   drupal.sites_subdir = slug, drupal.database = slug,
  *   drupal.profile = standard, site.colour = 047DB8 (six hex digits, the
- *   accent colour of the classic view; a leading # is dropped).
+ *   accent colour of the classic view; a leading # is dropped),
+ *   site.front_first_column = page (the node type of the classic front
+ *   page's first column, page or blog).
  *
  * Hostnames have an environment axis: `hostnames: {ddev: [...],
  * production: [...]}`. A plain list is accepted as the ddev list. Only the
@@ -88,6 +90,13 @@ function effective_instance(array $data): array {
     'profile' => 'standard',
   ];
   $data['site'] = (array) ($data['site'] ?? []);
+  // The first front page column of the classic view: the node type it
+  // lists (the Scratchpads front_page_block_1_node_type: page or blog).
+  $data['site'] += ['front_first_column' => 'page'];
+  $data['site']['front_first_column'] = trim((string) $data['site']['front_first_column']);
+  if (!preg_match('/^[a-z0-9_]+$/', $data['site']['front_first_column'])) {
+    fail("site.front_first_column must be a node type machine name (got '{$data['site']['front_first_column']}')");
+  }
   // The accent colour of the classic view (the Scratchpads default).
   $data['site'] += ['colour' => '047DB8'];
   $data['site']['colour'] = strtoupper(ltrim(trim((string) $data['site']['colour']), '#'));

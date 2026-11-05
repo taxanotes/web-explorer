@@ -237,6 +237,7 @@ footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
 colour="$(inst site.colour)"
+front_first_column="$(inst site.front_first_column)"
 subdir="$(inst drupal.sites_subdir)"
 profile="$(inst drupal.profile)"
 db_name="$(inst drupal.database)"
@@ -617,10 +618,11 @@ fi
 # ---------------------------------------------------------------------------
 # A theme with a recipe of its own name (recipes/taxanotes_classic) gets it
 # applied: its blocks, settings and the accent colour (instance.yml
-# site.colour) as the input <theme>.colour.
+# site.colour) as the input <theme>.colour, the first front page column's
+# node type (site.front_first_column) as <theme>.first_column.
 if [ -n "$theme" ] && [ -f "$code/recipes/$theme/recipe.yml" ]; then
   log "Recipe: $theme (the theme's blocks and settings)"
-  drush recipe "$code/recipes/$theme" --input="$theme.colour=$colour"
+  drush recipe "$code/recipes/$theme" --input="$theme.colour=$colour" --input="$theme.first_column=$front_first_column"
 else
   log "Recipe: none for theme ${theme:-?}: skipped"
 fi

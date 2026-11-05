@@ -72,6 +72,9 @@ site:
                                    # classic view, or olivero (the alternative)
   colour: '047DB8'                 # accent colour of the classic view, six hex digits (the
                                    # Drupal 7 site's scratchpads_colour); default 047DB8
+  front_first_column: page         # node type listed in the classic front page's first
+                                   # column (Drupal 7 front_page_block_1_node_type: page or
+                                   # blog); default page, the fallback while the type is absent
   admin_theme: claro               # administration theme
   # Site texts (HTML), recipe inputs of taxanotes_front -> taxanotes_front.settings,
   # editable afterwards at /admin/config/system/taxanotes-front. Each is
@@ -240,10 +243,10 @@ still gives the Olivero front page.
 |---|---|---|
 | header (accent colour) | logo (60 px) + site name + slogan; the search box with *All / Taxonomy*; the tabbed main menu (stacked behind a *Menu* button on a phone) | branding block; block `taxanotes_front_header_search` → `/find` (Taxonomy: `/taxa?name=`; All: a results page across taxa, literature, species pages, pages) |
 | slide top | the account links (*Log in*) as a tab on the dark strip | account menu block |
-| front page | welcome title + text (4 columns) beside the slideshow (8; the four newest images, thumbnails as a pager; absent without images); then *Recent Pages* / *Recently added literature* / *Recently added taxon descriptions*, three items each, "None yet." when empty | `taxanotes_front.settings`, view `taxanotes_slideshow` (image styles 619×463, 154×115), block `taxanotes_front_recent` (first column's node type a block setting, `page` by default, falls back to page when the type is absent) |
+| front page | welcome title + text (4 columns) beside the slideshow (8; the four newest images, thumbnails as a pager; absent without images); then *Recent Pages* / *Recently added literature* / *Recently added taxon descriptions*, three items each, "None yet." when empty | `taxanotes_front.settings`, view `taxanotes_slideshow` (image styles 619×463, 154×115), block `taxanotes_front_recent` (first column's node type from `site.front_first_column` → recipe input `taxanotes_classic.first_column` → the block setting, `page` by default, falls back to page when the type is absent) |
 | taxon page | the name with the authors as a subtitle; tabs *Overview* (the fields as a stripy group, the classification block) / *Descriptions* / *Images* / *Literature*, a tab only where its block has content; the classification tree in the grey sidebar | `js/classic.js` builds the tabs from the content blocks `taxanotes_classic_preprocess_block()` marks; block `taxanotes_classic_taxon_tree` |
 | footer (grey) | the main menu's links inline, the `footer_text` licence line, "Powered by Drupal" | blocks `taxanotes_classic_footer_menu`, `taxanotes_front_text`, `powered` |
-| colour | `site.colour` → recipe input `taxanotes_classic.colour` → `taxanotes_classic.settings:colour` → `--sp-colour` on `:root` and a `scratchpad-colour-<hex>` body class (the Drupal 7 scratchpads_colour module's palette logic: the header, links, headings and block title bars take the colour; the menu tabs and the search button are a 30 % black overlay on it, white when active) | theme setting, editable at `/admin/appearance/settings/taxanotes_classic` |
+| colour | `site.colour` → recipe input `taxanotes_classic.colour` → `taxanotes_classic.settings:colour` → `--sp-colour` as the `style` attribute of the `html` element (inline, so it beats the stylesheet's default) and a `scratchpad-colour-<hex>` body class (the Drupal 7 scratchpads_colour module's palette logic: the header, links, headings and block title bars take the colour; the menu tabs and the search button are a 30 % black overlay on it, white when active) | theme setting, editable at `/admin/appearance/settings/taxanotes_classic` |
 
 The Olivero front page blocks (sidebar search, tree and numbers; recent and
 updated taxa; newest images; recent literature and species pages) are

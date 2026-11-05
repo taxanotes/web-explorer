@@ -1,5 +1,5 @@
 name: 'Taxanotes classic view'
-description: 'Gives an instance the classic view: the Scratchpads (Drupal 7) front end reproduced by the taxanotes_classic theme. Installs the theme and makes it the default, seeds its accent colour (input colour, from instances/<slug>/instance.yml site.colour), places the classic blocks (header search, front page slideshow and recent-content columns, the classification tree beside the taxon page, the footer menu) and switches off the Olivero front page blocks that the classic front page replaces (the copies block_theme_initialize() made when the theme was installed; the Olivero originals stay, so site.theme: olivero still gives the Olivero front page). scripts/new-instance.sh applies it after taxanotes_front when instance.yml names this theme; nothing here names an instance, and re-applying changes nothing that is in place (blocks are created only when missing, the view and image styles left alone once they exist) except the colour, which follows instance.yml.'
+description: 'Gives an instance the classic view: the Scratchpads (Drupal 7) front end reproduced by the taxanotes_classic theme. Installs the theme and makes it the default, seeds its accent colour (input colour, from instances/<slug>/instance.yml site.colour) and the node type of the first front page column (input first_column, site.front_first_column: page, or blog as on Mormyrids), places the classic blocks (header search, front page slideshow and recent-content columns, the classification tree beside the taxon page, the footer menu) and switches off the Olivero front page blocks that the classic front page replaces (the copies block_theme_initialize() made when the theme was installed; the Olivero originals stay, so site.theme: olivero still gives the Olivero front page). scripts/new-instance.sh applies it after taxanotes_front when instance.yml names this theme; nothing here names an instance, and re-applying changes nothing that is in place (blocks are created only when missing, the view and image styles left alone once they exist) except the colour and the first column''s node type, which follow instance.yml.'
 type: 'Theme'
 install:
   - taxanotes_classic
@@ -16,6 +16,18 @@ input:
       source: config
       config: ['taxanotes_classic.settings', 'colour']
       fallback: '047DB8'
+  first_column:
+    data_type: string
+    description: 'The node type the first front page column lists (the Scratchpads front_page_block_1_node_type: page, or blog); the column falls back to page while the type does not exist.'
+    constraints:
+      Regex: '/^[a-z0-9_]+$/'
+    form:
+      '#type': textfield
+      '#title': 'First front page column (node type)'
+    default:
+      source: config
+      config: ['block.block.taxanotes_classic_recent', 'settings.node_type']
+      fallback: page
 config:
   # The slideshow view and its image styles are a starting point an instance
   # may tailor: once they exist they are left alone.
@@ -104,13 +116,17 @@ config:
           label: 'Recent content'
           label_display: '0'
           provider: taxanotes_front
-          node_type: page
+          node_type: ${first_column}
           items: 3
         visibility:
           request_path:
             id: request_path
             negate: false
             pages: '<front>'
+      # The block exists after the first apply; the column's node type
+      # follows instance.yml on every apply, as the colour does.
+      setProperties:
+        settings.node_type: ${first_column}
     block.block.taxanotes_classic_taxon_tree:
       placeBlockInDefaultTheme:
         plugin: block-node-tree-hierarchicaltaxontree

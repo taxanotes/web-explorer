@@ -98,6 +98,7 @@ footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
 colour="$(inst site.colour)"
+front_first_column="$(inst site.front_first_column)"
 subdir="$(inst drupal.sites_subdir)"
 profile="$(inst drupal.profile)"
 db_name="$(inst drupal.database)"
@@ -368,10 +369,12 @@ fi
 # A theme that ships a recipe of its own name (recipes/taxanotes_classic for
 # the classic view) gets it applied now: its blocks, its switch-offs of the
 # Olivero front page blocks, and the accent colour from instance.yml
-# (site.colour, default 047DB8) as the input <theme>.colour.
+# (site.colour, default 047DB8) as the input <theme>.colour, the first front
+# page column's node type (site.front_first_column, default page) as
+# <theme>.first_column.
 if [ -n "$theme" ] && [ -f "recipes/$theme/recipe.yml" ]; then
   log "Recipe: $theme (the theme's blocks and settings)"
-  in_web drush --uri="$url" recipe "$croot/recipes/$theme" --input="$theme.colour=$colour"
+  in_web drush --uri="$url" recipe "$croot/recipes/$theme" --input="$theme.colour=$colour" --input="$theme.first_column=$front_first_column"
 else
   log "Recipe: none for theme ${theme:-?} (recipes/$theme/recipe.yml does not exist): skipped"
 fi
