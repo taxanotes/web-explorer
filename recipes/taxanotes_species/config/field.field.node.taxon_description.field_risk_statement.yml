@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_risk_statement
+    - node.type.taxon_description
+  module:
+    - text
+id: node.taxon_description.field_risk_statement
+field_name: field_risk_statement
+entity_type: node
+bundle: taxon_description
+label: 'Risk statement'
+description: ''
+required: false
+translatable: false
+default_value: []
+default_value_callback: ''
+settings: []
+field_type: text_long

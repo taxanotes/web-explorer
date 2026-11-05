@@ -1,0 +1,406 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.taxon_description.field_associations
+    - field.field.node.taxon_description.field_behavious
+    - field.field.node.taxon_description.field_biology
+    - field.field.node.taxon_description.field_conservation_status
+    - field.field.node.taxon_description.field_cyclicity
+    - field.field.node.taxon_description.field_cytology
+    - field.field.node.taxon_description.field_diagnostic_description
+    - field.field.node.taxon_description.field_diseases
+    - field.field.node.taxon_description.field_dispersal
+    - field.field.node.taxon_description.field_distribution
+    - field.field.node.taxon_description.field_ecology
+    - field.field.node.taxon_description.field_electric_organ_discharge
+    - field.field.node.taxon_description.field_evolution
+    - field.field.node.taxon_description.field_general_description
+    - field.field.node.taxon_description.field_genetics
+    - field.field.node.taxon_description.field_growth
+    - field.field.node.taxon_description.field_habitat
+    - field.field.node.taxon_description.field_legislation
+    - field.field.node.taxon_description.field_life_cycle
+    - field.field.node.taxon_description.field_life_expectancy
+    - field.field.node.taxon_description.field_look_alikes
+    - field.field.node.taxon_description.field_management
+    - field.field.node.taxon_description.field_media
+    - field.field.node.taxon_description.field_migration
+    - field.field.node.taxon_description.field_molecular_biology
+    - field.field.node.taxon_description.field_morphology
+    - field.field.node.taxon_description.field_phylogeny
+    - field.field.node.taxon_description.field_physiology
+    - field.field.node.taxon_description.field_population_biology
+    - field.field.node.taxon_description.field_procedures
+    - field.field.node.taxon_description.field_reproduction
+    - field.field.node.taxon_description.field_risk_statement
+    - field.field.node.taxon_description.field_size
+    - field.field.node.taxon_description.field_taxon_biology
+    - field.field.node.taxon_description.field_taxonomic_name
+    - field.field.node.taxon_description.field_threats
+    - field.field.node.taxon_description.field_trends
+    - field.field.node.taxon_description.field_trophic_strategy
+    - field.field.node.taxon_description.field_uses
+    - node.type.taxon_description
+  module:
+    - media_library
+    - path
+    - text
+id: node.taxon_description.default
+targetEntityType: node
+bundle: taxon_description
+mode: default
+content:
+  field_general_description:
+    type: text_textarea
+    weight: 10
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_biology:
+    type: text_textarea
+    weight: 11
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_conservation_status:
+    type: text_textarea
+    weight: 12
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_legislation:
+    type: text_textarea
+    weight: 13
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_management:
+    type: text_textarea
+    weight: 14
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_procedures:
+    type: text_textarea
+    weight: 15
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_diagnostic_description:
+    type: text_textarea
+    weight: 16
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_threats:
+    type: text_textarea
+    weight: 17
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_trends:
+    type: text_textarea
+    weight: 18
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_behavious:
+    type: text_textarea
+    weight: 19
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_cytology:
+    type: text_textarea
+    weight: 20
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_genetics:
+    type: text_textarea
+    weight: 21
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_growth:
+    type: text_textarea
+    weight: 22
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_look_alikes:
+    type: text_textarea
+    weight: 23
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_dispersal:
+    type: text_textarea
+    weight: 24
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_molecular_biology:
+    type: text_textarea
+    weight: 25
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_morphology:
+    type: text_textarea
+    weight: 26
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_physiology:
+    type: text_textarea
+    weight: 27
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_size:
+    type: text_textarea
+    weight: 28
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_taxon_biology:
+    type: text_textarea
+    weight: 29
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_evolution:
+    type: text_textarea
+    weight: 30
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_phylogeny:
+    type: text_textarea
+    weight: 31
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_associations:
+    type: text_textarea
+    weight: 32
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_cyclicity:
+    type: text_textarea
+    weight: 33
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_distribution:
+    type: text_textarea
+    weight: 34
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_ecology:
+    type: text_textarea
+    weight: 35
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_habitat:
+    type: text_textarea
+    weight: 36
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_life_cycle:
+    type: text_textarea
+    weight: 37
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_life_expectancy:
+    type: text_textarea
+    weight: 38
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_migration:
+    type: text_textarea
+    weight: 39
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_trophic_strategy:
+    type: text_textarea
+    weight: 40
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_population_biology:
+    type: text_textarea
+    weight: 41
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_reproduction:
+    type: text_textarea
+    weight: 42
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_diseases:
+    type: text_textarea
+    weight: 43
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_risk_statement:
+    type: text_textarea
+    weight: 44
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_uses:
+    type: text_textarea
+    weight: 45
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_electric_organ_discharge:
+    type: text_textarea
+    weight: 46
+    region: content
+    settings:
+      rows: 5
+      placeholder: ''
+    third_party_settings: []
+  field_taxonomic_name:
+    type: entity_reference_autocomplete
+    weight: 0
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: []
+  field_media:
+    type: media_library_widget
+    weight: 100
+    region: content
+    settings:
+      media_types: []
+    third_party_settings: []
+  title:
+    type: string_textfield
+    weight: -5
+    region: content
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: []
+  status:
+    type: boolean_checkbox
+    weight: 120
+    region: content
+    settings:
+      display_label: true
+    third_party_settings: []
+  uid:
+    type: entity_reference_autocomplete
+    weight: 110
+    region: content
+    settings:
+      match_operator: CONTAINS
+      match_limit: 10
+      size: 60
+      placeholder: ''
+    third_party_settings: []
+  created:
+    type: datetime_timestamp
+    weight: 111
+    region: content
+    settings: []
+    third_party_settings: []
+  path:
+    type: path
+    weight: 112
+    region: content
+    settings: []
+    third_party_settings: []
+hidden:
+  promote: true
+  sticky: true

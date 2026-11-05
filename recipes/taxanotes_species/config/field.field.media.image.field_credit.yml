@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.media.field_credit
+    - media.type.image
+id: media.image.field_credit
+field_name: field_credit
+entity_type: media
+bundle: image
+label: Credit
+description: 'Who made the image (Scratchpads field_creator).'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string
