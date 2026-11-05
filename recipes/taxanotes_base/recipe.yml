@@ -1,9 +1,11 @@
 name: 'Taxanotes base'
-description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
+description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the literature (bibcite references linked to taxa, through taxanotes_literature), the species pages and images (through taxanotes_species), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
 type: 'Site'
 recipes:
   - taxanotes_taxon
   - taxanotes_users
+  - taxanotes_literature
+  - taxanotes_species
 install:
   - migrate
   - migrate_plus
@@ -61,3 +63,15 @@ config:
     update.settings:
       simpleConfigUpdate:
         notification.emails: []
+    # Composition of taxon + literature on the taxon page: the protologue is
+    # the link to the reference entity (taxanotes_literature), not the
+    # Scratchpads title text (taxanotes_taxon). Both sub-recipes set this
+    # display in their own actions; applied as one chain the taxon recipe's
+    # text won (seen on a fresh build), so the composed result is set here,
+    # after every sub-recipe, where it cannot be overtaken.
+    core.entity_view_display.node.taxon.default:
+      setComponents:
+        - name: field_reference
+          options: { type: entity_reference_label, label: inline, weight: 11, region: content, settings: { link: true }, third_party_settings: {  } }
+      hideComponents:
+        - field_reference_title

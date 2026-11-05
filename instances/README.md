@@ -31,11 +31,13 @@ with the generic `settings.php` (a verbatim copy of
 `settings.local.php` generated from `instance.yml` + `.env`, creates the
 database in the ddev db container, installs Drupal, sets the themes, applies
 `recipes/taxanotes_front` (which pulls in `taxanotes_base`, and through it
-`taxanotes_taxon` and `taxanotes_users`: the taxon type, the roles, the tree,
-the import module, the site identity, then the front page, the About page,
-the main menu and the taxon page blocks), installs the logo, runs the four
-`taxanotes_import` migrations when `.env` names a Scratchpads database,
-rebuilds caches and prints the URL. A second run on the same instance changes
+`taxanotes_taxon`, `taxanotes_users` and `taxanotes_literature`: the taxon
+type, the roles, the literature (bibcite references linked to taxa, the
+Literature page and blocks), the tree, the import module, the site identity,
+then the front page, the About page, the main menu and the taxon page
+blocks), installs the logo, runs the eleven `taxanotes_import` migrations
+(taxa, then literature, then the images and the species pages) when `.env`
+names a Scratchpads database, rebuilds caches and prints the URL. A second run on the same instance changes
 nothing that is already in place: blocks and views are created only when
 missing (an instance may move or edit them), the site texts are seeded again
 from `instance.yml` (a key left out keeps what the site has); a changed
@@ -47,6 +49,16 @@ Scratchpads stack's MySQL is on the `scratchpads2_default` Docker network that
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to; load the
 instance's dump as its own database there (see the mormyrids report in
 `docs/planning/reports/`).
+
+The D7 files directory of an instance (attachments, images) is a per-developer
+bind mount, not committed: copy
+`.ddev/docker-compose.scratchpads-files.local.yaml.dist` to
+`.ddev/docker-compose.scratchpads-files.local.yaml` (gitignored; the `.dist`
+mounts the sibling `../../scratchpads-d7/data/files` checkout of Myriatrix at
+`/mnt/scratchpads/myriatrix/files`, add a volume line per instance whose files
+you have), `ddev restart`, and point `source.files.ddev` in `instance.yml` (or
+`SOURCE_FILES_DIR` in `.env`) at the container path. Without the file the
+instance scripts skip the file and image migrations and say so.
 
 ## `instance.yml` schema
 
@@ -87,6 +99,12 @@ source:                            # omit for an instance without a Scratchpads 
     production: s_mormyrids        # server, loaded by scripts/hosting/load-source-db.sh)
   unpublished_roots:               # root terms imported unpublished with their subtree
     - 'Deleted taxa'               #   -> $settings['taxanotes_import']['unpublished_roots']
+  files:                           # optional: the D7 public files directory as PHP reaches it in
+    ddev: /mnt/scratchpads/myriatrix/files   # this environment -> $settings['taxanotes_import']['source_files_dir'];
+                                   # the literature attachments and the images are copied from it
+                                   # (taxanotes_d7_file, taxanotes_d7_media_image). .env SOURCE_FILES_DIR
+                                   # overrides it. Neither set: the scripts skip those two migrations with
+                                   # a line saying so; references and species pages import without them.
 ```
 
 Defaults are applied in one place, `scripts/lib/instance.php` (`get` prints
@@ -143,14 +161,20 @@ the two settings files, the vhost (HTTP to HTTPS, basic auth on the whole
 site, HSTS) with a self-signed certificate that certbot replaces, the
 htpasswd file with one user `<slug>` (password printed once), Drupal (only
 into an empty database; `--reinstall` dumps with `backup_db` and installs
-again), the themes, the recipe with the instance texts, the logo from
-`settings/assets/logo.png`, the four migrations, `deploy <domain> live
-<version>` and the `drush cron` crontab line. `load-source-db.sh` loads the
-Scratchpads dump as `s_<slug>` beforehand (keep the dump 0600 and delete it
-afterwards: it holds the users table). The headers of both scripts have the
-details; the next release of an existing site is the same command with the
-new version (the release step, `composer install`, `deploy`), everything
-else is a no-op.
+again), `deploy <domain> live <version>` (the toolkit's `backup_db` dump,
+docroot flip, php-fpm reload, `updb`, `cr`), then the themes, the recipe
+with the instance texts, the logo from `settings/assets/logo.png`, the
+eleven migrations (files and images only when `instance.env`
+`SOURCE_FILES_DIR` names the server's copy of the D7 files), a cache rebuild
+and the `drush cron` crontab line. `load-source-db.sh` loads the Scratchpads
+dump as `s_<slug>` beforehand (keep the dump 0600 and delete it afterwards:
+it holds the users table). The headers of both scripts have the details.
+The next release of an existing site is the same command with the new
+version: the release step, `composer install`, `deploy` (its dump is the
+pre-upgrade state, the one to `restore_db` with a rollback to the previous
+release), then the recipe installs what the new release adds and the new
+migrations run, with the site serving the new code throughout; everything
+already in place is a no-op.
 
 ## Adding an instance
 
@@ -184,12 +208,13 @@ instance's values:
 | below the content, front page only | *Recently added taxa*, *Recently updated taxa* (10 each, with a link to `/taxa`) | view `taxanotes_recent` |
 | footer | `footer_text` | block `taxanotes_front_text` |
 | main menu | Home (standard profile), Taxa (view `taxa`), Classification (`/taxonomy-tree`), About (`/about`, `about_body`) | static links of `taxanotes_front` |
-| taxon page (`/node/<nid>`) | authors under the name, rank, status, parent, vernacular names, protologue, description; then *Classification*: a link to the taxon in the tree and its child taxa | view display `node.taxon.default` (taxanotes_taxon), view `taxanotes_taxon_page` |
+| taxon page (`/node/<nid>`) | authors under the name, rank, status, parent, vernacular names, protologue (a link to the reference entity), description; then *Classification*: a link to the taxon in the tree and its child taxa; then *Literature*: the references that name the taxon | view display `node.taxon.default` (taxanotes_taxon, taxanotes_literature), views `taxanotes_taxon_page`, `taxanotes_literature` |
+| literature (`/literature`, main menu *Literature*) | the references of the instance: title, authors, year, type, taxa; filters on title, year, type, taxon and author (autocompletes) | view `taxanotes_literature` (recipe `taxanotes_literature`) |
+| front page, below | *Recently added literature* beside the recent taxa | block `views_block:taxanotes_literature-recent` |
 
 Blocks are placed in the instance's default theme (`site.theme`); the
-regions above are Olivero's, any other theme gets them in `content`.
-Literature, pages, media and biographies have no blocks yet: they come with
-their migrations.
+regions above are Olivero's, any other theme gets them in `content`. Pages,
+media and biographies have no blocks yet: they come with their migrations.
 
 The script never installs over data: Drupal is installed only into an
 **empty** database. A database with tables that does not bootstrap (db
@@ -207,10 +232,26 @@ orphans, roots, users, roles, revisions per node, accepted and vernacular
 names, weights, ranks, usages); a **full comparison of every term's current
 values** (name, weight, parent, the ITIS fields, accepted name, reference,
 page URL, description, vernacular-name count) against the D7 `field_data_*`
-tables, the ones the Scratchpads site renders, listing every mismatch; and a
+tables, the ones the Scratchpads site renders, listing every mismatch; a
 sha256 per content table (`node_field_data` without `vid`/`changed`, every
 `node__field_*` table without `revision_id`) so a before/after of the Myriatrix
-control is a checksum, not a count.
+control is a checksum, not a count; and, once the literature recipe is
+applied, the literature: D7/D11 counts of references (per type),
+contributors, keywords, author and keyword rows, taxon links, protologue
+links and attachments (with the number of files the import could not find
+locally), and a **comparison of every reference's** title, year, type and
+author list against its D7 biblio node; and, once the species recipe is
+applied, the species pages and images: D7/D11 counts of species pages, their
+taxa, the images the import selects (placed on a species page or tagged with
+a taxon of the vocabulary, renderable by the image toolkit, present under the
+files directory), their taxon links and licences, the images placed on pages,
+the bytes copied, and a **comparison of every species page's** title, status,
+taxon and text sections against its D7 spm node. The checksums cover the
+taxon nodes only, so a species page import leaves them unchanged.
+
+`scripts/list-source-files.php` prints the D7 files the import would copy
+(relative paths, with `sizes` the bytes too): the list to rsync to the
+server's `SOURCE_FILES_DIR` before the files and media migrations run there.
 
 ## Instances
 
@@ -218,3 +259,4 @@ control is a checksum, not a count.
 |---|---|---|---|
 | `myriatrix` | `web/sites/default` (built by hand before this script; its `settings.local.php` is hand-written) | taxanotes-dev.ddev.site / myriatrix.taxanotes.net | D7 vocabulary `myriatrix`, database `myriatrix` (ddev) / `s_myriatrix` (production) |
 | `mormyrids` | `web/sites/mormyrids` | mormyrids.taxanotes-dev.ddev.site / mormyrids.taxanotes.net | D7 vocabulary `mormyridae`, database `mormyrids` (ddev) / `s_mormyrids` (production) |
+| `anthophila` | `web/sites/anthophila` | anthophila.taxanotes-dev.ddev.site / anthophila.taxanotes.net (no DNS yet) | D7 vocabulary `bee_family_genus_groups` (2022 dump), database `anthophila` (ddev) / `s_anthophila` (production) |

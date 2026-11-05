@@ -1,0 +1,28 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_taxonomic_name
+    - node.type.taxon
+    - node.type.taxon_description
+id: node.taxon_description.field_taxonomic_name
+field_name: field_taxonomic_name
+entity_type: node
+bundle: taxon_description
+label: 'Taxonomic name'
+description: 'The taxon this page describes (Scratchpads field_taxonomic_name). The taxon page shows this page as its Species page section.'
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      taxon: taxon
+    sort:
+      field: title
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

@@ -1,0 +1,16 @@
+# Per-developer ddev compose file: copy to
+# .ddev/docker-compose.scratchpads-files.local.yaml (gitignored) on a machine
+# that has an instance's Scratchpads (Drupal 7) files directory, then
+# `ddev restart`. It mounts that directory into the web container, read-only,
+# so the taxanotes_d7_file migration can copy the literature attachments and
+# the images (instances/<slug>/instance.yml source.files.ddev names the
+# container path, which becomes $settings['taxanotes_import']['source_files_dir']).
+# The example below is Myriatrix: the sibling checkout
+# ../scratchpads-d7/data/files (7.4 GB, not in git; see the restore notes in
+# docs/planning), mounted outside the project directory so mutagen never
+# syncs it. One volume line per instance whose files you have; without this
+# file the instance scripts skip the file and image migrations and say so.
+services:
+  web:
+    volumes:
+      - ../../scratchpads-d7/data/files:/mnt/scratchpads/myriatrix/files:ro

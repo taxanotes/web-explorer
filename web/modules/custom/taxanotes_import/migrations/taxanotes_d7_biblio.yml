@@ -1,0 +1,208 @@
+id: taxanotes_d7_biblio
+label: 'Scratchpads (Drupal 7) biblio nodes to bibcite references'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_biblio
+  # The migration id is the node uuid (a real column, so the id map joins the
+  # source query); track_changes re-imports only rows whose values, authors,
+  # keywords, taxa or files changed in Drupal 7.
+  track_changes: true
+process:
+  # The 14 biblio publication types the pilot sites use, by D7 biblio_types
+  # tid, onto the bibcite reference types of the same name (bibcite was
+  # built as biblio's successor and ships every one of them). An unknown
+  # type lands on Miscellaneous.
+  type:
+    plugin: static_map
+    source: biblio_type
+    map:
+      100: book
+      101: book_chapter
+      102: journal_article
+      103: conference_paper
+      104: conference_proceedings
+      105: newspaper_article
+      106: magazine_article
+      108: thesis
+      109: report
+      120: personal
+      121: manuscript
+      124: unpublished
+      125: database
+      129: miscellaneous
+    default_value: miscellaneous
+  # Scratchpads titles carry HTML italics ("<i>Cryptomyrus</i>: a new
+  # genus"); the bibcite title is plain text and would show the tags, so they
+  # are stripped (the verify script compares against the stripped D7 title).
+  title:
+    plugin: callback
+    callable: strip_tags
+    source: title
+  langcode:
+    plugin: default_value
+    default_value: en
+  uid:
+    plugin: default_value
+    default_value: 1
+  status: status
+  created: created
+  changed: changed
+  field_scratchpads_uuid: uuid
+  # The D7 nid: the Scratchpads texts cite references as [bib]nid[/bib], and
+  # the citation filter of taxanotes_literature resolves the nid through this
+  # field (the bibcite citekey is computed, not stored).
+  field_scratchpads_nid: nid
+  # Authors in rank order, each with the bibcite role and category that the
+  # biblio auth_type / auth_category numbers stand for.
+  author:
+    plugin: sub_process
+    source: contributors
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_biblio_contributor
+        source: cid
+        no_stub: true
+      role:
+        plugin: static_map
+        source: auth_type
+        map:
+          1: author
+          2: secondary_author
+          3: tertiary_author
+          4: subsidiary_author
+          5: corporate_author
+          10: series_editor
+          11: performers
+          12: sponsor
+          13: translator
+          14: editor
+          15: counsel
+          16: series_director
+          17: producer
+          18: department
+          19: issuing_organization
+          20: international_author
+          21: recipient
+          22: advisor
+        default_value: author
+      category:
+        plugin: static_map
+        source: auth_category
+        map:
+          1: primary
+          2: secondary
+          3: tertiary
+          4: subsidiary
+          5: corporate_institutional
+        default_value: primary
+  keywords:
+    plugin: sub_process
+    source: keywords
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_biblio_keyword
+        source: kid
+        no_stub: true
+  # The taxa the reference cites (Scratchpads field_taxonomic_name), linked
+  # through the taxon migration by GUID; a term that was not migrated gives
+  # an empty item, which the entity drops on save.
+  field_taxonomic_name:
+    plugin: sub_process
+    source: taxa
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_taxon
+        source: guid
+        no_stub: true
+  # Attachments: the file entities taxanotes_d7_file created for the files
+  # that exist locally; a file that was skipped gives an empty item.
+  field_file:
+    plugin: sub_process
+    source: files
+    process:
+      target_id:
+        plugin: migration_lookup
+        migration: taxanotes_d7_file
+        source: fid
+        no_stub: true
+      display: display
+      description: description
+  # biblio columns onto the bibcite base fields of the same name. Year: the
+  # source turns biblio's "in press" 9999 into NULL. Dates are copied as the
+  # strings biblio stored (DD/MM/YYYY on the pilot sites; bibcite documents
+  # MM/DD/YYYY and does not parse the value). The citekey stays the D7 nid
+  # (biblio's default and the .bib export key).
+  bibcite_year: year
+  bibcite_secondary_title: biblio_secondary_title
+  bibcite_tertiary_title: biblio_tertiary_title
+  bibcite_volume: biblio_volume
+  bibcite_issue: biblio_issue
+  bibcite_pages: biblio_pages
+  bibcite_section: biblio_section
+  bibcite_number: biblio_number
+  bibcite_other_number: biblio_other_number
+  bibcite_edition: biblio_edition
+  bibcite_number_of_volumes: biblio_number_of_volumes
+  bibcite_publisher: biblio_publisher
+  bibcite_place_published: biblio_place_published
+  bibcite_date: biblio_date
+  bibcite_lang: biblio_lang
+  bibcite_type_of_work: biblio_type_of_work
+  bibcite_isbn: biblio_isbn
+  bibcite_issn: biblio_issn
+  bibcite_doi: biblio_doi
+  bibcite_url: biblio_url
+  bibcite_accession_number: biblio_accession_number
+  bibcite_call_number: biblio_call_number
+  bibcite_citekey: biblio_citekey
+  bibcite_short_title: biblio_short_title
+  bibcite_alternate_title: biblio_alternate_title
+  bibcite_translated_title: biblio_translated_title
+  bibcite_original_publication: biblio_original_publication
+  bibcite_reprint_edition: biblio_reprint_edition
+  bibcite_auth_address: biblio_auth_address
+  bibcite_remote_db_name: biblio_remote_db_name
+  bibcite_remote_db_provider: biblio_remote_db_provider
+  bibcite_label: biblio_label
+  bibcite_access_date: biblio_access_date
+  bibcite_refereed: biblio_refereed
+  bibcite_notes: biblio_notes
+  bibcite_research_notes: biblio_research_notes
+  bibcite_custom1: biblio_custom1
+  bibcite_custom2: biblio_custom2
+  bibcite_custom3: biblio_custom3
+  bibcite_custom4: biblio_custom4
+  bibcite_custom5: biblio_custom5
+  bibcite_custom6: biblio_custom6
+  bibcite_custom7: biblio_custom7
+  # Abstracts are formatted text in bibcite; Scratchpads abstracts are plain
+  # text or light HTML, which basic_html renders and sanitises.
+  bibcite_abst_e/value:
+    plugin: skip_on_empty
+    method: process
+    source: biblio_abst_e
+  bibcite_abst_e/format:
+    plugin: default_value
+    default_value: basic_html
+  bibcite_abst_f/value:
+    plugin: skip_on_empty
+    method: process
+    source: biblio_abst_f
+  bibcite_abst_f/format:
+    plugin: default_value
+    default_value: basic_html
+destination:
+  plugin: 'entity:bibcite_reference'
+migration_dependencies:
+  required:
+    - taxanotes_d7_biblio_contributor
+    - taxanotes_d7_taxon
+  optional:
+    - taxanotes_d7_biblio_keyword
+    - taxanotes_d7_file

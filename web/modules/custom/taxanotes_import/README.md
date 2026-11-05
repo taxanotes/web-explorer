@@ -1,11 +1,13 @@
 # Taxanotes import
 
 Migrations that bring taxa into the shared `taxon` content type (recipe
-`recipes/taxanotes_taxon`).
+`recipes/taxanotes_taxon`) and the literature into bibcite references linked
+to them (recipe `recipes/taxanotes_literature`).
 
 ## Drupal 7 Scratchpads track
 
-Four plugin migrations in group `taxanotes`, run in this order:
+Nine plugin migrations in group `taxanotes`, run in this order (the taxa
+first, then the literature, then the pass that links the two):
 
 | id | what it does |
 |---|---|
@@ -13,6 +15,11 @@ Four plugin migrations in group `taxanotes`, run in this order:
 | `taxanotes_d7_taxon` | one `taxon` node per term of the source vocabulary, keyed on the Scratchpads GUID; all scalar fields, GUIDs of parent / accepted name kept as strings |
 | `taxanotes_d7_taxon_parent` | second pass: resolves `field_parent_taxon_reference` and `field_accepted_name` through the first migration's id map |
 | `taxanotes_d7_taxon_revision` | the term revision history (Scratchpads `taxonomy_revision` tables) as node revisions, oldest first; the D7 current revision becomes the node's default revision |
+| `taxanotes_d7_biblio_contributor` | one `bibcite_contributor` per `biblio_contributor_data` row (cid kept as the id): last, first and middle names, prefix, suffix |
+| `taxanotes_d7_biblio_keyword` | one `bibcite_keyword` per `biblio_keyword_data` row (kid kept) |
+| `taxanotes_d7_file` | one file entity per attachment of a biblio node (`field_file`) that exists under `source_files_dir`, copied to `public://scratchpads/<D7 path>`; a file not on this machine skips its row with a message |
+| `taxanotes_d7_biblio` | one `bibcite_reference` per biblio node, keyed on the node uuid (kept in `field_scratchpads_uuid`; the nid in `field_scratchpads_nid`, which the `[bib]nid[/bib]` citations in texts are resolved through): the 14 publication types mapped onto bibcite's, every `biblio_*` column onto the bibcite field of the same name, authors (role and category), keywords, the taxa it names (`field_taxonomic_name`, through the taxon migration by GUID) and the attachments |
+| `taxanotes_d7_taxon_reference` | second pass over the taxa with a protologue: `field_reference` (entity reference to the bibcite reference) from the shadow `field_reference_guid` through the reference migration; the shadow fields stay |
 
 Source plugin `scratchpads_d7_taxon` is built on core migrate's `SqlBase`
 (not on the `migrate_drupal` d7 sources, which are deprecated in Drupal 11.3
@@ -36,6 +43,10 @@ $settings['taxanotes_import'] = [
   // Root terms whose whole subtree is imported unpublished. Optional;
   // defaults to ['Deleted taxa'], the Scratchpads convention.
   'unpublished_roots' => ['Deleted taxa'],
+  // The D7 public files directory as PHP reaches it (instance.yml
+  // source.files): the literature attachments are copied from it. Optional;
+  // without it taxanotes_d7_file skips every file with a message.
+  'source_files_dir' => '/mnt/scratchpads/myriatrix/files',
 ];
 ```
 
@@ -47,7 +58,11 @@ exactly one row per term (`ScratchpadsD7Base::joinFieldTable()`): the row in
 the term's own language, else the `und` row, else the alphabetically first
 language (what the D7 site shows on its default path). Without this a term
 yielded one source row per language combination, i.e. the same GUID twice,
-and the last row won.
+and the last row won. A site that never enabled entity_translation for terms
+has no `taxonomy_term_data.language` column (the 2022 Anthophila dump; its
+field rows are all `und`): the join then has no own language to prefer and
+takes `und` first (`termsHaveLanguage()`), and `scripts/verify-instance.php`
+applies the same rule.
 
 The parts of the scientific name, which Scratchpads stores as four field
 pairs (`field_unit_indicator1..4`, `field_unit_name1..4`), land in one
@@ -182,6 +197,122 @@ revision import with `--update` (a map row whose revision no longer exists
 falls back to creating it). The revision destination's rollback skips
 revisions that no longer exist.
 
+### Literature
+
+`scratchpads_d7_biblio` (built on `ScratchpadsD7Base` for the GUID rule)
+selects the current revision of every biblio node (`node` joined to `biblio`
+on `node.vid`) with every `biblio_*` column, and loads once per import the
+contributors of each revision (`biblio_contributor`, rank order), the keyword
+ids, the taxa (`field_data_field_taxonomic_name`: one row set per language,
+the node's own language first, else `und`, else the first, like the term
+fields; one link per distinct term of the instance vocabulary, with its
+GUID) and the attachments (`field_data_field_file`, same language rule).
+The migration maps the D7 publication type ids onto bibcite's reference
+types (100 book, 101 book_chapter, 102 journal_article, 103 conference_paper,
+104 conference_proceedings, 105 newspaper_article, 106 magazine_article, 108
+thesis, 109 report, 120 personal, 121 manuscript, 124 unpublished, 125
+database, 129 miscellaneous; anything else miscellaneous), the author rows
+onto bibcite's contributor roles (`auth_type`: 1 author, 2 secondary_author,
+... 14 editor, 22 advisor) and categories (`auth_category` 1..5), strips the
+HTML italics Scratchpads keeps in titles (bibcite titles are plain text),
+turns biblio's "in press" year 9999 into no year, keeps the citekey (the D7
+nid, the `.bib` key), copies dates as the strings biblio stored and gives
+abstracts the `basic_html` format. Contributors carry only their name parts:
+bibcite composes the name it shows from them (`full_name_pattern`, set by
+the recipe to include the middle initials D7 stores) and would re-parse and
+overwrite the parts if the computed `name` were set.
+
+`scratchpads_d7_file` lists the `file_managed` rows that `field_file` on a
+biblio node points at, plus the image files the instance uses (below), and
+resolves each under `source_files_dir`
+(`$settings['taxanotes_import']['source_files_dir']`, from `.env`
+`SOURCE_FILES_DIR` or `instance.yml` `source.files`; under ddev
+`.ddev/docker-compose.scratchpads-files.local.yaml` (gitignored, copied from
+its `.dist`) bind-mounts the Scratchpads
+files directory read-only at `/mnt/scratchpads/myriatrix/files`). A file
+that is not there skips its row with the message *Source file is not
+available locally*, an image the image toolkit cannot render (TIFF) with
+*Image type the image toolkit cannot render* (`drush migrate:messages
+taxanotes_d7_file` lists them; `scripts/verify-instance.php` counts them),
+and the reference or media item imports without it; a later run with the
+files present picks them up. Files are copied, never moved, into
+`public://scratchpads/<D7 relative path>` and reused when already there.
+The instance scripts run this migration only when the directory is
+configured; `scripts/list-source-files.php` prints the paths it would copy.
+
+`taxanotes_d7_taxon_reference` uses the taxon source with
+`with_reference_only: true` (only the terms whose D7 `field_reference` is
+set) and the `entity:node` destination with `overwrite_properties`, like the
+parent pass; rolling it back keeps the links. Rolling back
+`taxanotes_d7_biblio` deletes the references (the taxa and their shadow
+fields are untouched; `field_reference` then points at nothing until the
+reference import and this pass with `--update` run again). The `--update`
+matters: this pass has `track_changes` and the taxon rows did not change in
+D7, so after any biblio rollback and re-import a plain `migrate:import
+taxanotes_d7_taxon_reference` reports 0 items and leaves the links dangling
+(and the re-imported references get fresh entity ids, so their
+`/bibcite/reference/<id>` URLs change; citekeys and uuids stay). The instance
+scripts never roll back, so they run the plain import; after a hand rollback
+run `drush migrate:import taxanotes_d7_biblio && drush migrate:import
+taxanotes_d7_taxon_reference --update`.
+
+A hand run of `taxanotes_d7_file` or `taxanotes_d7_media_image` on an instance
+whose files are not on the machine (no `source_files_dir`) writes one *not
+available locally* message per file (828 on Mormyrids) and marks the rows
+ignored; harmless, the messages list what the server rsync must deliver, and
+a later run with the files present imports them. The instance scripts skip
+the two migrations in that case, so this happens only by hand.
+
+**Ids and the one-way cutover.** Contributors (`cid`), keywords (`kid`), files
+(`fid`) and media (`mid` = fid) keep their D7 ids as entity ids, and the
+`entity:*` destinations update an existing entity of that id. While the
+Scratchpads site is still edited and the Drupal 11 instance is read-only (the
+plan's cutover), re-imports are safe. If both sites were edited for a while,
+a new D7 row could take the id of an entity created on the Drupal 11 side and
+the next import would overwrite it; the taxa and species pages (keyed on
+uuid, fresh node ids) cannot collide. Keying the four migrations on uuid
+with fresh ids (the `migration_lookup`s already resolve the links) is the
+change to make before any two-way period.
+
+**Re-runs on a long-lived instance.** `taxanotes_d7_user` and
+`taxanotes_d7_taxon_parent` use `track_changes`; an instance imported with an
+older version of a source plugin (Myriatrix, imported before the plugins
+grew their literature and species columns) carries older row hashes, so the
+first run of the current code re-saves every user and parent row once
+("76 updated", "32,485 updated"; the values are the same, every checksum
+identical) and later runs are 0 items. The other migrations are 0 items on
+every re-run.
+
+### Species pages and images
+
+`scratchpads_d7_spm` selects the current revision of every `spm` node (the
+Scratchpads taxon description; revisions are not migrated) keyed on the node
+uuid, which the `taxon_description` node also takes as its uuid. The text
+sections are discovered from `field_config_instance` (every `text_long` on
+the type: the 36 standard SPM sections, plus `field_electric_organ_discharge`
+on Mormyrids), each read with the node language rule and mapped by the
+migration onto the field of the same name (`filtered_html` becomes
+`basic_html`, `full_html` stays, anything else `basic_html`). The taxon is
+the lowest-delta term of the instance vocabulary in `field_taxonomic_name`
+(terms of other vocabularies, the Myriatrix morphology terms, and any further
+taxon are dropped; a page whose taxon is not in the instance is skipped with
+a message). `field_media` is mapped through the media migration.
+
+`scratchpads_d7_image` selects the image files (`file_managed.type = image`)
+that are placed on an spm node (`field_media`) or tagged with a term of the
+instance vocabulary (`field_taxonomic_name` on the file), the same rule as
+the image branch of the file source; `taxanotes_d7_media_image` turns each
+into an Image media item whose id is the D7 fid, wrapping the file entity the
+file migration created (an image whose file was skipped there is skipped
+here with a message), with the taxa (by GUID), the Creative Commons licence
+(the Scratchpads creative_commons numbers 1 all rights reserved, 2 CC BY, 3
+CC BY-SA, 4 CC BY-ND, 5 CC BY-NC, 6 CC BY-NC-SA, 7 CC BY-NC-ND, 8 CC0, 9
+public domain), the creator as the credit, the description, and the
+description as plain text (else the file name) for the alt text. Media
+thumbnails are derived by core on save. Rolling back `taxanotes_d7_spm` and
+`taxanotes_d7_media_image` deletes the pages and media items and leaves the
+taxa, the literature and the file entities untouched.
+
 ## Local ddev setup for the D7 track
 
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to the
@@ -201,6 +332,12 @@ drush migrate:import taxanotes_d7_user
 drush migrate:import taxanotes_d7_taxon
 drush migrate:import taxanotes_d7_taxon_parent
 drush migrate:import taxanotes_d7_taxon_revision --feedback=2000
+drush recipe recipes/taxanotes_literature
+drush migrate:import taxanotes_d7_biblio_contributor
+drush migrate:import taxanotes_d7_biblio_keyword
+drush migrate:import taxanotes_d7_file
+drush migrate:import taxanotes_d7_biblio
+drush migrate:import taxanotes_d7_taxon_reference
 ```
 
 All migrations are idempotent (`track_changes: true`): re-running imports

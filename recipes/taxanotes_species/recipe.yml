@@ -1,0 +1,225 @@
+name: 'Taxanotes species pages and media'
+description: 'Gives a Taxanotes instance its species pages and images, as in Scratchpads: the Species page content type (taxon_description, the Scratchpads "taxon description" / SPM node) with the 37 descriptive text sections, one taxon (field_taxonomic_name) and its images (field_media); the Image media type (core media) with the taxa it shows (field_taxonomic_name, unlimited), its Creative Commons licence (field_cc_licence), credit and description; two image styles (gallery tiles, slide); on the taxon page a "Species page" section (the description of the taxon) and an "Images" gallery (the images tagged with the taxon); on the front page the newest images and the recently added species pages; a Species pages list (/species, in the main menu). Applied by taxanotes_base; nothing here names an instance. Re-applying changes nothing that is already in place (blocks and views are created only when missing).'
+type: 'Site'
+recipes:
+  - taxanotes_taxon
+  - taxanotes_users
+install:
+  - block
+  - file
+  - image
+  - media
+  - media_library
+  - options
+  - text
+  - views
+config:
+  # A recipe installs a module's simple configuration only; the media view
+  # mode, the media views and actions come in through this import list. (On
+  # a site installed from the Standard profile the profile's optional media
+  # types, image among them, are installed with the media module; config/
+  # here carries the same Image type for any other profile, and the display
+  # actions below add the Taxanotes fields to whichever copy exists.)
+  import:
+    media: '*'
+    media_library: '*'
+    image: '*'
+    file: '*'
+  strict:
+    # Field storages influence the database layout, so they must match exactly.
+    - field.storage.media.field_cc_licence
+    - field.storage.media.field_credit
+    - field.storage.media.field_description
+    - field.storage.media.field_media_image
+    - field.storage.media.field_taxonomic_name
+    - field.storage.node.field_associations
+    - field.storage.node.field_behavious
+    - field.storage.node.field_biology
+    - field.storage.node.field_conservation_status
+    - field.storage.node.field_cyclicity
+    - field.storage.node.field_cytology
+    - field.storage.node.field_diagnostic_description
+    - field.storage.node.field_diseases
+    - field.storage.node.field_dispersal
+    - field.storage.node.field_distribution
+    - field.storage.node.field_ecology
+    - field.storage.node.field_electric_organ_discharge
+    - field.storage.node.field_evolution
+    - field.storage.node.field_general_description
+    - field.storage.node.field_genetics
+    - field.storage.node.field_growth
+    - field.storage.node.field_habitat
+    - field.storage.node.field_legislation
+    - field.storage.node.field_life_cycle
+    - field.storage.node.field_life_expectancy
+    - field.storage.node.field_look_alikes
+    - field.storage.node.field_management
+    - field.storage.node.field_media
+    - field.storage.node.field_migration
+    - field.storage.node.field_molecular_biology
+    - field.storage.node.field_morphology
+    - field.storage.node.field_phylogeny
+    - field.storage.node.field_physiology
+    - field.storage.node.field_population_biology
+    - field.storage.node.field_procedures
+    - field.storage.node.field_reproduction
+    - field.storage.node.field_risk_statement
+    - field.storage.node.field_size
+    - field.storage.node.field_taxon_biology
+    - field.storage.node.field_taxonomic_name
+    - field.storage.node.field_threats
+    - field.storage.node.field_trends
+    - field.storage.node.field_trophic_strategy
+    - field.storage.node.field_uses
+  actions:
+    # Images have a page of their own (/media/<id>, where the gallery tiles
+    # link to); core keeps it off by default.
+    media.settings:
+      simpleConfigUpdate:
+        standalone_url: true
+    # Everyone sees the images and the species pages.
+    user.role.anonymous:
+      grantPermissions:
+        - 'view media'
+    user.role.authenticated:
+      grantPermissions:
+        - 'view media'
+    # Editing follows the taxon roles (recipes/taxanotes_users): a
+    # contributor adds species pages and images and edits their own, an
+    # editor any.
+    user.role.contributor:
+      grantPermissions:
+        - 'create taxon_description content'
+        - 'edit own taxon_description content'
+        - 'delete own taxon_description content'
+        - 'view taxon_description revisions'
+        - 'create image media'
+        - 'edit own image media'
+        - 'delete own image media'
+        - 'view own unpublished media'
+        - 'access media overview'
+    user.role.editor:
+      grantPermissions:
+        - 'create taxon_description content'
+        - 'edit any taxon_description content'
+        - 'delete any taxon_description content'
+        - 'view taxon_description revisions'
+        - 'revert taxon_description revisions'
+        - 'create image media'
+        - 'edit any image media'
+        - 'delete any image media'
+        - 'view own unpublished media'
+        - 'view all media revisions'
+        - 'access media overview'
+    # The Image type's displays: the Taxanotes fields on whichever copy of
+    # the display exists (the Standard profile's or this recipe's).
+    core.entity_view_display.media.image.default:
+      setComponents:
+        - name: field_media_image
+          options: { type: image, label: visually_hidden, weight: 1, region: content, settings: { image_style: taxanotes_slide, image_link: file, image_loading: { attribute: lazy } }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: above, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_credit
+          options: { type: string, label: inline, weight: 3, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }
+        - name: field_cc_licence
+          options: { type: list_default, label: inline, weight: 4, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_description
+          options: { type: text_default, label: above, weight: 5, region: content, settings: {  }, third_party_settings: {  } }
+    core.entity_form_display.media.image.default:
+      setComponents:
+        - name: field_taxonomic_name
+          options: { type: entity_reference_autocomplete_tags, weight: 1, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_credit
+          options: { type: string_textfield, weight: 2, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_cc_licence
+          options: { type: options_select, weight: 3, region: content, settings: {  }, third_party_settings: {  } }
+        - name: field_description
+          options: { type: text_textarea, weight: 4, region: content, settings: { rows: 5, placeholder: '' }, third_party_settings: {  } }
+    # Blocks (default theme; Olivero regions, "content" elsewhere), created
+    # only when missing like the front recipe's. Taxon page: the species page
+    # of the taxon and the images tagged with it, between the classification
+    # (weight 10) and the literature (20); both blocks render nothing for a
+    # taxon that has neither. Front page: the newest images above the recent
+    # taxa, the recently added species pages after the literature.
+    block.block.taxanotes_taxon_species:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_species-taxon'
+        region:
+          olivero: content
+        default_region: content
+        weight: 12
+        settings:
+          id: 'views_block:taxanotes_species-taxon'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
+    block.block.taxanotes_taxon_images:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_media-taxon'
+        region:
+          olivero: content
+        default_region: content
+        weight: 14
+        settings:
+          id: 'views_block:taxanotes_media-taxon'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
+    block.block.taxanotes_front_images:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_media-featured'
+        region:
+          olivero: content_below
+        default_region: content
+        weight: -1
+        settings:
+          id: 'views_block:taxanotes_media-featured'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'
+    block.block.taxanotes_front_recent_species:
+      placeBlockInDefaultTheme:
+        plugin: 'views_block:taxanotes_species-recent'
+        region:
+          olivero: content_below
+        default_region: content
+        weight: 3
+        settings:
+          id: 'views_block:taxanotes_species-recent'
+          label: ''
+          label_display: visible
+          provider: views
+          views_label: ''
+          items_per_page: none
+        visibility:
+          request_path:
+            id: request_path
+            negate: false
+            pages: '<front>'

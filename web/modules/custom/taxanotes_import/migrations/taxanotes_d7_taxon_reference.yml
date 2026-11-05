@@ -1,0 +1,49 @@
+id: taxanotes_d7_taxon_reference
+label: 'Scratchpads (Drupal 7) taxa: link the protologue reference'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_taxon
+  # Only the terms with a protologue reference (field_reference) are rows:
+  # the pass fills field_reference on their nodes from the migrated bibcite
+  # entity, after the literature import. It runs after taxanotes_d7_taxon,
+  # whose shadow fields (field_reference_nid/_title/_guid) hold the D7 values
+  # for every taxon and every revision. A term that loses its reference in
+  # D7 drops out of this set and keeps the stale link until the taxon pass
+  # has cleared the shadow fields and this pass is re-run with --update.
+  # See taxanotes_d7_taxon.yml for track_changes/ignore_map.
+  with_reference_only: true
+  track_changes: true
+  ignore_map: true
+process:
+  nid:
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_taxon
+      source: guid
+      no_stub: true
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  field_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: reference_guid
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_biblio
+      no_stub: true
+destination:
+  plugin: 'entity:node'
+  default_bundle: taxon
+  overwrite_properties:
+    - field_reference
+migration_dependencies:
+  required:
+    - taxanotes_d7_taxon
+    - taxanotes_d7_biblio
+  optional: {  }

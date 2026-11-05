@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - bibcite_entity.bibcite_reference_type.report
+    - field.storage.bibcite_reference.field_scratchpads_nid
+id: bibcite_reference.report.field_scratchpads_nid
+field_name: field_scratchpads_nid
+entity_type: bibcite_reference
+bundle: report
+label: 'Scratchpads node id'
+description: 'The nid of the Scratchpads biblio node this reference was imported from; the inline citations in texts ([bib]nid[/bib]) are resolved through it.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

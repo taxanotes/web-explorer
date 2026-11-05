@@ -1,0 +1,47 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - media
+    - options
+id: media.field_cc_licence
+field_name: field_cc_licence
+entity_type: media
+type: list_string
+settings:
+  allowed_values:
+    -
+      value: all_rights_reserved
+      label: 'All rights reserved'
+    -
+      value: cc0
+      label: 'CC0'
+    -
+      value: public_domain
+      label: 'Public domain'
+    -
+      value: cc_by
+      label: 'Attribution CC BY'
+    -
+      value: cc_by_sa
+      label: 'Attribution, Share Alike CC BY-SA'
+    -
+      value: cc_by_nd
+      label: 'Attribution, No Derivative Works CC BY-ND'
+    -
+      value: cc_by_nc
+      label: 'Attribution, Non-Commercial CC BY-NC'
+    -
+      value: cc_by_nc_sa
+      label: 'Attribution, Non-Commercial, Share Alike CC BY-NC-SA'
+    -
+      value: cc_by_nc_nd
+      label: 'Attribution, Non-Commercial, No Derivative Works CC BY-NC-ND'
+  allowed_values_function: ''
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: {  }
+persist_with_no_fields: false
+custom_storage: false

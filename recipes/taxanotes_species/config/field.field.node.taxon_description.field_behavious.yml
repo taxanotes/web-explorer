@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_behavious
+    - node.type.taxon_description
+  module:
+    - text
+id: node.taxon_description.field_behavious
+field_name: field_behavious
+entity_type: node
+bundle: taxon_description
+label: Behaviour
+description: ''
+required: false
+translatable: false
+default_value: []
+default_value_callback: ''
+settings: []
+field_type: text_long

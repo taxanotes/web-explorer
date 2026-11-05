@@ -1,0 +1,28 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.media.field_taxonomic_name
+    - media.type.image
+    - node.type.taxon
+id: media.image.field_taxonomic_name
+field_name: field_taxonomic_name
+entity_type: media
+bundle: image
+label: 'Taxonomic name'
+description: 'The taxa this image shows (Scratchpads field_taxonomic_name on the file). The taxon page shows the images tagged with it in its Images gallery.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      taxon: taxon
+    sort:
+      field: title
+      direction: ASC
+    auto_create: false
+    auto_create_bundle: ''
+field_type: entity_reference

@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies: {  }
+name: 'Species page'
+type: taxon_description
+description: 'The descriptive page of one taxon (the Scratchpads "taxon description", SPM): its text sections (general and diagnostic description, distribution, habitat, biology, ...) and the images placed on it. Shown on the taxon page as the Species page section.'
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: false

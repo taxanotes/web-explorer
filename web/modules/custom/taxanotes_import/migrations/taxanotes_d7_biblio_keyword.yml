@@ -1,0 +1,18 @@
+id: taxanotes_d7_biblio_keyword
+label: 'Scratchpads (Drupal 7) biblio keywords to bibcite keywords'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_biblio_keyword
+  track_changes: true
+process:
+  # The D7 kid is kept as the entity id (see the contributor migration).
+  id: kid
+  name: word
+destination:
+  plugin: 'entity:bibcite_keyword'
+migration_dependencies:
+  required: {  }
+  optional: {  }

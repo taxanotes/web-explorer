@@ -1,0 +1,34 @@
+id: taxanotes_d7_biblio_contributor
+label: 'Scratchpads (Drupal 7) biblio contributors to bibcite contributors'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_biblio_contributor
+  track_changes: true
+process:
+  # The D7 cid is kept as the entity id: the reference import links authors
+  # by cid, and a second instance has its own database, so ids cannot clash.
+  id: cid
+  # bibcite computes the displayed name ("John Sullivan") from the parts; the
+  # D7 full name ("Sullivan, John P.") is not stored. D7 `initials` are the
+  # middle initials.
+  last_name: lastname
+  first_name: firstname
+  middle_name: initials
+  prefix: prefix
+  suffix: suffix
+  # Parts D7 has no counterpart for are cleared (setting bibcite's computed
+  # `name` would re-parse the whole name and overwrite the parts above).
+  leading_title:
+    plugin: default_value
+    default_value: null
+  nick:
+    plugin: default_value
+    default_value: null
+destination:
+  plugin: 'entity:bibcite_contributor'
+migration_dependencies:
+  required: {  }
+  optional: {  }

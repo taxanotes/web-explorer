@@ -50,6 +50,10 @@ use Drupal\migrate\Row;
  *   imported unpublished (Scratchpads parks removed names under a root called
  *   "Deleted taxa", which is the default). Overridable per instance with
  *   $settings['taxanotes_import']['unpublished_roots'].
+ * - with_reference_only: TRUE restricts the rows to the terms whose
+ *   protologue reference (field_reference) is set, for the pass that links
+ *   the taxon to the migrated reference entity (taxanotes_d7_taxon_reference)
+ *   after the literature import; it saves only those nodes.
  * - key / database_state_key, track_changes, ignore_map, constants: see
  *   SqlBase and SourcePluginBase.
  *
@@ -170,6 +174,16 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
     // source).
     $this->joinItisFields($query, 'td');
 
+    if (!empty($this->configuration['with_reference_only'])) {
+      if (!$schema->tableExists('field_data_field_reference')) {
+        // No reference field on the D7 site: no term has a reference.
+        $query->alwaysFalse();
+      }
+      else {
+        $query->isNotNull('ref.field_reference_nid');
+      }
+    }
+
     return $query;
   }
 
@@ -240,6 +254,11 @@ final class ScratchpadsD7Taxon extends ScratchpadsD7Base {
    * number of terms in the vocabulary, which is one indexed lookup.
    */
   protected function doCount() {
+    if (!empty($this->configuration['with_reference_only'])) {
+      // The restricted set is small (one row per term with a protologue);
+      // the full query's count is affordable and the only exact one.
+      return (int) $this->query()->countQuery()->execute()->fetchField();
+    }
     $query = $this->select('taxonomy_term_data', 'td');
     $query->innerJoin('taxonomy_vocabulary', 'tv', '[td].[vid] = [tv].[vid]');
     $this->addBundleCondition($query);

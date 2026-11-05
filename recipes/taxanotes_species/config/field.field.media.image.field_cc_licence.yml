@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.media.field_cc_licence
+    - media.type.image
+  module:
+    - options
+id: media.image.field_cc_licence
+field_name: field_cc_licence
+entity_type: media
+bundle: image
+label: Licence
+description: 'The Creative Commons licence of the image (the Scratchpads creative_commons field: the same nine choices).'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: list_string

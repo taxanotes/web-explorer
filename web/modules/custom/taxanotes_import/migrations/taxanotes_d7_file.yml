@@ -1,0 +1,55 @@
+id: taxanotes_d7_file
+label: 'Scratchpads (Drupal 7) files to file entities: literature attachments and the images the instance uses'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - 'Drupal 7'
+source:
+  plugin: scratchpads_d7_file
+  # field_file on biblio nodes (the attachments) and the image files placed
+  # on spm nodes (field_media) or tagged with a taxon of the instance
+  # vocabulary (field_taxonomic_name on the file): the plugin's defaults. The
+  # file must exist under $settings['taxanotes_import']['source_files_dir']
+  # on this machine; a file that is not there skips its row with a message
+  # (migrate:messages taxanotes_d7_file lists them) and the reference or
+  # media item is imported without it. An image the image toolkit cannot
+  # render (TIFF) is skipped with its own message.
+  track_changes: true
+process:
+  # The D7 fid is kept as the file id (one database per instance).
+  fid: fid
+  _image_supported:
+    plugin: skip_on_empty
+    method: row
+    source: image_supported
+    message: 'Image type the image toolkit cannot render (no image style can be derived from it)'
+  _source_path:
+    plugin: skip_on_empty
+    method: row
+    source: source_path
+    message: 'Source file is not available locally'
+  # Copied (not moved) into public://scratchpads/<D7 relative path>; a file
+  # already there is reused, so a re-run copies nothing.
+  uri:
+    plugin: file_copy
+    source:
+      - source_path
+      - destination_uri
+    file_exists: 'use existing'
+    move: false
+  filename: filename
+  filemime: filemime
+  filesize: filesize
+  status:
+    plugin: default_value
+    default_value: 1
+  created: timestamp
+  changed: timestamp
+  uid:
+    plugin: default_value
+    default_value: 1
+destination:
+  plugin: 'entity:file'
+migration_dependencies:
+  required: {  }
+  optional: {  }

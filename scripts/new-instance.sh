@@ -12,10 +12,10 @@
 # web/sites/<subdir>/ with the generic settings.php and a generated
 # settings.local.php, creates the database, installs Drupal, sets the themes,
 # applies the taxanotes_front recipe (which applies taxanotes_base: taxon
-# type, roles, tree, import module, site identity; then the front page, the
-# About page, the menu and the taxon page blocks), installs the instance's
-# logo, runs the four Scratchpads migrations, rebuilds caches and prints the
-# URL. Re-running it on an existing instance changes nothing that is already
+# type, roles, literature, tree, import module, site identity; then the front
+# page, the About page, the menu and the taxon page blocks), installs the instance's
+# logo, runs the eleven Scratchpads migrations (taxa, literature, then the
+# species pages and images), rebuilds caches and prints the URL. Re-running it on an existing instance changes nothing that is already
 # in place (migrations only import rows that changed in Drupal 7; the recipe
 # creates blocks and views only when they are missing and re-seeds the site
 # texts from instance.yml).
@@ -134,6 +134,13 @@ db_host="$(env_get DB_HOST)"
 db_host="${db_host:-db}"
 migrate_user="$(env_get MIGRATE_DB_USER)"
 admin_pass="$(env_get ADMIN_PASSWORD)"
+# The D7 public files directory as PHP reaches it in this environment: .env
+# SOURCE_FILES_DIR, else instance.yml source.files.<environment>. Empty: the
+# files and the images are not on this machine and their migrations are
+# skipped (the references import without attachments, the species pages
+# without images; the taxon pages show no gallery).
+source_files_dir="$(env_get SOURCE_FILES_DIR)"
+[ -n "$source_files_dir" ] || source_files_dir="$(inst source.files)"
 
 # ---------------------------------------------------------------------------
 log "ddev hostnames: .ddev/config.instances.yaml (all instances)"
@@ -195,13 +202,17 @@ gen_sites_block() {
 }
 begin='// BEGIN taxanotes instances (generated; do not edit inside this block)'
 end='// END taxanotes instances'
-block="$(gen_sites_block)"
+# The block goes through a file: macOS awk rejects a newline in a -v value
+# ("newline in string"), which a block of two or more lines has.
+block_file="$(mktemp)"
+gen_sites_block > "$block_file"
 tmp="$(mktemp)"
-awk -v begin="$begin" -v end="$end" -v block="$block" '
-  $0 == begin { print; if (block != "") print block; skip = 1; next }
+awk -v begin="$begin" -v end="$end" -v block_file="$block_file" '
+  $0 == begin { print; while ((getline line < block_file) > 0) print line; close(block_file); skip = 1; next }
   $0 == end { skip = 0 }
   !skip { print }
 ' web/sites/sites.php > "$tmp"
+rm -f "$block_file"
 if cmp -s "$tmp" web/sites/sites.php; then
   note "unchanged"
   rm -f "$tmp"
@@ -213,11 +224,16 @@ fi
 # ---------------------------------------------------------------------------
 log "Site directory: $site_dir"
 mkdir -p "$site_dir/files"
+# shellcheck disable=SC2016  # the grep pattern is a regex, not an expansion
 if [ ! -f "$site_dir/settings.php" ]; then
   cp scripts/templates/settings.php "$site_dir/settings.php"
   note "settings.php copied from scripts/templates/settings.php"
 elif cmp -s scripts/templates/settings.php "$site_dir/settings.php"; then
   note "settings.php is the generic template"
+elif grep -Eq '^\$(databases\[|settings\[.hash_salt.\])' "$site_dir/settings.php"; then
+  # The installer's own writes (see the restore after site:install below): a
+  # credential or salt in a file that is committed. Never carried on with.
+  die "$site_dir/settings.php holds database credentials or a hash salt: restore it with 'cp scripts/templates/settings.php $site_dir/settings.php' (both come from .env through settings.local.php) and run again"
 else
   note "settings.php exists and is not the generic template: left alone"
 fi
@@ -360,8 +376,24 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
+# Taxa first (users, taxa, parents, revisions), then the literature
+# (contributors, keywords, the files, the references with their links to
+# taxa, the pass that points each taxon at its protologue reference entity),
+# then the images as media items and the species pages. The two file-based
+# migrations (files, media) run only when the D7 files directory is
+# configured for this environment (source_files_dir above).
 if [ -n "$migrate_user" ] && [ -n "$(inst source.vocabulary)" ]; then
-  for m in taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision; do
+  migrations=(taxanotes_d7_user taxanotes_d7_taxon taxanotes_d7_taxon_parent taxanotes_d7_taxon_revision
+    taxanotes_d7_biblio_contributor taxanotes_d7_biblio_keyword)
+  if [ -n "$source_files_dir" ]; then
+    note "D7 files: $source_files_dir (attachments and images are copied from it)"
+    migrations+=(taxanotes_d7_file taxanotes_d7_biblio taxanotes_d7_taxon_reference taxanotes_d7_media_image)
+  else
+    note "D7 files: not on this machine (no SOURCE_FILES_DIR in .env, no source.files.$environment in instance.yml): the attachments and the images are skipped (taxanotes_d7_file, taxanotes_d7_media_image); references and species pages import without them"
+    migrations+=(taxanotes_d7_biblio taxanotes_d7_taxon_reference)
+  fi
+  migrations+=(taxanotes_d7_spm)
+  for m in "${migrations[@]}"; do
     note "migrate:import $m"
     in_web drush --uri="$url" migrate:import "$m" --feedback=2000
   done

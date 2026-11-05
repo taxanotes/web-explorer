@@ -150,3 +150,7 @@ instances/*/data-imports/
 # Per-instance assets (logo.png): image rights are not cleared for committing;
 # scripts/new-instance.sh copies them into the site's files directory.
 instances/*/assets/
+
+# Per-developer ddev compose files (bind mounts of local D7 files directories);
+# copy the committed .dist next to it (see instances/README.md).
+.ddev/docker-compose.*.local.yaml
