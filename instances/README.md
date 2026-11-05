@@ -9,6 +9,7 @@ things, all in `instances/<slug>/`:
 | `instance.yml` | yes | everything that describes the instance and is not secret (below) |
 | `.env` | **no** (`**/.env` is gitignored; the script keeps it mode 600) | hash salt, database credentials, site mail, optional admin password; template `instances/.env.example` |
 | `data-imports/` | **no** (`instances/*/data-imports/`, `*.sql`, `*.sql.gz` are gitignored) | source data: dumps, spreadsheets |
+| `assets/` | **no** (`instances/*/assets/` is gitignored: image rights are not cleared for committing) | `logo.png`: the site logo; the script copies it to `web/sites/<subdir>/files/instance/logo.png` and points the theme's `logo.path` at it. No file: the theme's own logo |
 
 Nothing else is per instance: no per-site config export, no per-site module
 or recipe, no fork. Site configuration lives in the instance's database (and
@@ -28,13 +29,18 @@ in `web/sites/sites.php` (generated block), creates `web/sites/<sites_subdir>/`
 with the generic `settings.php` (a verbatim copy of
 `scripts/templates/settings.php`, identical for every instance) and a
 `settings.local.php` generated from `instance.yml` + `.env`, creates the
-database in the ddev db container, installs Drupal, applies
-`recipes/taxanotes_base` (which pulls in `taxanotes_taxon` and
-`taxanotes_users`), sets the themes, runs the four `taxanotes_import`
-migrations when `.env` names a Scratchpads database, rebuilds caches and
-prints the URL. A second run on the same instance changes nothing that is
-already in place; a changed `instance.yml`/`.env` regenerates
-`settings.local.php` (a hand-written one, like Myriatrix's, is left alone).
+database in the ddev db container, installs Drupal, sets the themes, applies
+`recipes/taxanotes_front` (which pulls in `taxanotes_base`, and through it
+`taxanotes_taxon` and `taxanotes_users`: the taxon type, the roles, the tree,
+the import module, the site identity, then the front page, the About page,
+the main menu and the taxon page blocks), installs the logo, runs the four
+`taxanotes_import` migrations when `.env` names a Scratchpads database,
+rebuilds caches and prints the URL. A second run on the same instance changes
+nothing that is already in place: blocks and views are created only when
+missing (an instance may move or edit them), the site texts are seeded again
+from `instance.yml` (a key left out keeps what the site has); a changed
+`instance.yml`/`.env` regenerates `settings.local.php` (a hand-written one,
+like Myriatrix's, is left alone).
 
 A Drupal 7 source must be reachable from the web container: the local
 Scratchpads stack's MySQL is on the `scratchpads2_default` Docker network that
@@ -51,6 +57,17 @@ site:
   slogan: '…'                      # system.site:slogan (may be empty)
   theme: olivero                   # default theme (enabled and set by the script)
   admin_theme: claro               # administration theme
+  # Site texts (HTML), recipe inputs of taxanotes_front -> taxanotes_front.settings,
+  # editable afterwards at /admin/config/system/taxanotes-front. Each is
+  # optional: a key left out keeps the site's current text (a generic one on
+  # the first apply).
+  front_title: 'Welcome, …'        # front page title; empty/omitted: "Welcome to <name>"
+  front_intro: |                   # front page introduction (the page body of /front)
+    <p>…</p>
+  about_body: |                    # body of the placeholder About page (/about)
+    <p>…</p>
+  footer_text: |                   # footer text (licence, credits)
+    <p>…</p>
 hostnames:                         # per environment; the first of each list is the canonical
   ddev:                            # URL (https) and trusted_host_patterns are built from the list
     - mormyrids.taxanotes-dev.ddev.site   # of the environment a script runs in. A plain list is
@@ -109,8 +126,28 @@ local setup. A third instance copies this shape: both lists, its own
 6. Commit `instances/<slug>/instance.yml`, `web/sites/sites.php` and
    `.ddev/config.instances.yaml` (and `web/sites/<subdir>/settings.php`, which
    is the unchanged template). Never `.env`, `settings.local.php`, `files/`,
-   `data-imports/` or dumps (`.gitignore` covers `instances/*/data-imports/`,
-   `*.sql`, `*.sql.gz`).
+   `assets/`, `data-imports/` or dumps (`.gitignore` covers
+   `instances/*/assets/`, `instances/*/data-imports/`, `*.sql`, `*.sql.gz`).
+
+## The front page
+
+`recipes/taxanotes_front` (applied by the script) gives every instance the
+same public face, in the spirit of the Scratchpads front page, filled with the
+instance's values:
+
+| Where (Olivero) | What | Source |
+|---|---|---|
+| page title + content of `/front` (`system.site:page.front`) | `front_title` ("Welcome to <name>" when empty), `front_intro` | `taxanotes_front.settings` |
+| sidebar, front page only | *Find a taxon* (search to `/taxa`), *Browse the classification* (the lazily loaded tree, `node_tree`), *In numbers* (taxa in all and per rank) | blocks `taxanotes_front_search`, `block-node-tree-hierarchicaltaxontree`, `taxanotes_front_summary` |
+| below the content, front page only | *Recently added taxa*, *Recently updated taxa* (10 each, with a link to `/taxa`) | view `taxanotes_recent` |
+| footer | `footer_text` | block `taxanotes_front_text` |
+| main menu | Home (standard profile), Taxa (view `taxa`), Classification (`/taxonomy-tree`), About (`/about`, `about_body`) | static links of `taxanotes_front` |
+| taxon page (`/node/<nid>`) | authors under the name, rank, status, parent, vernacular names, protologue, description; then *Classification*: a link to the taxon in the tree and its child taxa | view display `node.taxon.default` (taxanotes_taxon), view `taxanotes_taxon_page` |
+
+Blocks are placed in the instance's default theme (`site.theme`); the
+regions above are Olivero's, any other theme gets them in `content`.
+Literature, pages, media and biographies have no blocks yet: they come with
+their migrations.
 
 The script never installs over data: Drupal is installed only into an
 **empty** database. A database with tables that does not bootstrap (db

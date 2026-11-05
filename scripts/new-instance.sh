@@ -10,12 +10,15 @@
 # when missing) and then, step by step and only where something is missing:
 # registers the hostnames with ddev, maps them in web/sites/sites.php, creates
 # web/sites/<subdir>/ with the generic settings.php and a generated
-# settings.local.php, creates the database, installs Drupal, applies the
-# taxanotes_base recipe (taxon type, roles, tree, import module, site
-# identity), sets the themes, runs the four Scratchpads migrations, rebuilds
-# caches and prints the URL. Re-running it on an existing instance changes
-# nothing that is already in place (migrations only import rows that changed
-# in Drupal 7).
+# settings.local.php, creates the database, installs Drupal, sets the themes,
+# applies the taxanotes_front recipe (which applies taxanotes_base: taxon
+# type, roles, tree, import module, site identity; then the front page, the
+# About page, the menu and the taxon page blocks), installs the instance's
+# logo, runs the four Scratchpads migrations, rebuilds caches and prints the
+# URL. Re-running it on an existing instance changes nothing that is already
+# in place (migrations only import rows that changed in Drupal 7; the recipe
+# creates blocks and views only when they are missing and re-seeds the site
+# texts from instance.yml).
 #
 # It never installs over an existing database: Drupal is installed only when
 # the instance's database holds no table at all. A database with tables that
@@ -87,6 +90,10 @@ env_get() {
 log "Instance $slug: reading $yml"
 site_name="$(inst site.name)"
 site_slogan="$(inst site.slogan)"
+front_title="$(inst site.front_title)"
+front_intro="$(inst site.front_intro)"
+about_body="$(inst site.about_body)"
+footer_text="$(inst site.footer_text)"
 theme="$(inst site.theme)"
 admin_theme="$(inst site.admin_theme)"
 subdir="$(inst drupal.sites_subdir)"
@@ -303,15 +310,8 @@ if [ "$install" -eq 1 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-log "Recipe: taxanotes_base (taxon type, roles, tree, import module, site identity)"
-croot="$(in_web pwd)"
-in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_base" \
-  --input="taxanotes_base.site_name=$site_name" \
-  --input="taxanotes_base.site_slogan=$site_slogan" \
-  --input="taxanotes_base.site_mail=$site_mail"
-
-# ---------------------------------------------------------------------------
 log "Themes"
+# Before the recipe: its blocks are placed in the default theme.
 if [ -n "$theme" ]; then
   in_web drush --uri="$url" theme:enable "$theme" --yes
   in_web drush --uri="$url" config:set system.theme default "$theme" --yes
@@ -319,6 +319,43 @@ fi
 if [ -n "$admin_theme" ]; then
   in_web drush --uri="$url" theme:enable "$admin_theme" --yes
   in_web drush --uri="$url" config:set system.theme admin "$admin_theme" --yes
+fi
+
+# ---------------------------------------------------------------------------
+log "Recipe: taxanotes_front (applies taxanotes_base: taxon type, roles, tree, import module, site identity; then front page, About page, menu, taxon page blocks)"
+croot="$(in_web pwd)"
+recipe_inputs=(
+  --input="taxanotes_base.site_name=$site_name"
+  --input="taxanotes_base.site_slogan=$site_slogan"
+  --input="taxanotes_base.site_mail=$site_mail"
+)
+# A text left out of instance.yml keeps the site's current value (the recipe
+# input defaults to the existing config, or to a generic text on first apply).
+[ -n "$front_title" ] && recipe_inputs+=(--input="taxanotes_front.front_title=$front_title")
+[ -n "$front_intro" ] && recipe_inputs+=(--input="taxanotes_front.front_intro=$front_intro")
+[ -n "$about_body" ] && recipe_inputs+=(--input="taxanotes_front.about_body=$about_body")
+[ -n "$footer_text" ] && recipe_inputs+=(--input="taxanotes_front.footer_text=$footer_text")
+in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_front" "${recipe_inputs[@]}"
+
+# ---------------------------------------------------------------------------
+log "Logo: $inst_dir/assets/logo.png"
+# instances/<slug>/assets/ is gitignored (image rights are not cleared for
+# committing); a logo.png there is copied into the site's files directory and
+# set as the theme's logo. No file: the theme keeps its own logo.
+logo_src="$inst_dir/assets/logo.png"
+if [ -f "$logo_src" ] && [ -n "$theme" ]; then
+  mkdir -p "$site_dir/files/instance"
+  if cmp -s "$logo_src" "$site_dir/files/instance/logo.png"; then
+    note "$site_dir/files/instance/logo.png is up to date"
+  else
+    cp "$logo_src" "$site_dir/files/instance/logo.png"
+    note "copied to $site_dir/files/instance/logo.png"
+  fi
+  in_web drush --uri="$url" config:set "$theme.settings" logo.use_default false --input-format=yaml --yes
+  in_web drush --uri="$url" config:set "$theme.settings" logo.path "sites/$subdir/files/instance/logo.png" --yes
+  note "$theme.settings logo.path = sites/$subdir/files/instance/logo.png"
+else
+  note "no logo file: the theme's own logo stays"
 fi
 
 # ---------------------------------------------------------------------------

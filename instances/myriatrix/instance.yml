@@ -8,6 +8,18 @@ site:
   slogan: ''
   theme: olivero
   admin_theme: claro
+  # Front page, About page and footer texts (HTML), seeded through the
+  # taxanotes_front recipe; see instances/README.md. The texts below are the
+  # Drupal 7 site's own (front_page_welcome_* variables, the "About us" page).
+  front_title: 'Welcome to Myriatrix'
+  front_intro: |
+    <p>Myriatrix is a Virtual Research Environment proposed to the International Society of Myriapodology. It is currently under construction. If you would like to become a contributor or editor, please log in (top right) and request an account; if you wish to contribute but do not wish to have an account, please contact us.</p>
+    <p>Today we need sharing more than ever. Today, we need to make our data findable, accessible, interoperable and reusable. Today, we need to make our software Open Source and our publications Open Access. The Principles of Open Science are at the core of Myriatrix.</p>
+  about_body: |
+    <p>Myriatrix is a Scratchpads-based Virtual Research Environment proposed to the International Society of Myriapodology. It allows collaborative editing and linking of the taxonomy, literature, and morphological traits of the many-legged terrestrial invertebrate groups Onychophora and Myriapoda (to the inclusion of the extinct, aquatic Euthycarcinoidea). The classification (taxonomic backbone) is based on the Catalogue of Life (CoL) 2015 release.</p>
+    <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history have been carried over from the Scratchpads site; the literature, pages, media and biographies follow with later migrations.</p>
+  footer_text: |
+    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
 hostnames:
   ddev:
     - taxanotes-dev.ddev.site

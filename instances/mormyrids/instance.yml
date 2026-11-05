@@ -7,6 +7,18 @@ site:
   slogan: 'Mintotom mi ne vé ?'
   theme: olivero
   admin_theme: claro
+  # Front page, About page and footer texts (HTML), seeded through the
+  # taxanotes_front recipe; see instances/README.md. The welcome text is the
+  # Drupal 7 site's own (front_page_welcome_* variables).
+  front_title: 'Welcome, mormyrophile!'
+  front_intro: |
+    <p><strong>Looking for information on mormyrid fishes?</strong> You're in the right place. Here you'll find a classification reflecting the most recent published changes to mormyrid taxonomy, a page for each mormyrid genus and species including a photograph of the type specimen, information on the electric organ discharge waveform (EOD) if known, and a bibliography including all original species descriptions and many other important works on mormyrids. We hope this site is useful to the specialist and general public alike. Have something to contribute? Say hello and request an account at the login link (upper right). This is an ongoing labor of love. Check back often to see what's been added.</p>
+    <p><strong>How to use this site:</strong> Use the search box if you know the name of the taxon you're looking for, or start from the classification tree.</p>
+  about_body: |
+    <p>A Scratchpad of the African weakly electric fishes (Mormyridae): a classification reflecting the most recent published changes to mormyrid taxonomy, with a page for each genus and species.</p>
+    <p>This is the Taxanotes (Drupal 11) edition of the site: the classification, its names and their revision history have been carried over from the Scratchpads site; the literature, pages, media and biographies follow with later migrations.</p>
+  footer_text: |
+    <p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>. Originally built on <a href="https://scratchpads.org/">Scratchpads</a>, a Natural History Museum (London) platform.</p>
 # Hostnames per environment; the first of each list is the canonical URL.
 # ddev: served by this checkout's ddev project (multisite, web/sites/sites.php).
 # production: one checkout per instance (see instances/README.md).
