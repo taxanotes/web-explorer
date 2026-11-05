@@ -32,6 +32,12 @@ final class PageHooks {
       'taxanotes_front_recent_columns' => [
         'variables' => ['columns' => [], 'empty' => ''],
       ],
+      'taxanotes_nomenclature' => [
+        'variables' => ['rows' => [], 'synonyms' => []],
+      ],
+      'taxanotes_front_footer_logos' => [
+        'variables' => ['logos' => []],
+      ],
     ];
   }
 

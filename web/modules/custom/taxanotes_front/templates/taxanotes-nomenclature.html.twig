@@ -1,0 +1,36 @@
+{#
+/**
+ * @file
+ * The Nomenclature section of a taxon page (block taxanotes_taxon_nomenclature).
+ *
+ * The rows continue the taxon's field group: the theme styles
+ * .taxanotes-nomenclature__rows > .field like the node's own fields.
+ *
+ * Available variables:
+ * - rows: the rendered nomenclature fields that have a value, keyed by
+ *   field name, in display order (each a field with an inline label).
+ * - synonyms: the invalid child taxa, each with title, url (a Url object),
+ *   authors and reason (strings, may be empty).
+ */
+#}
+<div class="taxanotes-nomenclature">
+  <div class="taxanotes-nomenclature__rows">
+    {{ rows }}
+    {% if synonyms %}
+      <div class="field field--name-synonyms field--label-inline clearfix taxanotes-nomenclature__synonyms">
+        <div class="field__label">{{ 'Synonyms'|t }}</div>
+        <div class="field__item">
+          <ul class="taxanotes-synonyms">
+            {% for synonym in synonyms %}
+              <li>
+                <a href="{{ synonym.url.toString() }}">{{ synonym.title }}</a>
+                {%- if synonym.authors %} <span class="taxanotes-synonyms__authors">{{ synonym.authors }}</span>{% endif -%}
+                {%- if synonym.reason %} <span class="taxanotes-synonyms__reason">({{ synonym.reason }})</span>{% endif -%}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>

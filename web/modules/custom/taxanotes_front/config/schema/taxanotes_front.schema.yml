@@ -17,6 +17,22 @@ taxanotes_front.settings:
     footer_text:
       type: text
       label: 'Footer text (HTML)'
+    footer_logos:
+      type: sequence
+      label: 'Footer logos (the instance scripts fill this from assets/footer/)'
+      sequence:
+        type: mapping
+        label: 'Logo'
+        mapping:
+          file:
+            type: string
+            label: 'Path of the image under the public files directory (png or svg)'
+          url:
+            type: string
+            label: 'Link (optional)'
+          alt:
+            type: label
+            label: 'Alternative text'
 
 block.settings.taxanotes_front_text:
   type: block_settings
@@ -48,3 +64,11 @@ block.settings.taxanotes_front_recent:
     items:
       type: integer
       label: 'Items per column'
+
+block.settings.taxanotes_taxon_nomenclature:
+  type: block_settings
+  label: 'Nomenclature block'
+
+block.settings.taxanotes_front_footer_logos:
+  type: block_settings
+  label: 'Footer logos block'
