@@ -20,7 +20,7 @@ settings:
   handler: 'default:file'
   handler_settings: {  }
   file_directory: 'literature/[date:custom:Y]'
-  file_extensions: 'pdf doc docx odt txt rtf html xml csv xls xlsx zip'
+  file_extensions: 'pdf doc docx odt txt rtf csv xls xlsx'
   max_filesize: ''
   description_field: true
 field_type: file

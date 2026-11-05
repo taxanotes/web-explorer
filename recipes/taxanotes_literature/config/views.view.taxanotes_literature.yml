@@ -93,7 +93,7 @@ display:
         author:
           id: author
           table: bibcite_reference__author
-          field: author
+          field: author_target_id
           relationship: none
           group_type: group
           admin_label: ''
@@ -572,7 +572,21 @@ display:
           entity_field: type
           plugin_id: bundle
           operator: in
-          value: {  }
+          value:
+            book: book
+            book_chapter: book_chapter
+            journal_article: journal_article
+            conference_paper: conference_paper
+            conference_proceedings: conference_proceedings
+            newspaper_article: newspaper_article
+            magazine_article: magazine_article
+            thesis: thesis
+            report: report
+            personal: personal
+            manuscript: manuscript
+            unpublished: unpublished
+            database: database
+            miscellaneous: miscellaneous
           group: 1
           exposed: true
           expose:
@@ -589,7 +603,7 @@ display:
             multiple: false
             remember_roles:
               authenticated: authenticated
-            reduce: false
+            reduce: true
           is_grouped: false
           group_info:
             label: ''
@@ -894,7 +908,7 @@ display:
         author:
           id: author
           table: bibcite_reference__author
-          field: author
+          field: author_target_id
           relationship: none
           group_type: group
           admin_label: ''
@@ -1240,7 +1254,7 @@ display:
         author:
           id: author
           table: bibcite_reference__author
-          field: author
+          field: author_target_id
           relationship: none
           group_type: group
           admin_label: ''
