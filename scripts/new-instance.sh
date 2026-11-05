@@ -224,11 +224,16 @@ fi
 # ---------------------------------------------------------------------------
 log "Site directory: $site_dir"
 mkdir -p "$site_dir/files"
+# shellcheck disable=SC2016  # the grep pattern is a regex, not an expansion
 if [ ! -f "$site_dir/settings.php" ]; then
   cp scripts/templates/settings.php "$site_dir/settings.php"
   note "settings.php copied from scripts/templates/settings.php"
 elif cmp -s scripts/templates/settings.php "$site_dir/settings.php"; then
   note "settings.php is the generic template"
+elif grep -Eq '^\$(databases\[|settings\[.hash_salt.\])' "$site_dir/settings.php"; then
+  # The installer's own writes (see the restore after site:install below): a
+  # credential or salt in a file that is committed. Never carried on with.
+  die "$site_dir/settings.php holds database credentials or a hash salt: restore it with 'cp scripts/templates/settings.php $site_dir/settings.php' (both come from .env through settings.local.php) and run again"
 else
   note "settings.php exists and is not the generic template: left alone"
 fi
