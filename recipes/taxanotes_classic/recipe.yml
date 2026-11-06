@@ -129,14 +129,14 @@ config:
         settings.node_type: ${first_column}
     block.block.taxanotes_classic_taxon_tree:
       placeBlockInDefaultTheme:
-        plugin: block-node-tree-hierarchicaltaxontree
+        plugin: node_tree
         region:
           taxanotes_classic: sidebar
           olivero: sidebar
         default_region: content
         weight: 0
         settings:
-          id: block-node-tree-hierarchicaltaxontree
+          id: node_tree
           label: 'Classification'
           label_display: visible
           provider: node_tree
