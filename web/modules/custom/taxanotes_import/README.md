@@ -418,15 +418,23 @@ own parser; the two readers yield the same rows, so a CSV export of the
 workbook imports identically. The worksheet is `Template` (`--sheet`, or the
 first sheet when there is none of that name). The first non-empty row is the
 header, matched to the template's column names case-insensitively, ignoring
-underscores, hyphens and the space before a digit (`Unit name1`). A column
-the sheet lacks clears its field (the sheet is the owner's whole record of a
-taxon); a column the taxon type has no field for (Taxonomic revisions, the
+underscores, hyphens and the space before a digit (`Unit name1`). A
+template column the sheet lacks would clear its field on every taxon (the
+sheet is the owner's whole record of a taxon), so the command refuses such a
+sheet after the analysis unless `--allow-missing-columns` says the clearing
+is meant (a missing column without a field, Taxonomic revisions say, loses
+nothing); a column the taxon type has no field for (Taxonomic revisions, the
 vernacular Source GUID/NID/Title) is read, named in the report and not
 imported; a column the template does not know is listed and ignored. Cells
-are trimmed, an empty cell is NULL. A cell with markup (the exporter keeps
-the `<em>` of italicised names) lands in a formatted text field as
-`basic_html`, a plain cell as `plain_text`; string fields take the cell as
-it is, cut to the field's 255 characters with a warning message. Unit
+are trimmed (no-break spaces too), an empty cell is NULL; a CSV may be
+comma-, semicolon- or tab-delimited (sniffed from the header line). Only
+the notes columns keep markup: a cell with markup (the exporter keeps the
+`<em>` of italicised names) lands in a formatted text field as
+`basic_html`, a plain cell as `plain_text`; every other column is plain
+text, tags removed and entities decoded (the exporter writes `<em>` into
+"Synonymy by" and "Designation by" too, whose fields would show the tags),
+then cut to the field's 255 characters with a warning message and a line in
+the report's headline, so the owner can shorten the cell. Unit
 indicator/name 1..4 fold into `field_unit_names` as the D7 track does; the
 vernacular columns into one `field_vernacular_names` item when the name is
 set. The reader is `src/Sheet/SheetReader.php`, the rules
@@ -475,11 +483,17 @@ folded: the row is imported as a new taxon and listed under "ambiguous". Off
 by default; the report says how many rows it would match, so run
 `--report-only` first. After such a re-keying run the D7 track is finished
 for that instance: `taxanotes_d7_taxon` maps the old GUIDs and would write
-them back.
+them back. The taxa the sheet does not list keep their 2022 parent GUID
+while their parent took the sheet's, and the tree (which lists children by
+`field_parent_guid`, the node_tree `parent_id_field`) would lose them, so
+after the link pass the command rewrites `field_parent_guid` from the parent
+reference on every taxon the sheet does not list whose parent now carries
+another GUID (`src/Sheet/ParentGuidSync.php`; a revision "Imported from
+sheet <file>: parent GUID ... re-keyed to ..." where the current revision is
+history, in place on a placeholder); the analysis says how many beforehand.
 
-**What the import does.** The first pass writes title, `uid` 1, `status` 1
-(the sheet has no status column: a taxon the site had unpublished is
-published again), `field_guid` = the row id, `field_parent_guid` /
+**What the import does.** The first pass writes title, `field_guid` = the
+row id, `field_parent_guid` /
 `field_parent_term_name` (the parent as given, or as resolved by name),
 `field_rank`, `field_usage`, `field_unacceptability_reason`,
 `field_unit_names`, `field_authors`, `field_page_number`,
@@ -488,6 +502,9 @@ published again), `field_guid` = the row id, `field_parent_guid` /
 fields the sheet carries (`field_type_material_notes`,
 `field_family_level_name_origins`, `field_designation_by`,
 `field_synonymy_by`, `field_taxonomic_notes`, `field_biological_notes`).
+A created taxon is published and owned by uid 1; an existing one keeps its
+status and owner (the sheet has no such columns: `create_only_properties`
+of the destination), so a taxon unpublished on the site stays unpublished.
 `field_legacy_tid`, `field_weight`, `created` and the fields the template
 has no column for are left alone. The node is found through the D7 track's
 id map, else by `field_guid` (process plugin `taxanotes_guid_lookup`, which
@@ -504,18 +521,25 @@ message names the row. A junior homonym comes across as the owner records
 it: Usage `invalid`, Unacceptability Reason `junior homonym`, the valid
 parent in Parent GUID, nothing else.
 
-**Revisions.** The destination is `taxanotes_entity_node` with the D7 track's
-placeholder prefixes but a log that is *not* one of them: a created node's
-first revision and the revision a changed row adds to a node whose current
-revision is real history (a D7 revision, an edit made here, an earlier sheet
-import) are logged "Imported from sheet <file> row N", author uid 1, the
-time of the run. A row that changes nothing saves nothing: no revision, the
-log and `changed` untouched. A node whose current revision is still a D7
-placeholder ("Migrated from Scratchpads GUID ...", an instance that never
-ran the revision import) is updated in place as core does. Run the D7 track
-to completion (including `taxanotes_d7_taxon_revision`) before the first
-sheet import, or the revision import later keeps a sheet revision it does
-not know as history.
+**Revisions.** All three passes use the destination `taxanotes_entity_node`.
+The first pass has the D7 track's placeholder prefixes but a log that is
+*not* one of them: a created node's first revision and the revision a
+changed row adds to a node whose current revision is real history (a D7
+revision, an edit made here, an earlier sheet import) are logged "Imported
+from sheet <file> row N", author uid 1, the time of the run. A row that
+changes nothing saves nothing: no revision, the log (a placeholder stays a
+placeholder) and `changed` untouched. A node whose current revision is still
+a D7 placeholder ("Migrated from Scratchpads GUID ...", an instance that
+never ran the revision import) is updated in place as core does. The two
+link passes apply the same rule to their fields only (`overwrite_properties`)
+and count "Imported from sheet " among their placeholders: a changed link
+lands in the revision this run's first pass made (or an earlier sheet's), so
+a first import gives every taxon one revision; a link that differs on any
+other revision, say a taxon re-parented by hand on the site, becomes a new
+revision "Imported from sheet <file> row N" of its own, so every sheet change
+stays visible in the history. Run the D7 track to completion (including
+`taxanotes_d7_taxon_revision`) before the first sheet import, or the
+revision import later keeps a sheet revision it does not know as history.
 
 **Repeatability.** `drush taxanotes:import-sheet` runs the three migrations
 with `--update` semantics (every row is processed; a value edited on the
@@ -527,24 +551,30 @@ only the rows whose hash changed (`track_changes`). Rolling
 `taxanotes_sheet_taxon` back deletes the nodes the sheet created and keeps
 the ones it updated (core's rollback action for updated entities); the two
 link passes have `overwrite_properties` and their rollback keeps the links.
-Without a sheet configured the three migrations have 0 rows
-(`migrate:status` works on every instance) and `migrate:import` fails its
-requirements check with the reason.
+Without a sheet configured the source's requirements check fails, and Drush
+then hides the three migrations: `migrate:status --tag=sheet` prints an
+empty table and `migrate:import taxanotes_sheet_taxon` says only "No
+migrations found". Configure `$settings['taxanotes_import']['sheet_path']`
+to see them there, or use `drush taxanotes:import-sheet FILE`, which reports
+a missing or unreadable file itself.
 
 **What it cannot do.** Create literature (no titles in the sheet: add the
 references here, then run the import again, which fills the links); delete
-or unpublish taxa the sheet no longer lists (the report counts and the
-report file lists them; the owner decides); import the Taxonomic revisions
-column or the vernacular Source columns (no field); keep a status (every
-row is published); keep a string cell over 255 characters (cut, with a
-warning); recognise a renamed taxon without its GUID (it becomes a new
-taxon, the old one stays).
+or unpublish taxa the sheet no longer lists (the report counts them and
+lists the first 20, every one with `--list-all`; the owner decides); import
+the Taxonomic revisions column or the vernacular Source columns (no field);
+publish or unpublish (the sheet has no status column: a created taxon is
+published, an existing one keeps its status); keep a string cell over 255
+characters (cut, with a warning and a headline line); recognise a renamed
+taxon without its GUID (it becomes a new taxon, the old one stays); fold a
+name the sheet or the site has twice (listed as ambiguous, imported as new:
+the owner decides which of the pair to keep).
 
 **Running it.**
 
 ```
-drush taxanotes:import-sheet /path/to/sheet.xls --report-only   # analysis only
-drush taxanotes:import-sheet /path/to/sheet.xls [--match-names] [--sheet=Template]
+drush taxanotes:import-sheet /path/to/sheet.xls --report-only [--list-all]   # analysis only
+drush taxanotes:import-sheet /path/to/sheet.xls [--match-names] [--sheet=Template] [--allow-missing-columns]
 drush cr
 drush migrate:messages taxanotes_sheet_taxon                     # identity notes, cut cells
 drush migrate:messages taxanotes_sheet_taxon_link                # unresolved parents / accepted names
@@ -569,13 +599,24 @@ clears), else from `$settings['taxanotes_import']['sheet_path']` (with
 place; the migration YAML names no file, so one codebase serves every
 instance. Where the file goes: `instances/<slug>/data-imports/sheets/` locally
 (gitignored), `/var/www/09/<domain>/source/sheets/` on a server, mode 0600,
-never in git. The Kernel test `tests/src/Kernel/SheetImportTest.php` imports
+never in git.
+
+**Checks.** The Kernel test `tests/src/Kernel/SheetImportTest.php` imports
 `tests/fixtures/sheet.csv` twice (a root, children, a synonym with accepted
-name, a junior homonym, a duplicate GUID pair, a GUID-less row, an `<em>`
-cell) and checks the links, the derived ids and that the second run adds one
-revision to the one changed node and nothing to the others; run it with
-`vendor/bin/phpunit -c web/core/phpunit.xml.dist
-web/modules/custom/taxanotes_import/tests/src/Kernel` (`SIMPLETEST_DB` set).
+name, a junior homonym, a duplicate GUID pair, a GUID-less row, a non-GUID
+in the GUID cell, `<em>` in a notes cell and in two plain-string cells,
+no-break spaces; two taxa pre-existing as D7 placeholders, one re-parented
+by hand and one unpublished between the runs) and checks the fields, the
+links, the derived ids, that the first run gives every taxon one revision
+and leaves an unchanged placeholder untouched, and that the second run adds
+one revision to the changed node and one to the re-parented one and nothing
+to the others. From the repository root, inside ddev:
+
+```
+SIMPLETEST_DB=mysql://db:db@db/db vendor/bin/phpunit -c web/core/phpunit.xml.dist web/modules/custom/taxanotes_import/tests/src/Kernel
+vendor/bin/phpcs --standard=Drupal,DrupalPractice --extensions=php,module,inc,install,test,profile,theme,info,yml web/modules/custom/taxanotes_import
+vendor/bin/phpstan analyse        # phpstan.neon.dist at the root: level 5 over this module
+```
 
 ## Local ddev setup for the D7 track
 
