@@ -1,0 +1,42 @@
+node_tree.settings:
+  type: config_object
+  label: 'Node tree settings'
+  mapping:
+    bundles:
+      type: sequence
+      label: 'Node types that form trees'
+      sequence:
+        type: string
+        label: 'Node type'
+    parent_field:
+      type: string
+      label: 'Parent field (an entity reference to the parent node)'
+    id_field:
+      type: string
+      label: 'Identifier field (uuid, or a field whose value identifies the node in URLs and JSON)'
+    parent_id_field:
+      type: string
+      label: 'Parent identifier field (optional: a copy of the parent''s identifier on the child, for the children query and node_tree:link-parents)'
+    weight_field:
+      type: string
+      label: 'Weight field (optional: an integer field that orders siblings before the title)'
+    describes_field:
+      type: string
+      label: 'Describes field (optional: a reference field on other node types pointing at a tree node, so their pages get its lineage breadcrumb)'
+    path:
+      type: string
+      label: 'Path of the tree page'
+    title:
+      type: label
+      label: 'Title of the tree page'
+    breadcrumb:
+      type: boolean
+      label: 'Replace the breadcrumb of tree nodes with their lineage'
+
+block.settings.node_tree:
+  type: block_settings
+  label: 'Node tree block'
+
+block.settings.node_tree_content:
+  type: block_settings
+  label: 'Node tree content block'

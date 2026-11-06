@@ -1,7 +1,23 @@
 services:
-  # The lineage breadcrumb of taxon and species pages (Home › root › … ›
-  # parent › current), ahead of core's path-based builder (priority 0).
+  _defaults:
+    autowire: true
+  # The settings and the queries behind the tree.
+  node_tree:
+    class: Drupal\node_tree\NodeTree
+  Drupal\node_tree\NodeTree: '@node_tree'
+  # The lineage breadcrumb of tree nodes (Home › root › … › parent › the
+  # node) and of the nodes that describe one, ahead of core's path-based
+  # builder (priority 0).
   node_tree.breadcrumb:
-    class: Drupal\node_tree\Breadcrumb\TaxonBreadcrumbBuilder
+    class: Drupal\node_tree\Breadcrumb\LineageBreadcrumbBuilder
     tags:
       - { name: breadcrumb_builder, priority: 100 }
+  # The tree page routes take their path from the settings.
+  node_tree.route_subscriber:
+    class: Drupal\node_tree\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+  node_tree.config_subscriber:
+    class: Drupal\node_tree\EventSubscriber\ConfigSubscriber
+    tags:
+      - { name: event_subscriber }

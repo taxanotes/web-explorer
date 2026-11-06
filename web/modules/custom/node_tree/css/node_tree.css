@@ -1,16 +1,62 @@
-/* */
+/**
+ * @file
+ * The tree page layout and the tree block's box.
+ */
 
-/* Tree page layout (node_tree.page): tree on the left, taxon on the right. */
-.node-tree-page { display: flex; gap: 2rem; align-items: flex-start; }
-/* The tree scrolls inside its own column (a selected taxon deep in a long
+/* Tree page (node_tree.page): tree on the left, the selected node on the right. */
+.node-tree-page {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+/* The tree scrolls inside its own column (a selected node deep in a long
    sibling list is scrolled into view here, not by scrolling the page), and
-   the taxon panel stays in view beside it. */
-.node-tree-column { flex: 0 0 24rem; max-width: 40%; max-height: calc(100vh - 6rem); overflow: auto; }
-.node-tree-content-column { flex: 1 1 auto; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
-.node-tree-taxon-title { margin-top: 0; }
+   the content panel stays in view beside it. */
+.node-tree-column {
+  flex: 0 0 24rem;
+  max-width: 40%;
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+}
+
+.node-tree-content-column {
+  position: sticky;
+  top: 1rem;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.node-tree-title {
+  margin-top: 0;
+}
+
 /* Stacked on a phone: align-items must be stretch, or the panel takes its
    content's width (wider than the viewport) instead of the column's. */
-@media (max-width: 800px) { .node-tree-page { flex-direction: column; align-items: stretch; } .node-tree-column { max-width: 100%; max-height: 50vh; } .node-tree-content-column { position: static; max-height: none; } }
+@media (max-width: 800px) {
+  .node-tree-page {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .node-tree-column {
+    max-width: 100%;
+    max-height: 50vh;
+  }
+
+  .node-tree-content-column {
+    position: static;
+    max-height: none;
+  }
+}
 
 /* The tree block (a sidebar, the front page): scrolls inside itself. */
-.node-tree-block { max-height: 70vh; overflow: auto; }
+.node-tree-block {
+  max-height: 70vh;
+  overflow: auto;
+}

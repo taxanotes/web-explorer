@@ -1,34 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\node_tree\Controller;
 
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
-use Drupal\node\NodeInterface;
+use Drupal\Core\Url;
+use Drupal\node_tree\NodeTree;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * JSON endpoints and page for the lazily loaded taxon tree (jqTree).
- *
- * Taxa are `taxon` nodes. A node is identified in the tree by its GUID
- * (field_guid); the hierarchy is the single-parent entity reference
- * field_parent_taxon_reference, with field_parent_guid as the denormalised
- * copy that the children lookup uses (both are indexed).
+ * The tree page and the JSON endpoints of the lazily loaded tree (jqTree).
  */
 final class NodeTreeController extends ControllerBase {
 
   public function __construct(
+    private readonly NodeTree $tree,
     EntityTypeManagerInterface $entity_type_manager,
-    protected Connection $database,
-    protected RendererInterface $renderer,
-    protected RequestStack $requestStack,
+    private readonly RendererInterface $renderer,
+    private readonly RequestStack $requestStack,
   ) {
     $this->entityTypeManager = $entity_type_manager;
   }
@@ -36,24 +33,46 @@ final class NodeTreeController extends ControllerBase {
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container) {
+  public static function create(ContainerInterface $container): static {
     return new static(
+      $container->get('node_tree'),
       $container->get('entity_type.manager'),
-      $container->get('database'),
       $container->get('renderer'),
       $container->get('request_stack'),
     );
   }
 
   /**
-   * The tree page: /taxonomy-tree and /taxonomy-tree/node/{guid}.
+   * The title of the tree page (node_tree.settings:title).
+   */
+  public function title(): string {
+    return $this->tree->title();
+  }
+
+  /**
+   * The tree page: /<path> and /<path>/node/{id}.
    *
    * The JavaScript builds the jqTree inside #node_tree and renders the
-   * selected taxon into .node_treecontentdisplay. A permalink to a GUID that
-   * is not a published taxon is a real 404, not an empty tree.
+   * selected node into .node-tree-content. A permalink to an identifier
+   * that is not a published tree node is a real 404, not an empty tree.
    */
-  public function page(string $guid = ''): array {
-    if ($guid !== '' && !$this->loadNodeByGuid($guid)) {
+  public function page(string $id = ''): array {
+    $cache = ['contexts' => ['url.path', 'user.permissions'], 'tags' => $this->tree->cacheTags()];
+    if (!$this->tree->isConfigured()) {
+      $message = $this->t('The node tree is not configured yet.');
+      if ($this->currentUser()->hasPermission('administer node_tree')) {
+        $message = $this->t('The node tree is not configured yet: choose the node types and fields on the <a href=":url">settings page</a>.', [
+          ':url' => Url::fromRoute('node_tree.settings')->toString(),
+        ]);
+      }
+      return [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['node-tree-page', 'node-tree-unconfigured']],
+        'message' => ['#markup' => '<p>' . $message . '</p>'],
+        '#cache' => $cache,
+      ];
+    }
+    if ($id !== '' && !$this->tree->loadById($id)) {
       throw new NotFoundHttpException();
     }
     return [
@@ -67,86 +86,36 @@ final class NodeTreeController extends ControllerBase {
       'content' => [
         '#type' => 'html_tag',
         '#tag' => 'div',
-        '#attributes' => ['class' => ['node_treecontentdisplay', 'node-tree-content-column']],
+        '#attributes' => ['class' => ['node-tree-content', 'node-tree-content-column']],
       ],
-      '#attached' => ['library' => ['node_tree/node_tree']],
-      '#cache' => ['contexts' => ['url.path'], 'tags' => ['node_list:taxon']],
+      '#attached' => [
+        'library' => ['node_tree/node_tree'],
+        'drupalSettings' => ['nodeTree' => ['path' => $this->tree->path()]],
+      ],
+      '#cache' => $cache,
     ];
   }
 
   /**
-   * GET /node_tree/api/getImmediateChildrenOfParent/?node=<guid>.
+   * GET /node_tree/api/getImmediateChildrenOfParent?node=<id>.
    *
-   * Without `node` returns the roots (published taxa with no parent).
-   * Each item: {id: guid, name: title, load_on_demand: has children}.
+   * Without `node` returns the roots (published tree nodes with no parent).
+   * Each item: {id, name: title, load_on_demand: has children, child_count}.
    */
   public function responseForImmediateChildrenOfParent(): CacheableJsonResponse {
-    $parent_guid = (string) $this->requestStack->getCurrentRequest()->query->get('node', '');
-    $response = new CacheableJsonResponse($this->getImmediateChildrenOfParent($parent_guid));
+    $parent_id = (string) $this->requestStack->getCurrentRequest()->query->get('node', '');
+    $response = new CacheableJsonResponse($this->tree->children($parent_id));
     $response->addCacheableDependency((new CacheableMetadata())
-      ->setCacheTags(['node_list:taxon'])
-      ->setCacheContexts(['url.query_args:node']));
+      ->setCacheTags($this->tree->cacheTags())
+      ->setCacheContexts(['url.query_args:node', 'user.node_grants:view']));
     return $response;
   }
 
   /**
-   * Children of a parent GUID (or the roots) with a has-children flag.
-   *
-   * One SQL statement: children filtered on the indexed field_parent_guid
-   * column (or on a NULL parent reference for the roots), joined to a
-   * GROUP BY count of *published* children so only expandable nodes get
-   * load_on_demand. Siblings are ordered by field_weight (0 when unset),
-   * then title, which is the Scratchpads sibling order. Queries are tagged
-   * node_access so grants apply if a node access module is ever enabled.
+   * GET /node_tree/api/getNodeTreeContent/{id}: the node rendered in full.
    */
-  public function getImmediateChildrenOfParent(string $parent_guid = ''): array {
-    $query = $this->database->select('node_field_data', 'nfd');
-    $query->innerJoin('node__field_guid', 'g', 'g.entity_id = nfd.nid');
-    $query->addField('g', 'field_guid_value', 'id');
-    $query->addField('nfd', 'title', 'name');
-    $query->condition('nfd.type', 'taxon')
-      ->condition('nfd.status', NodeInterface::PUBLISHED);
-    if ($parent_guid !== '') {
-      $query->innerJoin('node__field_parent_guid', 'pg', 'pg.entity_id = nfd.nid');
-      $query->condition('pg.field_parent_guid_value', $parent_guid);
-    }
-    else {
-      $query->leftJoin('node__field_parent_taxon_reference', 'pr', 'pr.entity_id = nfd.nid');
-      $query->isNull('pr.field_parent_taxon_reference_target_id');
-    }
-    // Published child counts for the candidate rows.
-    $counts = $this->database->select('node__field_parent_taxon_reference', 'c');
-    $counts->innerJoin('node_field_data', 'cn', 'cn.nid = c.entity_id');
-    $counts->condition('cn.status', NodeInterface::PUBLISHED);
-    $counts->addField('c', 'field_parent_taxon_reference_target_id', 'parent_nid');
-    $counts->addExpression('COUNT(*)', 'child_count');
-    $counts->groupBy('c.field_parent_taxon_reference_target_id');
-    $counts->addTag('node_access');
-    $query->leftJoin($counts, 'cc', 'cc.parent_nid = nfd.nid');
-    $query->addExpression('COALESCE(cc.child_count, 0)', 'child_count');
-    $query->leftJoin('node__field_weight', 'w', 'w.entity_id = nfd.nid');
-    $query->addExpression('COALESCE(w.field_weight_value, 0)', 'weight');
-    $query->orderBy('weight');
-    $query->orderBy('nfd.title');
-    $query->addTag('node_access');
-
-    $items = [];
-    foreach ($query->execute() as $row) {
-      $items[] = [
-        'id' => $row->id,
-        'name' => $row->name,
-        'load_on_demand' => (int) $row->child_count > 0,
-        'child_count' => (int) $row->child_count,
-      ];
-    }
-    return $items;
-  }
-
-  /**
-   * GET /node_tree/api/getNodeTreeContent/{uuid}: rendered taxon by GUID.
-   */
-  public function responseForGetNodeContent(string $uuid = ''): JsonResponse {
-    $node = $this->loadNodeByGuid($uuid);
+  public function responseForGetNodeContent(string $id = ''): JsonResponse {
+    $node = $this->tree->loadById($id);
     if (!$node || !$node->access('view')) {
       return new JsonResponse(['data' => '', 'error' => 'not found'], 404);
     }
@@ -157,44 +126,42 @@ final class NodeTreeController extends ControllerBase {
       'title' => $node->label(),
       'nid' => $node->id(),
       'url' => $node->toUrl()->toString(),
-      'method' => 'GET',
     ]);
   }
 
   /**
-   * GET /node_tree/api/getExpandedTreePathToNode/{uuid}.
+   * GET /node_tree/api/getExpandedTreePathToNode/{id}.
    *
    * Returns a jqTree data array: the root ancestor, opened down to the
-   * requested taxon, which is selected. Each level lists all siblings so the
+   * requested node, which is selected. Each level lists all siblings so the
    * tree looks the same as when browsed by hand.
    */
-  public function getExpandedTreePathToNode(string $uuid = ''): CacheableJsonResponse {
+  public function getExpandedTreePathToNode(string $id = ''): CacheableJsonResponse {
     $data = [];
-    $node = $this->loadNodeByGuid($uuid);
+    $node = $this->tree->loadById($id);
     if ($node && $node->access('view')) {
-      // Walk up to the root, collecting GUIDs (target first).
-      $chain = [];
-      $current = $node;
-      $seen = [];
-      while ($current && !isset($seen[$current->id()])) {
-        $seen[$current->id()] = TRUE;
-        $chain[] = $current->get('field_guid')->value;
-        $parent = $current->get('field_parent_taxon_reference')->entity;
-        $current = $parent instanceof NodeInterface ? $parent : NULL;
-      }
-      $chain = array_reverse($chain);
+      $chain = array_map(fn($ancestor) => $this->tree->idOf($ancestor), $this->tree->lineage($node));
       $data = $this->buildOpenedLevel('', $chain, 0);
     }
     $response = new CacheableJsonResponse($data);
-    $response->addCacheableDependency((new CacheableMetadata())->setCacheTags(['node_list:taxon'])->setCacheContexts(['url.path']));
+    $response->addCacheableDependency((new CacheableMetadata())
+      ->setCacheTags($this->tree->cacheTags())
+      ->setCacheContexts(['url.path', 'user.node_grants:view']));
     return $response;
   }
 
   /**
    * Builds one tree level, opening the item that lies on the path.
+   *
+   * @param string $parent_id
+   *   The identifier of the level's parent ('' for the roots).
+   * @param string[] $chain
+   *   The identifiers from the root to the target node.
+   * @param int $depth
+   *   The index in $chain of this level's item on the path.
    */
-  protected function buildOpenedLevel(string $parent_guid, array $chain, int $depth): array {
-    $items = $this->getImmediateChildrenOfParent($parent_guid);
+  private function buildOpenedLevel(string $parent_id, array $chain, int $depth): array {
+    $items = $this->tree->children($parent_id);
     $on_path = $chain[$depth] ?? NULL;
     $last = $depth === count($chain) - 1;
     foreach ($items as &$item) {
@@ -210,27 +177,6 @@ final class NodeTreeController extends ControllerBase {
       }
     }
     return $items;
-  }
-
-  /**
-   * Loads the published taxon node with the given GUID, if any.
-   */
-  protected function loadNodeByGuid(string $guid): ?NodeInterface {
-    if (trim($guid) === '') {
-      return NULL;
-    }
-    $nids = $this->entityTypeManager->getStorage('node')->getQuery()
-      ->condition('type', 'taxon')
-      ->condition('field_guid.value', $guid)
-      ->condition('status', NodeInterface::PUBLISHED)
-      ->range(0, 1)
-      ->accessCheck(TRUE)
-      ->execute();
-    if (!$nids) {
-      return NULL;
-    }
-    $node = $this->entityTypeManager->getStorage('node')->load(reset($nids));
-    return $node instanceof NodeInterface ? $node : NULL;
   }
 
 }

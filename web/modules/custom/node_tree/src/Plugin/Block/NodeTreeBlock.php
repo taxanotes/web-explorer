@@ -10,25 +10,33 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\node\NodeInterface;
+use Drupal\node_tree\NodeTree;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The lazily loaded taxon tree as a block.
+ * The lazily loaded tree as a block.
  *
- * On a taxon page the tree opens with the lineage of the current taxon
- * expanded and the taxon selected and scrolled into view (the Scratchpads
- * tinytax block), the rest still loading on demand; elsewhere it starts at
- * the roots. The GUID to open at travels in drupalSettings.nodeTree.selected
- * (js/node_tree.js); the block varies by route for it.
+ * On a tree node's page the tree opens with the lineage of the current node
+ * expanded and the node selected and scrolled into view, the rest still
+ * loading on demand; elsewhere it starts at the roots. The identifier to
+ * open at travels in drupalSettings.nodeTree.selected (js/node_tree.js);
+ * the block varies by route for it. Selecting a node in the block opens its
+ * permalink on the tree page.
  */
 #[Block(
-  id: 'block-node-tree-hierarchicaltaxontree',
-  admin_label: new TranslatableMarkup('NodeTreeBlock'),
-  category: new TranslatableMarkup('Custom'),
+  id: 'node_tree',
+  admin_label: new TranslatableMarkup('Node tree'),
+  category: new TranslatableMarkup('Node tree'),
 )]
 final class NodeTreeBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
-  public function __construct(array $configuration, string $plugin_id, mixed $plugin_definition, private readonly RouteMatchInterface $routeMatch) {
+  public function __construct(
+    array $configuration,
+    string $plugin_id,
+    mixed $plugin_definition,
+    protected NodeTree $tree,
+    protected RouteMatchInterface $routeMatch,
+  ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
 
@@ -36,7 +44,7 @@ final class NodeTreeBlock extends BlockBase implements ContainerFactoryPluginInt
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    return new static($configuration, $plugin_id, $plugin_definition, $container->get('current_route_match'));
+    return new static($configuration, $plugin_id, $plugin_definition, $container->get('node_tree'), $container->get('current_route_match'));
   }
 
   /**
@@ -44,26 +52,26 @@ final class NodeTreeBlock extends BlockBase implements ContainerFactoryPluginInt
    */
   public function build(): array {
     $build = [
-      '#theme' => 'node-tree-hierarchy-tree-block',
-      '#attached' => [
-        'library' => [
-          'node_tree/node_tree',
-        ],
-      ],
-      '#data' => [
-        'title' => $this->t('Hierarchy'),
-      ],
       '#cache' => [
-        'max-age' => 3600,
         'contexts' => ['route'],
-        'tags' => ['node_list:taxon'],
+        'tags' => $this->tree->cacheTags(),
+      ],
+    ];
+    if (!$this->tree->isConfigured()) {
+      return $build;
+    }
+    $build += [
+      '#theme' => 'node_tree_block',
+      '#attached' => [
+        'library' => ['node_tree/node_tree'],
+        'drupalSettings' => ['nodeTree' => ['path' => $this->tree->path()]],
       ],
     ];
     $node = $this->routeMatch->getRouteName() === 'entity.node.canonical' ? $this->routeMatch->getParameter('node') : NULL;
-    if ($node instanceof NodeInterface && $node->bundle() === 'taxon' && $node->isPublished() && $node->hasField('field_guid')) {
-      $guid = (string) $node->get('field_guid')->value;
-      if ($guid !== '') {
-        $build['#attached']['drupalSettings']['nodeTree']['selected'] = $guid;
+    if ($node instanceof NodeInterface && $node->isPublished() && $this->tree->isTreeNode($node)) {
+      $id = $this->tree->idOf($node);
+      if ($id !== '') {
+        $build['#attached']['drupalSettings']['nodeTree']['selected'] = $id;
       }
     }
     return $build;
