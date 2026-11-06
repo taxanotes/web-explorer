@@ -62,31 +62,47 @@
 }
 
 /* The expanders: a boxed minus (open) or plus (closed), drawn by
-   js/node_tree.js as inline SVG inside jqTree's toggler link. A fixed box
-   keeps the rows aligned; on a touch screen (a coarse pointer) the box and
-   the row grow to a comfortable tap target. */
+   js/node_tree.js as inline SVG inside jqTree's toggler link. The sizes are
+   custom properties in em, so they follow the tree's font size, and a theme
+   changes them by redeclaring the properties on ul.jqtree-tree (its CSS
+   loads after this file) instead of replacing this file. A fixed box keeps
+   the rows aligned; on a touch screen (a coarse pointer) the box and the
+   row grow to a comfortable tap target. */
+ul.jqtree-tree {
+  --node-tree-box: 1.5em;
+  --node-tree-glyph: 1em;
+  --node-tree-stroke: 1.5;
+}
+
+/* jqTree lays a row out as a flex row; centre the box on the title's line. */
+ul.jqtree-tree .jqtree-element {
+  align-items: center;
+}
+
 ul.jqtree-tree .jqtree-toggler {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--node-tree-box);
+  height: var(--node-tree-box);
   color: inherit;
 }
 
 .node-tree-expander {
-  width: 1rem;
-  height: 1rem;
+  width: var(--node-tree-glyph);
+  height: var(--node-tree-glyph);
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: var(--node-tree-stroke);
   stroke-linecap: round;
 }
 
 /* A node without children has no box: indent its title by the box's width
-   so that it lines up with its siblings' titles. */
+   (plus jqTree's 0.5em gap after the box) so that it lines up with its
+   siblings' titles. */
 ul.jqtree-tree .jqtree-title-button-left {
-  margin-left: calc(1.5rem + 0.5em);
+  margin-left: calc(var(--node-tree-box) + 0.5em);
 }
 
 ul.jqtree-tree .jqtree-title-button-left.jqtree-title-folder {
@@ -94,25 +110,12 @@ ul.jqtree-tree .jqtree-title-button-left.jqtree-title-folder {
 }
 
 @media (pointer: coarse) {
-  ul.jqtree-tree .jqtree-toggler {
-    width: 2.75rem;
-    height: 2.75rem;
-  }
-
-  ul.jqtree-tree .jqtree-title-button-left {
-    margin-left: calc(2.75rem + 0.5em);
-  }
-
-  ul.jqtree-tree .jqtree-title-button-left.jqtree-title-folder {
-    margin-left: 0;
-  }
-
-  .node-tree-expander {
-    width: 1.375rem;
-    height: 1.375rem;
+  ul.jqtree-tree {
+    --node-tree-box: 2.75em;
+    --node-tree-glyph: 1.375em;
   }
 
   ul.jqtree-tree .jqtree-title {
-    padding: 0.625rem 0;
+    padding: 0.625em 0;
   }
 }
