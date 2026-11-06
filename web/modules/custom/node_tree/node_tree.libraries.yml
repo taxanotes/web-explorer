@@ -1,15 +1,31 @@
+# jqTree (Apache-2.0, https://mbraak.github.io/jqTree/) is served from
+# /libraries/jqtree when it is installed there; otherwise
+# node_tree_library_info_alter() points this library at the jsDelivr CDN.
+jqtree:
+  version: 1.6.2
+  remote: https://github.com/mbraak/jqTree
+  license:
+    name: Apache-2.0
+    url: https://github.com/mbraak/jqTree/blob/master/LICENSE
+    gpl-compatible: false
+  css:
+    component:
+      /libraries/jqtree/jqtree.css: {}
+  js:
+    /libraries/jqtree/tree.jquery.js: {}
+  dependencies:
+    - core/jquery
+
 node_tree:
   version: VERSION
   css:
-    base:
-      css/jqtree.css: {}
-      css/_portal.css: {}
+    component:
+      css/node_tree.css: {}
   js:
-    js/tree.jquery.js: {}
     js/node_tree.js: {}
   dependencies:
+    - node_tree/jqtree
     - core/drupal
     - core/drupalSettings
     - core/jquery
     - core/once
-

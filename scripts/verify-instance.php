@@ -1166,8 +1166,8 @@ if (\Drupal::config('system.theme')->get('default') === 'taxanotes_classic') {
     $classic['taxon page checked'] = '/node/' . $nid;
     $classic['taxon: html style attribute carries the colour'] = str_contains($taxon, 'style="--sp-colour:#' . $colour . ';"');
     $classic['taxon: tab markers (data-taxanotes-tab)'] = substr_count($taxon, 'data-taxanotes-tab=');
-    $classic['taxon: classification tree block'] = str_contains($taxon, 'block-node-tree-hierarchicaltaxontree');
-    $classic['taxon: tree opened at the taxon (drupalSettings nodeTree.selected)'] = (bool) preg_match('/"nodeTree":\{"selected":"[^"]+"\}/', $taxon);
+    $classic['taxon: classification tree block'] = str_contains($taxon, 'block-node-tree') && str_contains($taxon, 'id="node_tree"');
+    $classic['taxon: tree opened at the taxon (drupalSettings nodeTree.selected)'] = (bool) preg_match('/"nodeTree":\{[^}]*"selected":"[^"]+"/', $taxon);
     preg_match('/<nav class="breadcrumb".*?<\/nav>/s', $taxon, $m);
     $classic['taxon: breadcrumb items (Home › lineage › taxon)'] = isset($m[0]) ? substr_count($m[0], '<li>') : 0;
   }

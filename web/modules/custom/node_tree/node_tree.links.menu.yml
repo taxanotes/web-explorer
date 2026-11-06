@@ -1,0 +1,5 @@
+node_tree.settings:
+  title: 'Node tree'
+  description: 'The node types, fields and path the node tree is built from.'
+  parent: system.admin_config_content
+  route_name: node_tree.settings

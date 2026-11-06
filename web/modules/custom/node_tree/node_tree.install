@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * Status report entries of the node_tree module (Drupal before 11.2).
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\node_tree\Hook\NodeTreeRequirements;
+
+/**
+ * Implements hook_requirements().
+ *
+ * Drupal 11.2+ uses NodeTreeRequirements::runtime() (hook_runtime_requirements)
+ * instead; this is the same report for earlier versions.
+ */
+#[LegacyRequirementsHook]
+function node_tree_requirements(string $phase): array {
+  if ($phase !== 'runtime') {
+    return [];
+  }
+  return \Drupal::classResolver(NodeTreeRequirements::class)->runtime();
+}

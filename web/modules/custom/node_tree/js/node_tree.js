@@ -1,12 +1,22 @@
+/**
+ * @file
+ * Builds the lazily loaded jqTree and opens it at the selected node.
+ */
+
 (function ($, Drupal, drupalSettings, once) {
   'use strict';
 
-  // All routes are built with Drupal.url() so an instance served from a
-  // sub-path (base path) works too.
+  // All routes are built with Drupal.url() so a site served from a sub-path
+  // (base path) works too. The tree page path comes from the settings
+  // (drupalSettings.nodeTree.path, attached by the page and the block).
   var CHILDREN_URL = Drupal.url('node_tree/api/getImmediateChildrenOfParent/');
   var EXPAND_URL = Drupal.url('node_tree/api/getExpandedTreePathToNode/');
   var CONTENT_URL = Drupal.url('node_tree/api/getNodeTreeContent/');
-  var TREE_URL = Drupal.url('taxonomy-tree/node/');
+
+  function treeUrl() {
+    var path = (drupalSettings.nodeTree && drupalSettings.nodeTree.path) || 'node-tree';
+    return Drupal.url(path + '/node/');
+  }
 
   // jqTree requests its lazy loads with cache: false, which appends a
   // `_=<timestamp>` parameter and defeats the page cache for anonymous
@@ -19,34 +29,36 @@
   });
 
   /**
-   * Builds the jqTree inside #node_tree. If the URL is
-   * /taxonomy-tree/node/<guid>, or the page is a taxon page (the block
-   * passes the taxon's GUID in drupalSettings.nodeTree.selected), the tree
-   * is opened down to that taxon, which is selected and scrolled into view
-   * within the tree; the rest loads on demand.
+   * Builds the jqTree inside #node_tree.
+   *
+   * If the URL is a permalink (<path>/node/<id>), or the page is a tree
+   * node's page (the block passes the node's identifier in
+   * drupalSettings.nodeTree.selected), the tree is opened down to that node,
+   * which is selected and scrolled into view within the tree; the rest loads
+   * on demand.
    */
-  Drupal.behaviors.node_tree_open_tree_at = {
+  Drupal.behaviors.nodeTreeOpenTreeAt = {
     attach: function (context) {
       once('node_tree', '#node_tree', context).forEach(function (container) {
         var $container = $(container);
         var $tree = $('<div id="id_node_tree"></div>').attr('data-url', CHILDREN_URL);
         $container.append($tree);
-        var onTreePage = $('.node_treecontentdisplay').length > 0;
-        var guid = getGuidFromUrl() || (!onTreePage && drupalSettings.nodeTree && drupalSettings.nodeTree.selected) || null;
-        if (guid) {
-          $container.prepend('<p class="node-tree-loading">' + Drupal.t('Loading tree expanded to selected taxon…') + '</p>');
-          $.getJSON(EXPAND_URL + encodeURIComponent(guid), function (data) {
+        var onTreePage = $('.node-tree-content').length > 0;
+        var id = getIdFromUrl() || (!onTreePage && drupalSettings.nodeTree && drupalSettings.nodeTree.selected) || null;
+        if (id) {
+          $container.prepend('<p class="node-tree-loading">' + Drupal.t('Loading the tree at the selected node…') + '</p>');
+          $.getJSON(EXPAND_URL + encodeURIComponent(id), function (data) {
             $container.find('.node-tree-loading').remove();
             $tree.tree({ data: data, autoOpen: false, dragAndDrop: false, dataUrl: dataUrl });
-            var target = $tree.tree('getNodeById', guid);
+            var target = $tree.tree('getNodeById', id);
             if (target) {
               if (onTreePage) {
-                // selectNode fires tree.select, which renders the taxon.
+                // selectNode fires tree.select, which renders the node.
                 bindEvents($tree);
                 $tree.tree('selectNode', target);
               }
               else {
-                // On a taxon page the selection is only a highlight: bind
+                // On a node's page the selection is only a highlight: bind
                 // the events after it, so it does not navigate, and without
                 // the focus jqTree would set, which scrolls the page to the
                 // tree (below the content on a phone).
@@ -72,7 +84,7 @@
    * Scrolls the tree's own scrollable box so that an element is visible.
    *
    * Only the box scrolls (the block has a max-height), never the page: a
-   * taxon page must not jump to its sidebar when the tree opens.
+   * node's page must not jump to its sidebar when the tree opens.
    */
   function scrollIntoTree(container, element) {
     if (!element) {
@@ -101,16 +113,16 @@
     $tree.on('tree.select', function (event) {
       if (event.node) {
         var node = event.node;
-        var path = TREE_URL + encodeURIComponent(node.id);
-        // The permalink load selects the node the URL already names; do not
-        // push a second, identical history entry for it (compare decoded, a
-        // typed LSID keeps its colons while the pushed one is encoded).
+        var path = treeUrl() + encodeURIComponent(node.id);
         // Outside the tree page (the block in a sidebar, say) there is no
-        // taxon panel: selecting a taxon opens its tree permalink instead.
-        if (!$('.node_treecontentdisplay').length) {
+        // content panel: selecting a node opens its tree permalink instead.
+        if (!$('.node-tree-content').length) {
           window.location.assign(path);
           return;
         }
+        // The permalink load selects the node the URL already names; do not
+        // push a second, identical history entry for it (compare decoded, a
+        // typed identifier keeps its colons while the pushed one is encoded).
         if (decodeURIComponent(window.location.pathname) !== decodeURIComponent(path)) {
           window.history.pushState('permalink-to-' + node.id, node.name, path);
         }
@@ -119,23 +131,29 @@
     });
   }
 
-  function showContent(guid) {
-    $('.node_treecontentdisplay').html('<p class="node-tree-loading">' + Drupal.t('Loading…') + '</p>');
-    $.getJSON(CONTENT_URL + encodeURIComponent(guid))
+  function showContent(id) {
+    $('.node-tree-content').html('<p class="node-tree-loading">' + Drupal.t('Loading…') + '</p>');
+    $.getJSON(CONTENT_URL + encodeURIComponent(id))
       .done(function (response) {
-        var $panel = $('.node_treecontentdisplay').html(response.data);
+        var $panel = $('.node-tree-content').html(response.data);
         if (response.title) {
-          $panel.prepend($('<h2 class="node-tree-taxon-title"></h2>').text(response.title));
+          $panel.prepend($('<h2 class="node-tree-title"></h2>').text(response.title));
         }
       })
       .fail(function () {
-        $('.node_treecontentdisplay').html('<p>' + Drupal.t('Taxon not found.') + '</p>');
+        $('.node-tree-content').html('<p>' + Drupal.t('Not found.') + '</p>');
       });
   }
 
-  function getGuidFromUrl() {
-    var match = window.location.pathname.match(/\/taxonomy-tree\/node\/([^/]+)/);
-    return match ? decodeURIComponent(match[1]) : null;
+  // The identifier of a permalink URL (<path>/node/<id>), or null.
+  function getIdFromUrl() {
+    var base = treeUrl();
+    var pathname = window.location.pathname;
+    if (pathname.indexOf(base) !== 0) {
+      return null;
+    }
+    var id = pathname.substring(base.length).split('/')[0];
+    return id ? decodeURIComponent(id) : null;
   }
 
 })(jQuery, Drupal, drupalSettings, once);

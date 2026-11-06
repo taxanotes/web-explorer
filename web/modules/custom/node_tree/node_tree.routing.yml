@@ -1,45 +1,46 @@
+# The two tree page routes get their path from node_tree.settings:path
+# (Routing\RouteSubscriber); the paths here are the defaults.
 node_tree.page:
-  path: '/taxonomy-tree'
+  path: '/node-tree'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::page'
-    _title: 'Taxonomy tree'
+    _title_callback: 'Drupal\node_tree\Controller\NodeTreeController::title'
   requirements:
     _permission: 'access content'
 node_tree.page_node:
-  path: '/taxonomy-tree/node/{guid}'
+  path: '/node-tree/node/{id}'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::page'
-    _title: 'Taxonomy tree'
+    _title_callback: 'Drupal\node_tree\Controller\NodeTreeController::title'
   requirements:
     _permission: 'access content'
 node_tree.json_node_tree_api:
   path: '/node_tree/api/getImmediateChildrenOfParent'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::responseForImmediateChildrenOfParent'
-    _title: 'JSON api - node_tree API Parent Immediate Children'
-  methods:  [GET]
+  methods: [GET]
   requirements:
     _permission: 'access content'
 node_tree.api_node_tree_content_display:
-  path: '/node_tree/api/getNodeTreeContent/{uuid}'
+  path: '/node_tree/api/getNodeTreeContent/{id}'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::responseForGetNodeContent'
-    _title: 'node_tree API get node_tree content'
-    uuid: ''
+    id: ''
+  methods: [GET]
   requirements:
     _permission: 'access content'
 node_tree.api_get_expanded_tree:
-  path: '/node_tree/api/getExpandedTreePathToNode/{uuid}'
+  path: '/node_tree/api/getExpandedTreePathToNode/{id}'
   defaults:
     _controller: 'Drupal\node_tree\Controller\NodeTreeController::getExpandedTreePathToNode'
-    _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
-    uuid: ''
+    id: ''
+  methods: [GET]
   requirements:
     _permission: 'access content'
-node_tree.api_get_expanded_tree_root:
-  path: '/node_tree/api/getExpandedTreePathToRoot'
+node_tree.settings:
+  path: '/admin/config/content/node-tree'
   defaults:
-    _controller: 'Drupal\node_tree\Controller\NodeTreeController::getExpandedTreePathToNode'
-    _title: 'JSON api - node_tree API Get Expanded Tree Path to Node'
+    _form: 'Drupal\node_tree\Form\SettingsForm'
+    _title: 'Node tree'
   requirements:
-    _permission: 'access content'
+    _permission: 'administer node_tree'

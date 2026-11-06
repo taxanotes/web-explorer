@@ -6,6 +6,7 @@ install:
   - field
   - link
   - node
+  - node_tree
   - options
   - path
   - text
@@ -75,6 +76,23 @@ config:
   # order below, together with the synonyms (the invalid child taxa), under
   # the ITIS fields of the Overview.
   actions:
+    # The taxon tree (node_tree, a generic module): taxa are the tree, each
+    # keyed on its GUID, with the parent reference and the denormalised
+    # parent GUID the children lookup uses, siblings in Scratchpads order
+    # (field_weight), the tree page at /taxonomy-tree, and the species pages
+    # (field_taxonomic_name) sharing their taxon's lineage breadcrumb. Set on
+    # every apply, so an existing instance gets it too.
+    node_tree.settings:
+      simpleConfigUpdate:
+        bundles: [taxon]
+        parent_field: field_parent_taxon_reference
+        id_field: field_guid
+        parent_id_field: field_parent_guid
+        weight_field: field_weight
+        describes_field: field_taxonomic_name
+        path: taxonomy-tree
+        title: 'Taxonomy tree'
+        breadcrumb: true
     # The D7 label of field_synonymy_by is "Synonymy" (its values start with
     # "by ..."); an instance built with the earlier label gets it here.
     field.field.node.taxon.field_synonymy_by:

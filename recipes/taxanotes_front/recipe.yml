@@ -84,14 +84,14 @@ config:
             pages: '<front>'
     block.block.taxanotes_front_tree:
       placeBlockInDefaultTheme:
-        plugin: block-node-tree-hierarchicaltaxontree
+        plugin: node_tree
         region:
           olivero: sidebar
           taxanotes_classic: sidebar
         default_region: content
         weight: -5
         settings:
-          id: block-node-tree-hierarchicaltaxontree
+          id: node_tree
           label: 'Browse the classification'
           label_display: visible
           provider: node_tree

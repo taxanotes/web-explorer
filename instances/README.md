@@ -223,7 +223,7 @@ instance's values:
 | Where (Olivero) | What | Source |
 |---|---|---|
 | page title + content of `/front` (`system.site:page.front`) | `front_title` ("Welcome to <name>" when empty), `front_intro` | `taxanotes_front.settings` |
-| sidebar, front page only | *Find a taxon* (search to `/taxa`), *Browse the classification* (the lazily loaded tree, `node_tree`), *In numbers* (taxa in all and per rank) | blocks `taxanotes_front_search`, `block-node-tree-hierarchicaltaxontree`, `taxanotes_front_summary` |
+| sidebar, front page only | *Find a taxon* (search to `/taxa`), *Browse the classification* (the lazily loaded tree, `node_tree`), *In numbers* (taxa in all and per rank) | blocks `taxanotes_front_search`, `node_tree`, `taxanotes_front_summary` |
 | below the content, front page only | *Recently added taxa*, *Recently updated taxa* (10 each, with a link to `/taxa`) | view `taxanotes_recent` |
 | footer | `footer_text` | block `taxanotes_front_text` |
 | main menu | Home (standard profile), Taxa (view `taxa`), Classification (`/taxonomy-tree`), About (`/about`, `about_body`) | static links of `taxanotes_front` |

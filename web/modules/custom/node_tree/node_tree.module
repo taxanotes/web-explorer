@@ -2,21 +2,61 @@
 
 /**
  * @file
- * Lazily loaded taxon tree (jqTree) for the taxon content type.
+ * A lazily loaded tree of nodes built from a parent reference field.
  */
+
+declare(strict_types=1);
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
+use Drupal\node_tree\NodeTree;
+
+/**
+ * Implements hook_help().
+ */
+function node_tree_help(string $route_name, RouteMatchInterface $route_match): ?string {
+  if ($route_name === 'help.page.node_tree') {
+    $settings = Url::fromRoute('node_tree.settings')->toString();
+    return '<p>' . t('Node tree shows the nodes of the configured node types as a tree that loads on demand, following the parent reference field each node carries: a tree page with a permalink per node, a block that opens the tree at the node being viewed, JSON endpoints, a lineage breadcrumb and Drush commands that link children to their parents. Configure the node types, fields and path on the <a href=":url">settings page</a>.', [':url' => $settings]) . '</p>';
+  }
+  return NULL;
+}
 
 /**
  * Implements hook_theme().
  */
-function node_tree_theme($existing, $type, $theme, $path) {
+function node_tree_theme(array $existing, string $type, string $theme, string $path): array {
   return [
-    'node-tree-hierarchy-tree-block' => [
-      'variables' => ['data' => NULL],
-      'template' => 'node-tree-hierarchy-tree-block',
-    ],
-    'node-tree-content-display-block' => [
+    'node_tree_block' => [
       'variables' => [],
-      'template' => 'node-tree-content-display-block',
+      'template' => 'node-tree-block',
     ],
+    'node_tree_content_block' => [
+      'variables' => [],
+      'template' => 'node-tree-content-block',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_library_info_alter().
+ *
+ * JqTree is Apache-2.0 licensed, which drupal.org does not allow in a
+ * project's repository, so it is not shipped with the module. A site serves
+ * it from /libraries/jqtree (composer, or a copy of tree.jquery.js and
+ * jqtree.css from the jqtree npm package); without that, the library is
+ * loaded from the jsDelivr CDN at the pinned version. The status report
+ * says which is in use.
+ */
+function node_tree_library_info_alter(array &$libraries, string $extension): void {
+  if ($extension !== 'node_tree' || !isset($libraries['jqtree']) || NodeTree::jqtreeIsLocal()) {
+    return;
+  }
+  $base = 'https://cdn.jsdelivr.net/npm/jqtree@' . NodeTree::JQTREE_VERSION . '/';
+  $libraries['jqtree']['css']['component'] = [
+    $base . 'jqtree.css' => ['type' => 'external'],
+  ];
+  $libraries['jqtree']['js'] = [
+    $base . 'tree.jquery.js' => ['type' => 'external'],
   ];
 }

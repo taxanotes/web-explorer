@@ -1,0 +1,4 @@
+administer node_tree:
+  title: 'Administer the node tree'
+  description: 'Choose the node types, fields and path the tree is built from.'
+  restrict access: true

@@ -1,8 +1,8 @@
-name: 'Node Tree'
-description: 'Populates nodes of content type node'
-project: node_tree
-version: '1.0'
+name: 'Node tree'
 type: module
-core_version_requirement: ^10 || ^11
-libraries:
-  - node_tree/node_tree
+description: 'A lazily loaded tree of nodes (jqTree) built from a parent reference field: a tree page with permalinks, a tree block that opens at the current node, JSON endpoints, a lineage breadcrumb and Drush commands that link children to parents.'
+package: Content
+core_version_requirement: ^10.3 || ^11
+configure: node_tree.settings
+dependencies:
+  - drupal:node

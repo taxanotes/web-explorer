@@ -1,0 +1,11 @@
+# The module does nothing until at least one bundle is listed
+# (/admin/config/content/node-tree).
+bundles: {  }
+parent_field: field_parent
+id_field: uuid
+parent_id_field: ''
+weight_field: ''
+describes_field: ''
+path: node-tree
+title: 'Node tree'
+breadcrumb: true
