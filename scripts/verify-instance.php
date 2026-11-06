@@ -42,8 +42,10 @@
  *   not know;
  * - pages (when the pages recipe is applied): the D7 page and blog nodes
  *   against the Basic pages and blog posts (title, status, dates, author,
- *   body and format, taxa), and the D7 main-menu links to them against the
- *   main menu's links;
+ *   body and format, taxa), the inline images of the bodies (every D11 img
+ *   points at a file of this site, present or missing), and the D7
+ *   main-menu links to them and to the blog listing against the main
+ *   menu's links;
  * - classic (when the default theme is taxanotes_classic): the front page
  *   and a taxon page rendered as anonymous through the kernel: the accent
  *   colour of taxanotes_classic.settings must appear as the style attribute
@@ -147,9 +149,15 @@ else {
 $c['d7 revisions by uid 0 (vocabulary)'] = (int) $d7->query('SELECT COUNT(*) FROM {taxonomy_term_data_revision} r JOIN {taxonomy_term_data} t ON t.tid = r.tid WHERE t.vid = :v AND r.uid = 0', [':v' => $vid])->fetchField();
 $c['d11 revisions by uid 0'] = (int) $d11->query('SELECT COUNT(*) FROM {node_revision} WHERE revision_uid = 0')->fetchField();
 $c['d11 accepted names'] = (int) $d11->query('SELECT COUNT(*) FROM {node__field_accepted_name}')->fetchField();
-$c['d7 accepted names (distinct terms)'] = $d7->schema()->tableExists("field_data_field_aan_$vid")
-  ? (int) $d7->query("SELECT COUNT(DISTINCT entity_id) FROM {field_data_field_aan_$vid} WHERE entity_type = 'taxonomy_term' AND deleted = 0")->fetchField()
+// The D7 field_aan_<vid> rows whose target term no longer exists (Myriatrix
+// term 37580 -> tid 12410, Anthophila 83952/83953 -> 83949) have no D11
+// counterpart: counted apart, so the two accepted-name counts agree.
+$c['d7 accepted names (distinct terms, target term exists)'] = $d7->schema()->tableExists("field_data_field_aan_$vid")
+  ? (int) $d7->query("SELECT COUNT(DISTINCT a.entity_id) FROM {field_data_field_aan_$vid} a JOIN {taxonomy_term_data} t ON t.tid = a.field_aan_{$vid}_tid WHERE a.entity_type = 'taxonomy_term' AND a.deleted = 0")->fetchField()
   : 0;
+$c['d7 accepted names pointing at a missing term (tid => target)'] = $d7->schema()->tableExists("field_data_field_aan_$vid")
+  ? $d7->query("SELECT a.entity_id, a.field_aan_{$vid}_tid FROM {field_data_field_aan_$vid} a LEFT JOIN {taxonomy_term_data} t ON t.tid = a.field_aan_{$vid}_tid WHERE a.entity_type = 'taxonomy_term' AND a.deleted = 0 AND t.tid IS NULL")->fetchAllKeyed()
+  : [];
 $c['d11 vernacular rows'] = (int) $d11->query('SELECT COUNT(*) FROM {node__field_vernacular_names}')->fetchField();
 $c['d7 vernacular rows'] = $d7->schema()->tableExists('field_data_field_vernacular_name_collection')
   ? (int) $d7->query("SELECT COUNT(*) FROM {field_data_field_vernacular_name_collection} c JOIN {taxonomy_term_data} t ON t.tid = c.entity_id WHERE c.entity_type = 'taxonomy_term' AND c.deleted = 0 AND t.vid = :v", [':v' => $vid])->fetchField()
@@ -745,6 +753,10 @@ if ($d11->schema()->tableExists('node__field_general_description') && $d7->schem
   // of the D7 node type (value and the mapped format), by uuid.
   $text_fields = $d7->query("SELECT DISTINCT fci.field_name FROM {field_config_instance} fci JOIN {field_config} fc ON fc.id = fci.field_id WHERE fci.entity_type = 'node' AND fci.bundle = 'spm' AND fci.deleted = 0 AND fc.type = 'text_long' ORDER BY fci.field_name")->fetchCol();
   $format_map = ['filtered_html' => 'basic_html', 'full_html' => 'full_html', 'plain_text' => 'plain_text'];
+  // The migration points the inline images at the imported files, so a
+  // text is compared without the src of its <img> tags (the pages section
+  // checks every D11 src on its own).
+  $without_img_src = fn(?string $s): ?string => $s === NULL ? NULL : preg_replace('/(<img\b[^>]*?)\s+src\s*=\s*(["\']).*?\2/i', '$1', $s);
   $d11_pages = $d11->query("SELECT nb.uuid, n.nid, n.title, n.status, l.field_legacy_tid_value taxon_tid FROM {node_field_data} n JOIN {node} nb ON nb.nid = n.nid LEFT JOIN {node__field_taxonomic_name} f ON f.entity_id = n.nid LEFT JOIN {node__field_legacy_tid} l ON l.entity_id = f.field_taxonomic_name_target_id WHERE n.type = 'taxon_description'")->fetchAllAssoc('uuid');
   $spm_mismatches = [];
   $spm_compared = 0;
@@ -784,14 +796,14 @@ if ($d11->schema()->tableExists('node__field_general_description') && $d7->schem
     foreach (array_keys($d11_texts) as $field) {
       $t = $d7_texts[$field][$nid] ?? NULL;
       $value = $t["{$field}_value"] ?? NULL;
-      $expected["$field value"] = ($value === NULL || $value === '') ? NULL : $value;
+      $expected["$field value"] = ($value === NULL || $value === '') ? NULL : $without_img_src($value);
       $expected["$field format"] = ($value === NULL || $value === '') ? NULL : ($format_map[$t["{$field}_format"] ?? ''] ?? 'basic_html');
     }
     $got = NULL;
     if ($page) {
       $got = ['title' => (string) $page->title, 'status' => (int) $page->status, 'taxon_tid' => (int) $page->taxon_tid];
       foreach (array_keys($d11_texts) as $field) {
-        $got["$field value"] = $d11_texts[$field][$node->uuid]->v ?? NULL;
+        $got["$field value"] = $without_img_src($d11_texts[$field][$node->uuid]->v ?? NULL);
         $got["$field format"] = $d11_texts[$field][$node->uuid]->fmt ?? NULL;
       }
     }
@@ -992,7 +1004,7 @@ if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()-
         'changed' => (int) $node->changed,
         // The author: the migrated account (uid kept), else uid 1.
         'uid' => ((int) $node->uid > 1 && isset($d11_users[(int) $node->uid])) ? (int) $node->uid : 1,
-        'body value' => $body['body_value'] ?? NULL,
+        'body value' => $without_img_src($body['body_value'] ?? NULL),
         'body format' => isset($body['body_value']) && $body['body_value'] !== '' ? ($format_map[$body['body_format'] ?? ''] ?? 'basic_html') : NULL,
         'taxa' => $taxa[(int) $node->nid] ?? 0,
       ];
@@ -1002,7 +1014,7 @@ if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()-
         'created' => (int) $d11_nodes[$uuid]->created,
         'changed' => (int) $d11_nodes[$uuid]->changed,
         'uid' => (int) $d11_nodes[$uuid]->uid,
-        'body value' => $d11_nodes[$uuid]->body_value,
+        'body value' => $without_img_src($d11_nodes[$uuid]->body_value),
         'body format' => $d11_nodes[$uuid]->body_format,
         'taxa' => (int) ($d11_taxa[$uuid] ?? 0),
       ] : NULL;
@@ -1026,17 +1038,57 @@ if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()-
   $pages['mismatches'] = count($page_mismatches);
   $pages['mismatch list'] = $page_mismatches;
 
+  // Inline images: every <img> of a D7 body points, in D11, at a file of
+  // this site (public://scratchpads/<D7 path>, the file taxanotes_d7_file
+  // imports; the basic_html format removes an off-site image). The D7 count
+  // is of the bodies the migration reads (one language per node).
+  $public = \Drupal::service('file_url_generator')->generateString('public://');
+  $images = [
+    'd7 img tags' => 0,
+    'd11 img tags' => 0,
+    'd11 img tags on this site' => 0,
+    'd11 img tags off-site (nid => src)' => [],
+    'd11 files present' => 0,
+    'd11 files missing (nid => src)' => [],
+  ];
+  foreach ($page_types as $d7_type => $d11_type) {
+    foreach ($d7_page_field('body', ['body_value'], $d7_type) as $body) {
+      $images['d7 img tags'] += preg_match_all('/<img\b/i', (string) $body['body_value']);
+    }
+    foreach ($d11->query("SELECT b.entity_id, b.body_value FROM {node__body} b JOIN {node_field_data} n ON n.nid = b.entity_id WHERE n.type = :t AND b.body_value LIKE '%<img%'", [':t' => $d11_type]) as $r) {
+      preg_match_all('/<img\b[^>]*\bsrc\s*=\s*["\']([^"\']*)/i', (string) $r->body_value, $m);
+      foreach ($m[1] as $src) {
+        $images['d11 img tags']++;
+        if (!str_starts_with($src, $public)) {
+          $images['d11 img tags off-site (nid => src)'][] = [(int) $r->entity_id => $src];
+          continue;
+        }
+        $images['d11 img tags on this site']++;
+        $file = \Drupal::root() . '/' . rawurldecode(substr($src, strlen(base_path())));
+        if (is_file($file)) {
+          $images['d11 files present']++;
+        }
+        else {
+          $images['d11 files missing (nid => src)'][] = [(int) $r->entity_id => $src];
+        }
+      }
+    }
+  }
+  $pages['inline images'] = $images;
+
   // The main-menu links of the pages: one D11 link per D7 main-menu link to
   // a migrated page or blog node, same title, enabled state and D7 weight
-  // + 50, pointing at the node imported from the same uuid.
+  // + 50, pointing at the node imported from the same uuid; and one per D7
+  // link to the blog listing (blog), pointing at /blog (keyed path:blog).
   $d7_links = [];
   if ($d7->schema()->tableExists('menu_links')) {
-    foreach ($d7->query("SELECT ml.mlid, ml.link_path, ml.link_title, ml.weight, ml.hidden FROM {menu_links} ml WHERE ml.menu_name = 'main-menu' AND ml.link_path LIKE 'node/%'") as $r) {
+    foreach ($d7->query("SELECT ml.mlid, ml.link_path, ml.link_title, ml.weight, ml.hidden FROM {menu_links} ml WHERE ml.menu_name = 'main-menu' AND (ml.link_path LIKE 'node/%' OR ml.link_path = 'blog')") as $r) {
       $nid = (int) substr($r->link_path, 5);
-      if (isset($d7_page_nids[$nid])) {
+      $key = $r->link_path === 'blog' ? 'path:blog' : ($d7_page_nids[$nid] ?? NULL);
+      if ($key !== NULL) {
         $d7_links[] = [
           'mlid' => (int) $r->mlid,
-          'uuid' => $d7_page_nids[$nid],
+          'uuid' => $key,
           'title' => $r->link_title,
           'weight' => (int) $r->weight + 50,
           'enabled' => (int) $r->hidden === 0 ? 1 : 0,
@@ -1046,9 +1098,9 @@ if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()-
   }
   $d11_links = [];
   if ($d11->schema()->tableExists('menu_link_content_data')) {
-    foreach ($d11->query("SELECT m.title, m.weight, m.enabled, m.link__uri FROM {menu_link_content_data} m WHERE m.menu_name = 'main' AND m.link__uri LIKE 'entity:node/%'") as $r) {
+    foreach ($d11->query("SELECT m.title, m.weight, m.enabled, m.link__uri FROM {menu_link_content_data} m WHERE m.menu_name = 'main' AND (m.link__uri LIKE 'entity:node/%' OR m.link__uri = 'internal:/blog')") as $r) {
       $nid = (int) substr($r->link__uri, 12);
-      $uuid = $d11->query('SELECT uuid FROM {node} WHERE nid = :n', [':n' => $nid])->fetchField();
+      $uuid = $r->link__uri === 'internal:/blog' ? 'path:blog' : $d11->query('SELECT uuid FROM {node} WHERE nid = :n', [':n' => $nid])->fetchField();
       $d11_links[$uuid][] = ['title' => $r->title, 'weight' => (int) $r->weight, 'enabled' => (int) $r->enabled];
     }
   }
@@ -1066,8 +1118,8 @@ if ($d11->schema()->tableExists('node__field_taxonomic_names') && $d7->schema()-
       $link_mismatches[] = ['mlid' => $link['mlid'], 'd7' => $link, 'd11' => $candidates];
     }
   }
-  $pages['d7 main-menu links to pages and blog entries'] = count($d7_links);
-  $pages['d11 main-menu links to nodes'] = array_sum(array_map('count', $d11_links));
+  $pages['d7 main-menu links to pages, blog entries and the blog listing'] = count($d7_links);
+  $pages['d11 main-menu links to nodes and /blog'] = array_sum(array_map('count', $d11_links));
   $pages['menu link mismatches'] = count($link_mismatches);
   $pages['menu link mismatch list'] = $link_mismatches;
 }
@@ -1129,6 +1181,18 @@ if (\Drupal::config('system.theme')->get('default') === 'taxanotes_classic') {
     preg_match('/<ul class="taxanotes-synonyms">.*?<\/ul>/s', $with_synonyms, $m);
     $classic['taxon with synonyms: synonyms listed'] = isset($m[0]) ? substr_count($m[0], '<li>') : 0;
     $classic['taxon with synonyms: synonyms in the database'] = (int) $d11->query("SELECT COUNT(*) FROM {node__field_parent_taxon_reference} p JOIN {node__field_usage} u ON u.entity_id = p.entity_id JOIN {node_field_data} n ON n.nid = p.entity_id WHERE p.field_parent_taxon_reference_target_id = :p AND u.field_usage_value = 'invalid' AND n.status = 1", [':p' => $parent_nid])->fetchField();
+  }
+  // The pages and blog posts with inline images, rendered as anonymous: an
+  // image the basic_html format removed carries the filter-image-invalid
+  // class; one from this site's files has /files/scratchpads/ in its src.
+  $with_images = $d11->query("SELECT b.entity_id FROM {node__body} b JOIN {node_field_data} n ON n.nid = b.entity_id WHERE n.type IN ('page', 'blog_post') AND n.status = 1 AND b.body_value LIKE '%<img%' ORDER BY b.entity_id LIMIT 12")->fetchCol();
+  $classic['pages with inline images rendered'] = array_map(fn($nid) => '/node/' . $nid, $with_images);
+  $classic['pages: images from this site\'s files'] = 0;
+  $classic['pages: images removed by the format (filter-image-invalid)'] = 0;
+  foreach ($with_images as $page_nid) {
+    $html = $render('/node/' . $page_nid);
+    $classic['pages: images from this site\'s files'] += preg_match_all('#<img[^>]*src="[^"]*/files/scratchpads/#', $html);
+    $classic['pages: images removed by the format (filter-image-invalid)'] += substr_count($html, 'filter-image-invalid');
   }
 }
 

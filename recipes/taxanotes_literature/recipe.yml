@@ -65,17 +65,21 @@ config:
       simpleConfigUpdate:
         display_override.reference_page_view_mode: default
     # Everyone reads the literature; the list formatter shows an author only
-    # when the contributor entity is viewable, hence the three permissions.
+    # when the contributor entity is viewable, hence the three permissions;
+    # and everyone may use the BibTeX / RIS links at the foot of a reference
+    # page (the Scratchpads offered the export to every visitor).
     user.role.anonymous:
       grantPermissions:
         - 'view bibcite_reference'
         - 'view bibcite_contributor'
         - 'view bibcite_keyword'
+        - 'access bibcite export'
     user.role.authenticated:
       grantPermissions:
         - 'view bibcite_reference'
         - 'view bibcite_contributor'
         - 'view bibcite_keyword'
+        - 'access bibcite export'
     # Editing follows the taxon roles (recipes/taxanotes_users): a
     # contributor adds references and edits their own, an editor any.
     user.role.contributor:

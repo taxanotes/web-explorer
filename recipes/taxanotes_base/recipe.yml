@@ -64,6 +64,20 @@ config:
     update.settings:
       simpleConfigUpdate:
         notification.emails: []
+    # The Scratchpads filtered_html format turned bare web addresses into
+    # links (filter_url); basic_html, the format the migrations give those
+    # texts, does the same, after filter_html (-10) and before the citation
+    # filter (10). Set on every apply.
+    filter.format.basic_html:
+      setFilterConfig:
+        instance_id: filter_url
+        configuration:
+          id: filter_url
+          provider: filter
+          status: true
+          weight: 0
+          settings:
+            filter_url_length: 72
     # Composition of taxon + literature on the taxon page: the protologue is
     # the link to the reference entity (taxanotes_literature), not the
     # Scratchpads title text (taxanotes_taxon). Both sub-recipes set this
