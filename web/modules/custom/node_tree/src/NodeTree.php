@@ -115,7 +115,7 @@ final class NodeTree {
   /**
    * The optional reference field to the tree node a page describes.
    *
-   * On other bundles than the tree's (a species page's taxon field).
+   * On other bundles than the tree's (a document's folder field).
    */
   public function describesField(): string {
     return trim((string) $this->settings()->get('describes_field'));
@@ -210,7 +210,7 @@ final class NodeTree {
    * The tree node a node stands for: itself, or the one it describes.
    *
    * A node of another bundle that points at a tree node through
-   * describes_field stands for that node (a species page for its taxon).
+   * describes_field stands for that node (a document for its folder).
    */
   public function treeNodeOf(mixed $node): ?NodeInterface {
     if (!$node instanceof NodeInterface) {

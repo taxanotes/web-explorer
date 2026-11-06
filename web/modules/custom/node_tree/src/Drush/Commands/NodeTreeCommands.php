@@ -32,7 +32,7 @@ final class NodeTreeCommands extends DrushCommands {
   #[CLI\Option(name: 'bundle', description: 'Link only this node type (default: every configured one).')]
   #[CLI\Option(name: 'dry-run', description: 'Report what would change without saving anything.')]
   #[CLI\Usage(name: 'drush node_tree:link-parents', description: 'Link the children of every configured node type to their parents.')]
-  #[CLI\Usage(name: 'drush node_tree:link-parents --bundle=taxon --dry-run', description: 'Count what would be linked among taxon nodes.')]
+  #[CLI\Usage(name: 'drush node_tree:link-parents --bundle=folder --dry-run', description: 'Count what would be linked among the nodes of one type, without saving.')]
   public function linkParents(array $options = ['bundle' => NULL, 'dry-run' => FALSE]): void {
     if (!$this->tree->isConfigured()) {
       throw new \RuntimeException('node_tree is not configured: set the node types and fields at /admin/config/content/node-tree.');
