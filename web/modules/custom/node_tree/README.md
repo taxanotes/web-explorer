@@ -102,6 +102,28 @@ configured types (or of `--bundle`) whose parent identifier names a node,
 the parent field is set to that node when it is not already; nodes whose
 identifier matches nothing are listed. Unpublished nodes take part.
 
+## Tests
+
+`tests/src/Functional/NodeTreeTest.php` covers the tree page, the JSON
+endpoints, the block, the breadcrumb, parent linking, the settings form
+and the status report, on a "folder" node type it creates itself. It is a
+core browser test, so it needs `SIMPLETEST_BASE_URL`, `SIMPLETEST_DB` and
+a database it may install into (see core's `core/tests/README.md`). In a
+ddev project, with a `test` database created in the db container once
+(`ddev mysql -e 'CREATE DATABASE test'`):
+
+```
+ddev exec "SIMPLETEST_BASE_URL=http://localhost \
+  SIMPLETEST_DB=mysql://db:db@db/test \
+  BROWSERTEST_OUTPUT_DIRECTORY=/var/www/html/web/sites/simpletest/browser_output \
+  vendor/bin/phpunit -c web/core web/modules/custom/node_tree"
+```
+
+Coding standards: `vendor/bin/phpcs --standard=Drupal,DrupalPractice
+--extensions=php,module,install,inc,yml <path to the module>`. On
+drupal.org the GitLab pipeline (`.gitlab-ci.yml`) runs both, against the
+current and the previous Drupal major.
+
 ## Theming
 
 The tree page is `.node-tree-page` with `#node_tree.node-tree-column` and
