@@ -1,19 +1,21 @@
 id: taxanotes_d7_taxon_reference
-label: 'Scratchpads (Drupal 7) taxa: link the protologue reference'
+label: 'Scratchpads (Drupal 7) taxa: link the protologue, synonymy and designation references'
 migration_group: taxanotes
 migration_tags:
   - taxanotes
   - 'Drupal 7'
 source:
   plugin: scratchpads_d7_taxon
-  # Only the terms with a protologue reference (field_reference) are rows:
-  # the pass fills field_reference on their nodes from the migrated bibcite
-  # entity, after the literature import. It runs after taxanotes_d7_taxon,
-  # whose shadow fields (field_reference_nid/_title/_guid) hold the D7 values
-  # for every taxon and every revision. A term that loses its reference in
-  # D7 drops out of this set and keeps the stale link until the taxon pass
-  # has cleared the shadow fields and this pass is re-run with --update.
-  # See taxanotes_d7_taxon.yml for track_changes/ignore_map.
+  # Only the terms that point at a biblio node are rows: the protologue
+  # reference (field_reference), or the synonymy / designation references
+  # of the nomenclature fields (Anthophila). The pass fills the three
+  # reference fields on their nodes from the migrated bibcite entities,
+  # after the literature import. It runs after taxanotes_d7_taxon, whose
+  # shadow fields (field_reference_nid/_title/_guid) hold the D7 protologue
+  # values for every taxon and every revision. A term that loses its
+  # reference in D7 drops out of this set and keeps the stale link until
+  # the taxon pass has cleared the shadow fields and this pass is re-run
+  # with --update. See taxanotes_d7_taxon.yml for track_changes/ignore_map.
   with_reference_only: true
   track_changes: true
   ignore_map: true
@@ -37,11 +39,34 @@ process:
       plugin: migration_lookup
       migration: taxanotes_d7_biblio
       no_stub: true
+  # The nomenclature references (node uuid of the biblio node, built by the
+  # source plugin from the D7 node_reference fields; NULL on a vocabulary
+  # without them, which leaves the field empty).
+  field_synonymy_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: field_synonymy_reference_guid
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_biblio
+      no_stub: true
+  field_designation_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: field_designation_reference_guid
+    -
+      plugin: migration_lookup
+      migration: taxanotes_d7_biblio
+      no_stub: true
 destination:
   plugin: 'entity:node'
   default_bundle: taxon
   overwrite_properties:
     - field_reference
+    - field_synonymy_reference
+    - field_designation_reference
 migration_dependencies:
   required:
     - taxanotes_d7_taxon

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Drupal\taxanotes_import\Plugin\migrate\destination;
 
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\Sql\SqlEntityStorageInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\migrate\Attribute\MigrateDestination;
 use Drupal\migrate\Plugin\migrate\destination\EntityRevision;
@@ -31,13 +33,24 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - replace_log_prefixes: when a row becomes the default revision, the
  *   revision that was default until then is deleted if its log message starts
  *   with one of these prefixes, i.e. if it was the placeholder written by the
- *   entity import rather than real history.
+ *   entity import rather than real history. This also covers a re-imported
+ *   current revision: when the row of the D7 current revision maps to an
+ *   existing revision that is no longer the default one (the entity import
+ *   saved a sync revision above it after a platform change re-imported the
+ *   same D7 values with more fields), that revision is updated in place and
+ *   made the default again, and the sync revision is deleted like any other
+ *   placeholder, so the history stays exactly the D7 history.
  * - rollback_log: a default revision cannot be deleted, so rolling such a
  *   row back resets its log to this text (author uid 1, time now) instead,
  *   which lets the next import replace it again through replace_log_prefixes.
  * - every new revision is marked revision_translation_affected, so a
  *   historic revision whose values equal the current ones still shows in the
  *   Revisions tab;
+ * - an existing revision updated in place gets the row's log even when that
+ *   log is empty: Node::preSaveRevision() keeps the stored log of a revision
+ *   saved without a new revision whenever the new log is empty (so an empty
+ *   D7 log could not replace a placeholder's text), which this plugin
+ *   corrects on the revision table after the save;
  * - a revision this migration created is deleted on rollback (and stays so
  *   when a later run updates it in place). Core records "preserve" for every
  *   entity_revision row because the entity already existed, which makes
@@ -66,11 +79,24 @@ final class TaxanotesEntityRevision extends EntityRevision {
   protected ?TimeInterface $time = NULL;
 
   /**
+   * The database (to clear the log of a revision updated in place).
+   */
+  protected ?Connection $database = NULL;
+
+  /**
+   * The row's revision log while an existing revision is updated in place.
+   *
+   * NULL when the row creates a revision (the log is saved with it).
+   */
+  protected ?string $inPlaceLog = NULL;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
     $instance = static::traitCreate($container, $configuration, $plugin_id, $plugin_definition, $migration);
     $instance->time = $container->get('datetime.time');
+    $instance->database = $container->get('database');
     return $instance;
   }
 
@@ -108,15 +134,34 @@ final class TaxanotesEntityRevision extends EntityRevision {
     $row->removeDestinationProperty($property);
     $this->replacedRevisionId = NULL;
     $this->createdRevision = FALSE;
+    $this->inPlaceLog = NULL;
 
     $entity = parent::getEntity($row, $old_destination_id_values);
-    if ($entity instanceof ContentEntityInterface && $entity->isNewRevision()) {
+    if (!$entity instanceof ContentEntityInterface) {
+      return $entity;
+    }
+    if (!$entity->isNewRevision()) {
+      $log_key = $entity->getEntityType()->getRevisionMetadataKey('revision_log_message');
+      $this->inPlaceLog = $log_key && $row->hasDestinationProperty($log_key) ? (string) $row->getDestinationProperty($log_key) : '';
+    }
+    if ($entity->isNewRevision()) {
       $this->createdRevision = TRUE;
       if ($make_default) {
         $entity->isDefaultRevision(TRUE);
         $this->replacedRevisionId = (int) $entity->getLoadedRevisionId();
       }
       $entity->setRevisionTranslationAffected(TRUE);
+    }
+    elseif ($make_default) {
+      // An existing revision updated in place: the D7 current revision must
+      // be the default revision. If a sync revision of the entity import has
+      // displaced it (see the class comment), take the default back and let
+      // save() delete that placeholder.
+      $current = $this->revisionableStorage()->load($entity->id());
+      if ($current instanceof ContentEntityInterface && (int) $current->getRevisionId() !== (int) $entity->getRevisionId()) {
+        $this->replacedRevisionId = (int) $current->getRevisionId();
+        $entity->isDefaultRevision(TRUE);
+      }
     }
     return $entity;
   }
@@ -130,7 +175,36 @@ final class TaxanotesEntityRevision extends EntityRevision {
       $this->deletePlaceholderRevision($this->replacedRevisionId);
     }
     $this->replacedRevisionId = NULL;
+    if ($this->inPlaceLog !== NULL && trim($this->inPlaceLog) === '') {
+      $this->clearRevisionLog($entity);
+    }
+    $this->inPlaceLog = NULL;
     return $ids;
+  }
+
+  /**
+   * Empties the stored log of a revision that was updated in place.
+   *
+   * Node::preSaveRevision() refuses an empty log on a save that creates no
+   * revision and keeps the stored one instead, so after such a save the row
+   * of the revision still carries whatever log it had (a placeholder's text
+   * when the entity import displaced it). The log column of the revision
+   * table is set to NULL directly; a revision's log is not cached.
+   */
+  protected function clearRevisionLog(ContentEntityInterface $entity): void {
+    $log_key = $entity->getEntityType()->getRevisionMetadataKey('revision_log_message');
+    if (!$log_key || !$this->database || !$this->storage instanceof SqlEntityStorageInterface) {
+      return;
+    }
+    $mapping = $this->storage->getTableMapping();
+    $table = $mapping->getFieldTableName($log_key);
+    $column = $mapping->getFieldColumnName($entity->getFieldDefinition($log_key)->getFieldStorageDefinition(), 'value');
+    $revision_key = $entity->getEntityType()->getKey('revision');
+    $this->database->update($table)
+      ->fields([$column => NULL])
+      ->condition($mapping->getFieldColumnName($entity->getFieldDefinition($revision_key)->getFieldStorageDefinition(), 'value'), $entity->getRevisionId())
+      ->execute();
+    $this->storage->resetCache([$entity->id()]);
   }
 
   /**

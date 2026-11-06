@@ -6,8 +6,10 @@ to them (recipe `recipes/taxanotes_literature`).
 
 ## Drupal 7 Scratchpads track
 
-Nine plugin migrations in group `taxanotes`, run in this order (the taxa
-first, then the literature, then the pass that links the two):
+Fourteen plugin migrations in group `taxanotes`, run in this order (the
+taxa first, then the literature, then the pass that links the two, then the
+images and species pages, then the pages, blog entries and their menu
+links):
 
 | id | what it does |
 |---|---|
@@ -17,9 +19,12 @@ first, then the literature, then the pass that links the two):
 | `taxanotes_d7_taxon_revision` | the term revision history (Scratchpads `taxonomy_revision` tables) as node revisions, oldest first; the D7 current revision becomes the node's default revision |
 | `taxanotes_d7_biblio_contributor` | one `bibcite_contributor` per `biblio_contributor_data` row (cid kept as the id): last, first and middle names, prefix, suffix |
 | `taxanotes_d7_biblio_keyword` | one `bibcite_keyword` per `biblio_keyword_data` row (kid kept) |
-| `taxanotes_d7_file` | one file entity per attachment of a biblio node (`field_file`) that exists under `source_files_dir`, copied to `public://scratchpads/<D7 path>`; a file not on this machine skips its row with a message |
+| `taxanotes_d7_file` | one file entity per attachment of a biblio node (`field_file`), per image placed on a species page or tagged with a taxon, and per file an inline `<img>` of a page, blog entry or species page text points at (see "Inline images"), that exists under `source_files_dir`, copied to `public://scratchpads/<D7 path>`; a file not on this machine skips its row with a message |
 | `taxanotes_d7_biblio` | one `bibcite_reference` per biblio node, keyed on the node uuid (kept in `field_scratchpads_uuid`; the nid in `field_scratchpads_nid`, which the `[bib]nid[/bib]` citations in texts are resolved through): the 14 publication types mapped onto bibcite's, every `biblio_*` column onto the bibcite field of the same name, authors (role and category), keywords, the taxa it names (`field_taxonomic_name`, through the taxon migration by GUID) and the attachments |
-| `taxanotes_d7_taxon_reference` | second pass over the taxa with a protologue: `field_reference` (entity reference to the bibcite reference) from the shadow `field_reference_guid` through the reference migration; the shadow fields stay |
+| `taxanotes_d7_taxon_reference` | second pass over the taxa that point at a biblio node: `field_reference` (entity reference to the bibcite reference) from the shadow `field_reference_guid` through the reference migration, and the nomenclature references `field_synonymy_reference` / `field_designation_reference` (below); the shadow fields stay |
+| `taxanotes_d7_media_image`, `taxanotes_d7_spm` | the images as media items and the species pages (see "Species pages and images") |
+| `taxanotes_d7_page`, `taxanotes_d7_blog` | one Basic page per D7 `page` node and one `blog_post` per D7 `blog` node (recipe `recipes/taxanotes_pages`), keyed on the node uuid: title, body (format mapped as the species pages, inline images pointed at the imported files), author through the user migration (uid 1 for the D7 site owner and deleted accounts), created/changed/status/promote/sticky, the vocabulary taxa the node names in `field_taxonomic_names`; revisions are not migrated |
+| `taxanotes_d7_menu_link` | one main-menu link (`menu_link_content`) per D7 `main-menu` link to a page or blog node, pointing at the migrated node, and per D7 link to the blog listing (`blog`, pointing at `/blog`), with the link's own title, enabled state and the D7 weight + 50 (D7 weights run -50..50; the D11 menu's own entries sit at 0..10, so the pages follow them in their D7 order); the parent is not migrated (every pilot link is top level) |
 
 Source plugin `scratchpads_d7_taxon` is built on core migrate's `SqlBase`
 (not on the `migrate_drupal` d7 sources, which are deprecated in Drupal 11.3
@@ -86,6 +91,45 @@ foreground, one at a time; if one is interrupted it stays "Importing":
 `migrate:reset-status <id>` and run the same `--update` import again (it
 resumes the rows still marked needs-update), or restore the snapshot. The
 script's header has the details.
+
+### Nomenclature fields
+
+Beyond the ITIS set, a Scratchpads vocabulary may carry term fields of its
+own: Mormyrids has the type material (`field_description_taxa`), type
+locality, original combination, free-text synonym lists (objective and
+subjective) and taxonomic notes; Anthophila the synonymy and designation
+(by whom, in which reference, on which page), the family-level name
+origins, the type material notes (`field_type_species`) and the biological
+notes. They land in the optional nomenclature fields of the taxon type
+(`recipes/taxanotes_taxon`; the two references, which point at bibcite
+references, in `recipes/taxanotes_literature`), the same on every instance:
+a field a vocabulary lacks stays empty and hidden. The table is
+`ScratchpadsD7Base::EXTRA_FIELDS` (D7 name => D11 name and kind): three
+misleading D7 names are renamed (`field_description_taxa` ->
+`field_type_material`, `field_type_species` -> `field_type_material_notes`,
+`field_designation_method` -> `field_designation_reference`, and
+`field_synonyms` -> `field_synonyms_homotypic`, beside
+`field_synonyms_heterotypic`). A D7 `text` of 255 characters is a `string`,
+a longer `text` or a `text_long` a formatted `text_long` (format NULL and
+plain_text -> plain_text, filtered_html -> basic_html, full_html stays), a
+`node_reference` an entity reference to the bibcite reference, resolved by
+`taxanotes_d7_taxon_reference` through the biblio migration by node uuid
+(like the protologue; not revisioned). The source plugins discover which of
+the table's fields the vocabulary has (`extraFields()`, from
+`field_config_instance`) and load their values once, every delta in the
+term's own language (else `und`, else the first), as whole-field
+properties named after the D11 field: a string, a list of `{value,
+format}`, or for a reference `<name>_guid` / `<name>_nid`. A vocabulary
+without them (Myriatrix) adds no property, so its row hashes do not change;
+on a vocabulary with them every row re-imports once. A term field the
+table does not know is not migrated; `scripts/verify-instance.php` lists
+such fields (`d7 term fields not migrated`).
+
+The taxon page shows these fields, with the synonyms (the published child
+taxa whose usage is invalid; `field_accepted_name` stays the D7 "associated
+accepted name", `field_aan_<vid>`, which Scratchpads sets on most synonyms
+and which the page shows on the synonym's side), in the Nomenclature block
+of `taxanotes_front`.
 
 Node `status` is mapped from the source property `published`: 0 for a term
 that is, or descends from, one of the `unpublished_roots`, 1 for everything
@@ -186,6 +230,17 @@ exactly its D7 history. Without this rule, a pass-1 re-import after a D7
 edit would have overwritten the D7 current revision's log with the
 placeholder text and the next revision import would then have deleted that
 genuine revision.
+
+**A platform change that re-imports the current revision.** When the
+taxon import re-saves a node with changed values (new fields, as above) it
+writes a sync revision above the D7 current revision. The next revision
+import re-imports that D7 current revision too (its hash changed as well):
+the destination updates the mapped revision in place, makes it the default
+revision again and deletes the sync placeholder, so the history is exactly
+the D7 history after the two runs. Node::preSaveRevision() keeps the stored
+log of a revision saved in place when the new log is empty (a Scratchpads
+log usually is); the destination clears it on the revision table after
+the save, so the placeholder's text does not survive.
 
 **Rollback order.** Rolling back `taxanotes_d7_taxon` deletes the nodes
 with all their revisions but leaves the revision migration's id map in
@@ -313,6 +368,26 @@ thumbnails are derived by core on save. Rolling back `taxanotes_d7_spm` and
 `taxanotes_d7_media_image` deletes the pages and media items and leaves the
 taxa, the literature and the file entities untouched.
 
+### Inline images
+
+The Scratchpads media module put images into the texts of pages, blog
+entries and species pages as `<img>` tags with the file id in a class
+(`img__fid__<fid>`) and an absolute `src` on the D7 host, often an image
+style path (`sites/<site>/files/styles/large/public/<path>`). Left as
+they are, the basic_html format replaces each with its "image removed"
+marker (only images of this site are allowed). So:
+- `taxanotes_d7_file` also imports every file an inline image points at
+  (`inline_bundles`, default page, blog and spm: every text field of those
+  bundles is scanned; the fid from the class, else `file_managed` by the
+  `public://` path the src gives);
+- the page, blog and species page sources rewrite each such `src` to the
+  imported file's URL (`public://scratchpads/<D7 path>`: the original,
+  not the style derivative) before the row is hashed, so a body with images
+  re-imports once and then stays unchanged. An image whose file is not in
+  `file_managed` keeps its src (and shows the marker). On a machine without
+  the D7 files the src is rewritten all the same; the image appears once
+  the files are there and `taxanotes_d7_file` has run.
+
 ## Local ddev setup for the D7 track
 
 `.ddev/docker-compose.scratchpads.yaml` attaches the web container to the
@@ -338,6 +413,11 @@ drush migrate:import taxanotes_d7_biblio_keyword
 drush migrate:import taxanotes_d7_file
 drush migrate:import taxanotes_d7_biblio
 drush migrate:import taxanotes_d7_taxon_reference
+drush migrate:import taxanotes_d7_media_image
+drush migrate:import taxanotes_d7_spm
+drush migrate:import taxanotes_d7_page
+drush migrate:import taxanotes_d7_blog
+drush migrate:import taxanotes_d7_menu_link
 ```
 
 All migrations are idempotent (`track_changes: true`): re-running imports

@@ -1,5 +1,5 @@
 name: 'Taxanotes taxon'
-description: 'Provides the Taxon content type (one node per taxonomic name, keyed on a GUID, single parent reference, ITIS/Scratchpads name fields) and the field set every Taxanotes instance shares. Instance data is imported separately; this recipe contains no site-specific values.'
+description: 'Provides the Taxon content type (one node per taxonomic name, keyed on a GUID, single parent reference, ITIS/Scratchpads name fields, the optional nomenclature fields: type material, type locality, original combination, free-text synonym lists, synonymy and designation, notes) and the field set every Taxanotes instance shares. Instance data is imported separately; this recipe contains no site-specific values.'
 type: 'Content type'
 install:
   - custom_field
@@ -18,9 +18,15 @@ config:
     - field.storage.node.field_accepted_name
     - field.storage.node.field_accepted_tid
     - field.storage.node.field_authors
+    - field.storage.node.field_biological_notes
+    - field.storage.node.field_designation_by
+    - field.storage.node.field_family_level_name_origins
     - field.storage.node.field_guid
     - field.storage.node.field_legacy_tid
+    - field.storage.node.field_original_combination
     - field.storage.node.field_page_number
+    - field.storage.node.field_page_number_designation
+    - field.storage.node.field_page_number_synonymy
     - field.storage.node.field_page_url
     - field.storage.node.field_parent_guid
     - field.storage.node.field_parent_taxon_reference
@@ -29,7 +35,14 @@ config:
     - field.storage.node.field_reference_guid
     - field.storage.node.field_reference_nid
     - field.storage.node.field_reference_title
+    - field.storage.node.field_synonyms_heterotypic
+    - field.storage.node.field_synonyms_homotypic
+    - field.storage.node.field_synonymy_by
+    - field.storage.node.field_taxonomic_notes
     - field.storage.node.field_term_description
+    - field.storage.node.field_type_locality
+    - field.storage.node.field_type_material
+    - field.storage.node.field_type_material_notes
     - field.storage.node.field_unacceptability_reason
     - field.storage.node.field_unit_names
     - field.storage.node.field_usage
@@ -48,14 +61,55 @@ config:
   # name, rank, status, parent, unit names, vernacular names, the protologue,
   # the description. config/ seeds a fresh site; these actions bring an
   # existing instance's displays to the same state on every apply (display
-  # only, no fields): the view display order, and the unit-names widget on
-  # the form (an instance built before field_unit_names existed has the
-  # field after this recipe is applied, but no widget for it otherwise).
+  # only, no fields): the view display order, and the widgets on the form
+  # (an instance built before a field existed has the field after this
+  # recipe is applied, but no widget for it otherwise).
+  #
+  # The nomenclature fields (type material and its notes, type locality,
+  # original combination, the free-text synonym lists, synonymy and
+  # designation, family-level name origins, taxonomic and biological notes:
+  # the term fields the Scratchpads vocabularies carry beyond the ITIS set,
+  # see taxanotes_import/README.md) are optional on every instance: a field
+  # no instance fills stays empty. They are hidden from the node display
+  # because the Nomenclature block of taxanotes_front renders them, in the
+  # order below, together with the synonyms (the invalid child taxa), under
+  # the ITIS fields of the Overview.
   actions:
+    # The D7 label of field_synonymy_by is "Synonymy" (its values start with
+    # "by ..."); an instance built with the earlier label gets it here.
+    field.field.node.taxon.field_synonymy_by:
+      setProperties:
+        label: Synonymy
     core.entity_form_display.node.taxon.default:
       setComponents:
         - name: field_unit_names
           options: { type: custom_stacked, weight: 7, region: content, settings: { wrapper: div, label_value: '', label_limit: 60, label_prefix: Unit, auto_collapse: false, open: true, fields: { indicator: { type: text, weight: 0, size: 10, placeholder: '', maxlength: 32, maxlength_js: false }, name: { type: text, weight: 1, size: 40, placeholder: '', maxlength: 255, maxlength_js: false } } }, third_party_settings: {  } }
+        - name: field_type_material
+          options: { type: text_textarea, weight: 40, region: content, settings: { rows: 4, placeholder: '' }, third_party_settings: {  } }
+        - name: field_type_material_notes
+          options: { type: text_textarea, weight: 41, region: content, settings: { rows: 3, placeholder: '' }, third_party_settings: {  } }
+        - name: field_type_locality
+          options: { type: text_textarea, weight: 42, region: content, settings: { rows: 3, placeholder: '' }, third_party_settings: {  } }
+        - name: field_original_combination
+          options: { type: string_textfield, weight: 43, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_synonyms_homotypic
+          options: { type: text_textarea, weight: 44, region: content, settings: { rows: 2, placeholder: '' }, third_party_settings: {  } }
+        - name: field_synonyms_heterotypic
+          options: { type: text_textarea, weight: 45, region: content, settings: { rows: 2, placeholder: '' }, third_party_settings: {  } }
+        - name: field_synonymy_by
+          options: { type: string_textfield, weight: 46, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_page_number_synonymy
+          options: { type: string_textfield, weight: 48, region: content, settings: { size: 20, placeholder: '' }, third_party_settings: {  } }
+        - name: field_designation_by
+          options: { type: string_textfield, weight: 49, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_page_number_designation
+          options: { type: string_textfield, weight: 51, region: content, settings: { size: 20, placeholder: '' }, third_party_settings: {  } }
+        - name: field_family_level_name_origins
+          options: { type: text_textarea, weight: 52, region: content, settings: { rows: 3, placeholder: '' }, third_party_settings: {  } }
+        - name: field_taxonomic_notes
+          options: { type: text_textarea, weight: 53, region: content, settings: { rows: 4, placeholder: '' }, third_party_settings: {  } }
+        - name: field_biological_notes
+          options: { type: text_textarea, weight: 54, region: content, settings: { rows: 4, placeholder: '' }, third_party_settings: {  } }
     core.entity_view_display.node.taxon.default:
       hideComponents:
         - field_accepted_guid
@@ -67,6 +121,19 @@ config:
         - field_reference_nid
         - field_weight
         - links
+        - field_type_material
+        - field_type_material_notes
+        - field_type_locality
+        - field_original_combination
+        - field_synonyms_homotypic
+        - field_synonyms_heterotypic
+        - field_synonymy_by
+        - field_page_number_synonymy
+        - field_designation_by
+        - field_page_number_designation
+        - field_family_level_name_origins
+        - field_taxonomic_notes
+        - field_biological_notes
       setComponents:
         - name: field_authors
           options: { type: string, label: hidden, weight: 0, region: content, settings: { link_to_entity: false, link_rel: canonical }, third_party_settings: {  } }

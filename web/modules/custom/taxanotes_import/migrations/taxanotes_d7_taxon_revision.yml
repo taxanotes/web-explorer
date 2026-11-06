@@ -103,6 +103,24 @@ process:
       language: language
       area: area
       remarks: remarks
+  # The nomenclature fields of the vocabulary (ScratchpadsD7Base::EXTRA_FIELDS):
+  # whole-field properties built by the source plugin, a string, a list of
+  # {value, format} items or NULL; a vocabulary without the field yields NULL
+  # and the field stays empty. The synonymy and designation
+  # references are linked by taxanotes_d7_taxon_reference, not revisioned.
+  field_type_material: field_type_material
+  field_type_material_notes: field_type_material_notes
+  field_type_locality: field_type_locality
+  field_original_combination: field_original_combination
+  field_synonyms_homotypic: field_synonyms_homotypic
+  field_synonyms_heterotypic: field_synonyms_heterotypic
+  field_synonymy_by: field_synonymy_by
+  field_page_number_synonymy: field_page_number_synonymy
+  field_designation_by: field_designation_by
+  field_page_number_designation: field_page_number_designation
+  field_family_level_name_origins: field_family_level_name_origins
+  field_taxonomic_notes: field_taxonomic_notes
+  field_biological_notes: field_biological_notes
 destination:
   plugin: taxanotes_entity_revision
   entity_type: node

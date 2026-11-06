@@ -3,3 +3,4 @@ front_intro: '<p>This site is a collaborative taxonomic database: a classificati
 about_title: About
 about_body: '<p>This site runs on Taxanotes, an open platform for taxonomic websites that carries on from the Scratchpads. Each name in the classification has its own page with its rank, status, parent and synonyms, vernacular names and the reference that published it.</p>'
 footer_text: '<p>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution (CC BY) licence</a>.</p>'
+footer_logos: {  }

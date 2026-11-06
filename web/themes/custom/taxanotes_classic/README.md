@@ -15,7 +15,9 @@ classic view").
 | the default logo: the Scratchpads logo from the GPL-2 Scratchpads theme (the repository's licence); every instance replaces it with its own (`instances/<slug>/assets/logo.png`, set as the theme's logo path by the instance scripts), so it is seen only on a site without one | `logo.png` |
 | the accent colour: `taxanotes_classic.settings:colour` (six hex digits, default 047DB8) → `--sp-colour` as the `style` attribute of the `html` element (an inline declaration, so it beats the stylesheet's `:root` fallback) + body class `scratchpad-colour-<hex>` | `taxanotes_classic.theme`, `theme-settings.php`, `config/` |
 | the front page: welcome + slideshow grid, the three columns | `css/front.css`, `js/classic.js` (slideshow) |
-| the taxon page: tabs from the content blocks, the authors as the title's subtitle, the stripy field group (the species page in the Descriptions tab uses the same group, its images as a grid, no row title under the block bar) | `css/taxon.css`, `js/classic.js`, `taxanotes_classic_preprocess_block()`, `templates/content/node--taxon-description.html.twig` |
+| the taxon page: tabs from the content blocks, the authors as the title's subtitle, the stripy field group (the species page in the Descriptions tab uses the same group, its images as a grid, no row title under the block bar); the Nomenclature section's rows continue the group; the lineage breadcrumb (node_tree); the classification tree opened at the taxon in a box that scrolls within itself | `css/taxon.css`, `js/classic.js`, `taxanotes_classic_preprocess_block()`, `templates/content/node--taxon-description.html.twig` |
+| the reference page: the citation line, then labelled rows like the taxon's; the Literature page's filters as one row (title, year, type, taxon, author, Apply/Reset) | `css/taxon.css`, `css/global.css` |
+| the footer logos row (block `taxanotes_front_footer_logos`, between the footer menu and the licence line; the platform ships no logo) | `taxanotes_front/css/taxanotes_front.css` |
 | the phone menu toggle | `js/classic.js`, `css/tabs.css` |
 
 Regions are named after Olivero's (`header`, `primary_menu`,

@@ -1,0 +1,50 @@
+name: 'Taxanotes pages and blog'
+description: 'Gives a Taxanotes instance the two free-form content types of a Scratchpads site: the Basic page (core''s page content type, for the "About us", "Resources" and "Acknowledgments" pages) and the Blog post (blog_post: title, body, author, date), both with field_taxonomic_names (the taxa a page is about, unlimited), and a Blog listing at /blog (newest first). The Scratchpads page and blog nodes arrive through the taxanotes_d7_page and taxanotes_d7_blog migrations, their main-menu entries through taxanotes_d7_menu_link. Applied by taxanotes_base; nothing here names an instance. Re-applying changes nothing that is already in place (the view is created only when missing).'
+type: 'Content type'
+recipes:
+  - taxanotes_taxon
+install:
+  - menu_link_content
+  - node
+  - path
+  - text
+  - views
+config:
+  # The Basic page is core's page_content_type recipe, carried here as config
+  # (with field_taxonomic_names on its displays) rather than applied from
+  # core: core's recipe is strict and would refuse the page displays once
+  # they carry the field. An instance that already has the page type (a
+  # Standard profile install) keeps its own; the actions below add the field
+  # to its displays on every apply. The blog view is a starting point an
+  # instance may tailor: once it exists it is left alone.
+  strict:
+    # Field storages influence the database layout, so they must match exactly.
+    - field.storage.node.body
+    - field.storage.node.field_taxonomic_names
+  import:
+    node:
+      - core.entity_view_mode.node.full
+      - core.entity_view_mode.node.rss
+      - core.entity_view_mode.node.teaser
+      - system.action.node_delete_action
+      - system.action.node_make_sticky_action
+      - system.action.node_make_unsticky_action
+      - system.action.node_promote_action
+      - system.action.node_publish_action
+      - system.action.node_save_action
+      - system.action.node_unpromote_action
+      - system.action.node_unpublish_action
+  actions:
+    # An instance built before this recipe has the field after the apply,
+    # but no widget or formatter for it otherwise.
+    core.entity_form_display.node.page.default:
+      setComponents:
+        - name: field_taxonomic_names
+          options: { type: entity_reference_autocomplete, weight: 32, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
+    core.entity_view_display.node.page.default:
+      setComponents:
+        - name: field_taxonomic_names
+          options: { type: entity_reference_label, label: inline, weight: 110, region: content, settings: { link: true }, third_party_settings: {  } }
+    core.entity_view_display.node.page.teaser:
+      hideComponents:
+        - field_taxonomic_names

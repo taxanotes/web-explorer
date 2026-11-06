@@ -1,11 +1,12 @@
 name: 'Taxanotes base'
-description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the literature (bibcite references linked to taxa, through taxanotes_literature), the species pages and images (through taxanotes_species), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
+description: 'Turns a freshly installed Drupal site into a Taxanotes instance: the shared taxon content type and editing roles (through the taxanotes_taxon and taxanotes_users recipes), the literature (bibcite references linked to taxa, through taxanotes_literature), the species pages and images (through taxanotes_species), the pages and blog posts (through taxanotes_pages), the taxon tree (node_tree), the Scratchpads import track (taxanotes_import with the migrate tooling) and the site identity. Name, slogan and mail are the only per-instance values and arrive as recipe inputs, which scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing in this recipe names an instance.'
 type: 'Site'
 recipes:
   - taxanotes_taxon
   - taxanotes_users
   - taxanotes_literature
   - taxanotes_species
+  - taxanotes_pages
 install:
   - migrate
   - migrate_plus
@@ -63,6 +64,20 @@ config:
     update.settings:
       simpleConfigUpdate:
         notification.emails: []
+    # The Scratchpads filtered_html format turned bare web addresses into
+    # links (filter_url); basic_html, the format the migrations give those
+    # texts, does the same, after filter_html (-10) and before the citation
+    # filter (10). Set on every apply.
+    filter.format.basic_html:
+      setFilterConfig:
+        instance_id: filter_url
+        configuration:
+          id: filter_url
+          provider: filter
+          status: true
+          weight: 0
+          settings:
+            filter_url_length: 72
     # Composition of taxon + literature on the taxon page: the protologue is
     # the link to the reference entity (taxanotes_literature), not the
     # Scratchpads title text (taxanotes_taxon). Both sub-recipes set this

@@ -21,7 +21,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   `image_bundles` through `image_field` (default: field_media on spm, the
  *   species pages) or tagged with a term of the instance vocabulary through
  *   `image_taxon_field` (default: field_taxonomic_name on the file; the
- *   vocabulary is the `bundle` of the base class, from settings).
+ *   vocabulary is the `bundle` of the base class, from settings), or
+ * - pointed at by an inline <img> in a text of a node of `inline_bundles`
+ *   (default: the pages, blog entries and species pages; see
+ *   ScratchpadsD7Base::inlineImages()), so the texts can show it.
  * The file itself must be present on this machine: `source_files_dir`
  * (configuration, else $settings['taxanotes_import']['source_files_dir']) is
  * the directory the D7 `public://` scheme maps to, as reachable by PHP (under
@@ -51,6 +54,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - image_taxon_field: the term reference on files (default
  *   field_taxonomic_name).
  * - images: FALSE to leave images out (default TRUE).
+ * - inline_bundles: node bundles whose texts are scanned for inline images
+ *   (default [page, blog, spm]); [] scans none.
  * - source_files_dir: the D7 public files directory on this machine.
  */
 #[MigrateSource(
@@ -76,6 +81,7 @@ final class ScratchpadsD7File extends ScratchpadsD7Base {
       'image_bundles' => ['spm'],
       'image_taxon_field' => 'field_taxonomic_name',
       'images' => TRUE,
+      'inline_bundles' => ['page', 'blog', 'spm'],
     ];
     if (!array_key_exists('source_files_dir', $configuration)) {
       $configuration['source_files_dir'] = $this->settingsFilesDir();
@@ -132,6 +138,10 @@ final class ScratchpadsD7File extends ScratchpadsD7Base {
           ->condition('fm.type', 'image')
           ->condition('fm.fid', $ids, 'IN'));
       }
+    }
+    $inline = $this->inlineImageFileIds((array) $this->configuration['inline_bundles']);
+    if ($inline) {
+      $used->condition('fm.fid', $inline, 'IN');
     }
     $query->condition($used);
     return $query;

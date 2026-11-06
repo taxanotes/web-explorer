@@ -152,3 +152,14 @@
     margin-top: 10px;
   }
 }
+
+/* Stacked (phone) layout of a taxon or species page: the content first, the
+   classification tree box (up to 70vh of sidebar) after it, so the title
+   and the fields are not scrolled past the tree. The front page keeps its
+   order (search, tree, numbers, then the columns). */
+@media (max-width: 739px) {
+  .page-node-type-taxon #region-sidebar,
+  .page-node-type-taxon-description #region-sidebar {
+    order: 1;
+  }
+}

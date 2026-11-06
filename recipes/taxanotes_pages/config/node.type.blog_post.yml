@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies: {  }
+name: 'Blog post'
+type: blog_post
+description: 'A dated entry of the site''s blog (the Scratchpads blog): news, how-tos, announcements, with the author and the date shown.'
+help: null
+new_revision: true
+preview_mode: 1
+display_submitted: true

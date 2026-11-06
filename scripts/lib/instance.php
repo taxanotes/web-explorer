@@ -29,13 +29,21 @@
  *   php scripts/lib/instance.php settings-migrate <instance.yml> <.env> [env]
  *     Prints the file holding the `migrate` connection alone, or nothing
  *     when the instance has no Scratchpads source or MIGRATE_DB_USER is empty.
+ *   php scripts/lib/instance.php footer-logos <instance.yml> <footer dir>
+ *     Prints, as YAML, the taxanotes_front.settings:footer_logos list for the
+ *     png/svg files in the directory: the entries of site.footer_logos
+ *     ({file, url, alt}) whose file is there, in their order, then the
+ *     remaining files alphabetically (alt: the file name, no link), each
+ *     file as instance/footer/<name> (where the scripts copy them), in flow
+ *     style on one line (drush config:set takes it as a value). An empty
+ *     list ({  }) when the directory has no logo.
  *
  * Defaults (applied in effective_instance(), the one place that knows them):
  *   drupal.sites_subdir = slug, drupal.database = slug,
  *   drupal.profile = standard, site.colour = 047DB8 (six hex digits, the
  *   accent colour of the classic view; a leading # is dropped),
  *   site.front_first_column = page (the node type of the classic front
- *   page's first column, page or blog).
+ *   page's first column, page or blog_post).
  *
  * Hostnames have an environment axis: `hostnames: {ddev: [...],
  * production: [...]}`. A plain list is accepted as the ddev list. Only the
@@ -91,7 +99,8 @@ function effective_instance(array $data): array {
   ];
   $data['site'] = (array) ($data['site'] ?? []);
   // The first front page column of the classic view: the node type it
-  // lists (the Scratchpads front_page_block_1_node_type: page or blog).
+  // lists (the Scratchpads front_page_block_1_node_type: page, or blog,
+  // which is blog_post here).
   $data['site'] += ['front_first_column' => 'page'];
   $data['site']['front_first_column'] = trim((string) $data['site']['front_first_column']);
   if (!preg_match('/^[a-z0-9_]+$/', $data['site']['front_first_column'])) {
@@ -308,6 +317,45 @@ switch ($command) {
     echo implode("\n", $lines), "\n";
     break;
 
+  case 'footer-logos':
+    $instance = read_instance($argv[2] ?? '');
+    $dir = rtrim($argv[3] ?? '', '/');
+    $files = [];
+    if ($dir !== '' && is_dir($dir)) {
+      foreach (scandir($dir) ?: [] as $name) {
+        if (preg_match('/^[A-Za-z0-9_. -]+\.(png|svg)$/i', $name) && is_file("$dir/$name")) {
+          $files[$name] = TRUE;
+        }
+      }
+    }
+    $logos = [];
+    foreach ((array) ($instance['site']['footer_logos'] ?? []) as $entry) {
+      $name = is_array($entry) ? trim((string) ($entry['file'] ?? '')) : '';
+      if ($name === '' || !isset($files[$name])) {
+        continue;
+      }
+      unset($files[$name]);
+      $url = trim((string) ($entry['url'] ?? ''));
+      // The block links a logo only to an absolute URL (scheme and host).
+      if ($url !== '' && !preg_match('#^[a-z][a-z0-9+.-]*://[^/\s]+#i', $url)) {
+        fwrite(STDERR, "warning: site.footer_logos: $name: url \"$url\" is not an absolute URL (https://...): the logo is shown without a link\n");
+        $url = '';
+      }
+      $logos[] = [
+        'file' => 'instance/footer/' . $name,
+        'url' => $url,
+        'alt' => trim((string) ($entry['alt'] ?? '')) ?: pathinfo($name, PATHINFO_FILENAME),
+      ];
+    }
+    foreach (array_keys($files) as $name) {
+      $logos[] = ['file' => 'instance/footer/' . $name, 'url' => '', 'alt' => pathinfo($name, PATHINFO_FILENAME)];
+    }
+    // Flow style ([{ file: ..., url: ..., alt: ... }]): one line that drush
+    // config:set --input-format=yaml takes as a value (a block list starts
+    // with "-", which drush reads as an option).
+    echo Yaml::dump($logos, 0), "\n";
+    break;
+
   default:
-    fail("usage: instance.php get <instance.yml> <dot.path> [environment] | settings-local <instance.yml> <.env> [environment] [migrate-file] | settings-migrate <instance.yml> <.env> [environment]");
+    fail("usage: instance.php get <instance.yml> <dot.path> [environment] | settings-local <instance.yml> <.env> [environment] [migrate-file] | settings-migrate <instance.yml> <.env> [environment] | footer-logos <instance.yml> <assets/footer dir>");
 }

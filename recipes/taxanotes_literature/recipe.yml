@@ -32,7 +32,9 @@ config:
     - field.storage.bibcite_reference.field_scratchpads_nid
     - field.storage.bibcite_reference.field_scratchpads_uuid
     - field.storage.bibcite_reference.field_taxonomic_name
+    - field.storage.node.field_designation_reference
     - field.storage.node.field_reference
+    - field.storage.node.field_synonymy_reference
   actions:
     # The Scratchpads inline citations ([bib]nid[/bib], the biblio filter
     # markup) in the migrated texts, rendered by the filter of
@@ -56,18 +58,28 @@ config:
     bibcite_entity.contributor.settings:
       simpleConfigUpdate:
         full_name_pattern: '@prefix @first_name @middle_name @last_name @suffix'
+    # The reference page renders the default display (below: the citation
+    # line, then the labelled rows), not bibcite's two-column table of every
+    # field. Set on every apply.
+    bibcite_entity.reference.settings:
+      simpleConfigUpdate:
+        display_override.reference_page_view_mode: default
     # Everyone reads the literature; the list formatter shows an author only
-    # when the contributor entity is viewable, hence the three permissions.
+    # when the contributor entity is viewable, hence the three permissions;
+    # and everyone may use the BibTeX / RIS links at the foot of a reference
+    # page (the Scratchpads offered the export to every visitor).
     user.role.anonymous:
       grantPermissions:
         - 'view bibcite_reference'
         - 'view bibcite_contributor'
         - 'view bibcite_keyword'
+        - 'access bibcite export'
     user.role.authenticated:
       grantPermissions:
         - 'view bibcite_reference'
         - 'view bibcite_contributor'
         - 'view bibcite_keyword'
+        - 'access bibcite export'
     # Editing follows the taxon roles (recipes/taxanotes_users): a
     # contributor adds references and edits their own, an editor any.
     user.role.contributor:
@@ -94,16 +106,25 @@ config:
     # the taxon recipe shows the reference title text (the shadow field,
     # hidden here; it keeps the Scratchpads value for taxa whose reference
     # did not resolve).
+    # The synonymy and designation references (the nomenclature fields of
+    # the taxon that point at a literature entry, see the taxon recipe) are
+    # rendered by the Nomenclature block, like the other nomenclature fields.
     core.entity_view_display.node.taxon.default:
       setComponents:
         - name: field_reference
           options: { type: entity_reference_label, label: inline, weight: 11, region: content, settings: { link: true }, third_party_settings: {  } }
       hideComponents:
         - field_reference_title
+        - field_synonymy_reference
+        - field_designation_reference
     core.entity_form_display.node.taxon.default:
       setComponents:
         - name: field_reference
           options: { type: entity_reference_autocomplete, weight: 12, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_synonymy_reference
+          options: { type: entity_reference_autocomplete, weight: 47, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
+        - name: field_designation_reference
+          options: { type: entity_reference_autocomplete, weight: 50, region: content, settings: { match_operator: CONTAINS, match_limit: 10, size: 60, placeholder: '' }, third_party_settings: {  } }
     # Blocks (default theme; Olivero regions, "content" elsewhere), created
     # only when missing like the front recipe's: the references naming the
     # taxon under the taxon's fields, the newest references on the front page.
@@ -177,28 +198,78 @@ config:
             settings:
               progress_indicator: throbber
             third_party_settings: {  }
+    # The reference page as the Scratchpads biblio node read: the citation
+    # line first (bibcite's citation pseudo-field, in the site's citation
+    # style), then the abstract, the keywords, the taxa, the attachment, the
+    # DOI, the URL and the notes as labelled rows, and the export links;
+    # every bibliographic field the citation already carries is hidden. Set
+    # on every apply, on each of the 14 publication types (the table
+    # display keeps the taxa and the attachment only).
     core.entity_view_display.bibcite_reference.book.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.book.table:
       setComponents:
         -
@@ -246,26 +317,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.book_chapter.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.book_chapter.table:
       setComponents:
         -
@@ -313,26 +427,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.journal_article.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.journal_article.table:
       setComponents:
         -
@@ -380,26 +537,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.conference_paper.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.conference_paper.table:
       setComponents:
         -
@@ -447,26 +647,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.conference_proceedings.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.conference_proceedings.table:
       setComponents:
         -
@@ -514,26 +757,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.newspaper_article.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.newspaper_article.table:
       setComponents:
         -
@@ -581,26 +867,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.magazine_article.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.magazine_article.table:
       setComponents:
         -
@@ -648,26 +977,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.thesis.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.thesis.table:
       setComponents:
         -
@@ -715,26 +1087,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.report.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.report.table:
       setComponents:
         -
@@ -782,26 +1197,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.personal.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.personal.table:
       setComponents:
         -
@@ -849,26 +1307,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.manuscript.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.manuscript.table:
       setComponents:
         -
@@ -916,26 +1417,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.unpublished.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.unpublished.table:
       setComponents:
         -
@@ -983,26 +1527,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.database.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.database.table:
       setComponents:
         -
@@ -1050,26 +1637,69 @@ config:
             third_party_settings: {  }
     core.entity_view_display.bibcite_reference.miscellaneous.default:
       setComponents:
-        -
-          name: field_taxonomic_name
-          options:
-            type: entity_reference_label
-            label: above
-            weight: 4
-            region: content
-            settings:
-              link: true
-            third_party_settings: {  }
-        -
-          name: field_file
-          options:
-            type: file_default
-            label: above
-            weight: 5
-            region: content
-            settings:
-              use_description_as_link_text: true
-            third_party_settings: {  }
+        - name: citation
+          options: { weight: 0, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_abst_e
+          options: { type: basic_string, label: inline, weight: 1, region: content, settings: {  }, third_party_settings: {  } }
+        - name: keywords
+          options: { type: entity_reference_label, label: inline, weight: 2, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_taxonomic_name
+          options: { type: entity_reference_label, label: inline, weight: 3, region: content, settings: { link: true }, third_party_settings: {  } }
+        - name: field_file
+          options: { type: file_default, label: inline, weight: 4, region: content, settings: { use_description_as_link_text: true }, third_party_settings: {  } }
+        - name: bibcite_doi
+          options: { type: string, label: inline, weight: 5, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_url
+          options: { type: string, label: inline, weight: 6, region: content, settings: { link_to_entity: false }, third_party_settings: {  } }
+        - name: bibcite_notes
+          options: { type: basic_string, label: inline, weight: 7, region: content, settings: {  }, third_party_settings: {  } }
+        - name: bibcite_links
+          options: { weight: 8, region: content, settings: {  }, third_party_settings: {  } }
+      hideComponents:
+        - author
+        - bibcite_year
+        - bibcite_secondary_title
+        - bibcite_volume
+        - bibcite_issue
+        - bibcite_pages
+        - bibcite_date
+        - bibcite_publisher
+        - bibcite_place_published
+        - bibcite_edition
+        - bibcite_isbn
+        - bibcite_issn
+        - bibcite_type_of_work
+        - bibcite_tertiary_title
+        - bibcite_short_title
+        - bibcite_alternate_title
+        - bibcite_translated_title
+        - bibcite_original_publication
+        - bibcite_reprint_edition
+        - bibcite_number_of_volumes
+        - bibcite_section
+        - bibcite_lang
+        - bibcite_accession_number
+        - bibcite_call_number
+        - bibcite_other_number
+        - bibcite_citekey
+        - bibcite_pmid
+        - bibcite_pmcid
+        - bibcite_refereed
+        - bibcite_remote_db_name
+        - bibcite_remote_db_provider
+        - bibcite_research_notes
+        - bibcite_auth_address
+        - bibcite_custom1
+        - bibcite_custom2
+        - bibcite_custom3
+        - bibcite_custom4
+        - bibcite_custom5
+        - bibcite_custom6
+        - bibcite_custom7
+        - bibcite_label
+        - bibcite_type
+        - field_scratchpads_nid
+        - field_scratchpads_uuid
     core.entity_view_display.bibcite_reference.miscellaneous.table:
       setComponents:
         -

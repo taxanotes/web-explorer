@@ -9,7 +9,7 @@ things, all in `instances/<slug>/`:
 | `instance.yml` | yes | everything that describes the instance and is not secret (below) |
 | `.env` | **no** (`**/.env` is gitignored; the script keeps it mode 600) | hash salt, database credentials, site mail, optional admin password; template `instances/.env.example` |
 | `data-imports/` | **no** (`instances/*/data-imports/`, `*.sql`, `*.sql.gz` are gitignored) | source data: dumps, spreadsheets |
-| `assets/` | **no** (`instances/*/assets/` is gitignored: image rights are not cleared for committing) | `logo.png`: the site logo; the script copies it to `web/sites/<subdir>/files/instance/logo.png` and points the theme's `logo.path` at it. No file: the theme's own logo |
+| `assets/` | **no** (`instances/*/assets/` is gitignored: image rights are not cleared for committing) | `logo.png`: the site logo; the script copies it to `web/sites/<subdir>/files/instance/logo.png` and points the theme's `logo.path` at it. No file: the theme's own logo. `footer/*.png`, `footer/*.svg`: the partner logos of the footer row (the Scratchpads footer showed Scratchpads, NHM, ViBRANT ...); the script copies them to `files/instance/footer/` and lists them in `taxanotes_front.settings:footer_logos` with the links and alt texts of `instance.yml` `site.footer_logos`. No file: no row |
 
 Nothing else is per instance: no per-site config export, no per-site module
 or recipe, no fork. Site configuration lives in the instance's database (and
@@ -31,14 +31,22 @@ with the generic `settings.php` (a verbatim copy of
 `settings.local.php` generated from `instance.yml` + `.env`, creates the
 database in the ddev db container, installs Drupal, sets the themes, applies
 `recipes/taxanotes_front` (which pulls in `taxanotes_base`, and through it
-`taxanotes_taxon`, `taxanotes_users` and `taxanotes_literature`: the taxon
-type, the roles, the literature (bibcite references linked to taxa, the
-Literature page and blocks), the tree, the import module, the site identity,
-then the front page, the About page, the main menu and the taxon page
-blocks), sets the themes and applies the theme's own recipe when it has one
-(`recipes/taxanotes_classic`, see "The classic view"), installs the logo, runs the eleven `taxanotes_import` migrations
-(taxa, then literature, then the images and the species pages) when `.env`
-names a Scratchpads database, rebuilds caches and prints the URL. A second run on the same instance changes
+`taxanotes_taxon`, `taxanotes_users`, `taxanotes_literature`,
+`taxanotes_species` and `taxanotes_pages`: the taxon type with its
+nomenclature fields, the roles, the literature (bibcite references linked
+to taxa, the Literature page and blocks), the species pages and images, the
+Basic page and Blog post types with the /blog listing, the tree, the import
+module, the site identity, then the front page, the About page, the main
+menu and the taxon page blocks: the Nomenclature section, the
+classification), after running the platform's pending update hooks (`drush
+updatedb`: they carry changes to configuration the recipes create only
+once, such as a shipped view's layout, to an instance that already has it),
+sets the themes and applies the theme's own recipe when it has one
+(`recipes/taxanotes_classic`, see "The classic view"), installs the logo
+and the footer logos, runs the fourteen `taxanotes_import` migrations
+(taxa, then literature, then the images and the species pages, then the
+pages, blog entries and their menu links) when `.env` names a Scratchpads
+database, rebuilds caches and prints the URL. A second run on the same instance changes
 nothing that is already in place: blocks and views are created only when
 missing (an instance may move or edit them), the site texts are seeded again
 from `instance.yml` (a key left out keeps what the site has); a changed
@@ -73,8 +81,12 @@ site:
   colour: '047DB8'                 # accent colour of the classic view, six hex digits (the
                                    # Drupal 7 site's scratchpads_colour); default 047DB8
   front_first_column: page         # node type listed in the classic front page's first
-                                   # column (Drupal 7 front_page_block_1_node_type: page or
-                                   # blog); default page, the fallback while the type is absent
+                                   # column (Drupal 7 front_page_block_1_node_type: page, or
+                                   # blog, which is blog_post here); default page, the fallback while the type is absent
+  footer_logos:                    # optional: links and alt texts of the footer logos in
+    - file: nhm.png                #   assets/footer/ (png/svg; the file name there), in this
+      url: https://www.nhm.ac.uk/  #   order; a file without an entry is shown with its name
+      alt: Natural History Museum  #   as the alt text and no link; no file: no row
   admin_theme: claro               # administration theme
   # Site texts (HTML), recipe inputs of taxanotes_front -> taxanotes_front.settings,
   # editable afterwards at /admin/config/system/taxanotes-front. Each is

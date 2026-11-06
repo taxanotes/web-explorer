@@ -11,8 +11,8 @@ site:
   theme: taxanotes_classic
   colour: '9F8247'
   # The first front page column listed the blog on the Drupal 7 site
-  # (front_page_block_1_node_type: blog); pages until the blog type arrives.
-  front_first_column: blog
+  # (front_page_block_1_node_type: blog): the blog posts (blog_post).
+  front_first_column: blog_post
   admin_theme: claro
   # Front page, About page and footer texts (HTML), seeded through the
   # taxanotes_front recipe; see instances/README.md. The welcome text is the

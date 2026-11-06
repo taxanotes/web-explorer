@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
 use Drupal\Core\Database\Query\SelectInterface;
+use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Plugin\migrate\source\SqlBase;
+use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\Row;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Shared behaviour of the Scratchpads (Drupal 7) taxon source plugins.
@@ -55,6 +58,66 @@ abstract class ScratchpadsD7Base extends SqlBase {
   protected const UNIT_POSITIONS = 4;
 
   /**
+   * The nomenclature term fields: D7 field name => [D11 field name, kind].
+   *
+   * The term fields a Scratchpads vocabulary may carry beyond the ITIS set
+   * (SCALAR_FIELDS, the accepted name, the protologue reference, the page
+   * URL and the vernacular names): Mormyrids has the type material, type
+   * locality, original combination, free-text synonym lists and taxonomic
+   * notes; Anthophila the synonymy and designation fields, the family-level
+   * name origins, the type material notes and the biological notes. Each
+   * lands in the generic optional field of the taxon type named here
+   * (recipes/taxanotes_taxon, the two references in
+   * recipes/taxanotes_literature); three D7 names are misleading and are
+   * renamed (field_description_taxa holds the type material,
+   * field_type_species the type material notes, field_designation_method
+   * the designation reference). The kind says how the value travels:
+   * - string: one plain value (D7 text, 255 characters) as the property;
+   * - text: the items as a list of {value, format} (D7 text_long, or a
+   *   text field longer than 255 characters), the format mapped like the
+   *   term description (NULL and plain_text -> plain_text, filtered_html ->
+   *   basic_html, full_html -> full_html);
+   * - reference: a node_reference to a biblio node; the property
+   *   <D11 name>_guid carries the node uuid (and <D11 name>_nid the nid), to
+   *   be resolved through the biblio migration by the reference pass.
+   * A vocabulary's term field that is not in this table is not migrated
+   * (scripts/verify-instance.php lists such fields).
+   */
+  protected const EXTRA_FIELDS = [
+    'field_description_taxa' => ['field_type_material', 'text'],
+    'field_type_species' => ['field_type_material_notes', 'text'],
+    'field_type_locality' => ['field_type_locality', 'text'],
+    'field_original_combination' => ['field_original_combination', 'string'],
+    'field_synonyms' => ['field_synonyms_homotypic', 'text'],
+    'field_synonyms_heterotypic' => ['field_synonyms_heterotypic', 'text'],
+    'field_synonymy_by' => ['field_synonymy_by', 'string'],
+    'field_page_number_synonymy' => ['field_page_number_synonymy', 'string'],
+    'field_synonymy_reference' => ['field_synonymy_reference', 'reference'],
+    'field_designation_by' => ['field_designation_by', 'string'],
+    'field_page_number_designation' => ['field_page_number_designation', 'string'],
+    'field_designation_method' => ['field_designation_reference', 'reference'],
+    'field_family_level_name_origins' => ['field_family_level_name_origins', 'text'],
+    'field_taxonomic_notes' => ['field_taxonomic_notes', 'text'],
+    'field_biological_notes' => ['field_biological_notes', 'text'],
+  ];
+
+  /**
+   * D7 text format => D11 text format of a nomenclature text value.
+   */
+  protected const TEXT_FORMATS = [
+    'filtered_html' => 'basic_html',
+    'full_html' => 'full_html',
+    'plain_text' => 'plain_text',
+  ];
+
+  /**
+   * The nomenclature fields the vocabulary has, resolved once.
+   *
+   * @var array<string, array{string, string}>|null
+   */
+  protected ?array $extraFields = NULL;
+
+  /**
    * Sub-fields of a vernacular-name collection item: source key => D7 field.
    */
   protected const VERNACULAR_FIELDS = [
@@ -75,6 +138,27 @@ abstract class ScratchpadsD7Base extends SqlBase {
   protected ?bool $termsHaveLanguage = NULL;
 
   /**
+   * The file URL generator, for the inline images of the texts.
+   *
+   * Set by create(); the file source, which builds itself, leaves it NULL.
+   */
+  protected ?FileUrlGeneratorInterface $fileUrlGenerator = NULL;
+
+  /**
+   * The file_managed URIs by fid, as looked up (NULL for an unknown file).
+   *
+   * @var array<int, string|null>
+   */
+  protected array $fileUris = [];
+
+  /**
+   * The file_managed ids by public:// URI, as looked up (NULL when none).
+   *
+   * @var array<string, int|null>
+   */
+  protected array $fileIdsByUri = [];
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state) {
@@ -83,6 +167,18 @@ abstract class ScratchpadsD7Base extends SqlBase {
       $configuration['bundle'] = $instance['source_vocabulary'];
     }
     parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The sources that carry texts take the file URL generator too, for
+   * rewriteInlineImages().
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
+    $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition, $migration);
+    $instance->fileUrlGenerator = $container->get('file_url_generator');
+    return $instance;
   }
 
   /**
@@ -475,6 +571,177 @@ abstract class ScratchpadsD7Base extends SqlBase {
   }
 
   /**
+   * The nomenclature term fields of the vocabulary: D7 name => [D11, kind].
+   *
+   * The subset of EXTRA_FIELDS that has an instance on the configured
+   * vocabulary (field_config_instance) and a data table. Nothing for a
+   * vocabulary without them (Myriatrix): its rows carry no extra property,
+   * so their hashes do not change.
+   *
+   * @return array<string, array{string, string}>
+   *   D7 field name => [D11 field name, kind], in EXTRA_FIELDS order.
+   */
+  protected function extraFields(): array {
+    if ($this->extraFields !== NULL) {
+      return $this->extraFields;
+    }
+    $this->extraFields = [];
+    $schema = $this->getDatabase()->schema();
+    if (empty($this->configuration['bundle']) || !$schema->tableExists('field_config_instance')) {
+      return $this->extraFields;
+    }
+    $names = $this->select('field_config_instance', 'fci')
+      ->fields('fci', ['field_name'])
+      ->condition('fci.entity_type', 'taxonomy_term')
+      ->condition('fci.bundle', (array) $this->configuration['bundle'], 'IN')
+      ->condition('fci.deleted', 0)
+      ->execute()
+      ->fetchCol();
+    foreach (static::EXTRA_FIELDS as $d7_name => $target) {
+      if (in_array($d7_name, $names, TRUE) && $schema->tableExists('field_data_' . $d7_name)) {
+        $this->extraFields[$d7_name] = $target;
+      }
+    }
+    return $this->extraFields;
+  }
+
+  /**
+   * Loads the values of every nomenclature field of the vocabulary, once.
+   *
+   * One query per field over field_data_<name> (keyed by tid) or
+   * field_revision_<name> (keyed by term revision id), every delta of the
+   * row set in the term's own language, else `und`, else the first
+   * language (the rule of joinFieldTable()), shaped per kind (EXTRA_FIELDS):
+   * a string, a list of {value, format}, or for a reference the uuid and
+   * nid of the biblio node under <D11 name>_guid / <D11 name>_nid. A term
+   * (or revision) without a value for a field gets NULL for that property,
+   * so every row of the vocabulary carries the same property set.
+   *
+   * @param bool $revision
+   *   TRUE for the field_revision_* tables, keyed by term revision id.
+   *
+   * @return array<int, array<string, mixed>>
+   *   Source properties keyed by tid or revision id.
+   */
+  protected function loadExtraFieldValues(bool $revision): array {
+    $values = [];
+    $fields = $this->extraFields();
+    if (!$fields) {
+      return $values;
+    }
+    $schema = $this->getDatabase()->schema();
+    $prefix = $revision ? 'field_revision_' : 'field_data_';
+    $key = $revision ? 'revision_id' : 'entity_id';
+    foreach ($fields as $d7_name => [$name, $kind]) {
+      $table = $prefix . $d7_name;
+      if (!$schema->tableExists($table)) {
+        continue;
+      }
+      // The best language per term (and revision), as joinFieldTable() ranks
+      // it, over every delta of the field.
+      $best = $this->getDatabase()->select($table, 'f');
+      $best->addField('f', 'entity_id');
+      if ($this->termsHaveLanguage()) {
+        $best->innerJoin('taxonomy_term_data', 't', '[t].[tid] = [f].[entity_id]');
+        $rank = "CASE WHEN [f].[language] = [t].[language] THEN '0' WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+      }
+      else {
+        $rank = "CASE WHEN [f].[language] = 'und' THEN '1' ELSE '2' END";
+      }
+      $best->addExpression("SUBSTRING(MIN(CONCAT($rank, [f].[language])), 2)", 'language');
+      $best->condition('f.entity_type', 'taxonomy_term')
+        ->condition('f.deleted', 0)
+        ->condition('f.bundle', (array) $this->configuration['bundle'], 'IN')
+        ->groupBy('f.entity_id');
+      $on = '[best].[entity_id] = [d].[entity_id] AND [best].[language] = [d].[language]';
+      if ($revision) {
+        $best->addField('f', 'revision_id');
+        $best->groupBy('f.revision_id');
+        $on .= ' AND [best].[revision_id] = [d].[revision_id]';
+      }
+      $query = $this->select($table, 'd')
+        ->fields('d', ['entity_id', 'revision_id', 'delta'])
+        ->condition('d.entity_type', 'taxonomy_term')
+        ->condition('d.deleted', 0)
+        ->condition('d.bundle', (array) $this->configuration['bundle'], 'IN')
+        ->orderBy('d.' . $key)
+        ->orderBy('d.delta');
+      $query->innerJoin($best, 'best', $on);
+      if ($kind === 'reference') {
+        $query->addField('d', $d7_name . '_nid', 'nid');
+        $query->leftJoin('node', 'n', "[n].[nid] = [d].[{$d7_name}_nid]");
+        $query->addField('n', 'uuid', 'uuid');
+      }
+      else {
+        $query->addField('d', $d7_name . '_value', 'value');
+        if ($schema->fieldExists($table, $d7_name . '_format')) {
+          $query->addField('d', $d7_name . '_format', 'format');
+        }
+      }
+      foreach ($query->execute()->fetchAll() as $record) {
+        $id = (int) $record[$key];
+        if ($kind === 'reference') {
+          if (!isset($values[$id][$name . '_guid']) && $record['nid']) {
+            $values[$id][$name . '_nid'] = (int) $record['nid'];
+            $values[$id][$name . '_guid'] = $record['uuid'] ?: NULL;
+          }
+          continue;
+        }
+        $value = $record['value'];
+        if ($value === NULL || trim((string) $value) === '') {
+          continue;
+        }
+        if ($kind === 'string') {
+          if (!isset($values[$id][$name])) {
+            $values[$id][$name] = (string) $value;
+          }
+          continue;
+        }
+        $values[$id][$name][] = [
+          'value' => (string) $value,
+          'format' => static::TEXT_FORMATS[$record['format'] ?? ''] ?? 'plain_text',
+        ];
+      }
+    }
+    return $values;
+  }
+
+  /**
+   * The source property names of the nomenclature fields of the vocabulary.
+   *
+   * @return string[]
+   *   One name per non-reference field, two (<name>_guid, <name>_nid) per
+   *   reference field.
+   */
+  protected function extraFieldProperties(): array {
+    $properties = [];
+    foreach ($this->extraFields() as [$name, $kind]) {
+      if ($kind === 'reference') {
+        $properties[] = $name . '_guid';
+        $properties[] = $name . '_nid';
+      }
+      else {
+        $properties[] = $name;
+      }
+    }
+    return $properties;
+  }
+
+  /**
+   * Sets the nomenclature properties of a row (NULL where the term has none).
+   *
+   * @param \Drupal\migrate\Row $row
+   *   The row.
+   * @param array<string, mixed> $values
+   *   The term's (or revision's) values from loadExtraFieldValues().
+   */
+  protected function setExtraFieldProperties(Row $row, array $values): void {
+    foreach ($this->extraFieldProperties() as $property) {
+      $row->setSourceProperty($property, $values[$property] ?? NULL);
+    }
+  }
+
+  /**
    * The D7 vocabulary id of the configured bundle, or FALSE.
    */
   protected function vocabularyId(): int|false {
@@ -505,6 +772,171 @@ abstract class ScratchpadsD7Base extends SqlBase {
     }
     $field = 'field_aan_' . $vid;
     return $this->getDatabase()->schema()->tableExists('field_data_' . $field) ? $field : NULL;
+  }
+
+  /**
+   * The inline images of a Scratchpads text: one entry per <img> tag.
+   *
+   * The Scratchpads media module wrote an inline image with the file id in
+   * a class (img__fid__<fid>) and an absolute src on the D7 host, often an
+   * image style path (sites/<site>/files/styles/<style>/public/<path>). The
+   * file id is taken from the class, else resolved from the src through
+   * file_managed by its public:// path; NULL when neither gives a file.
+   *
+   * @return array<int, array{tag: string, attr: string, src: string, fid: int|null}>
+   *   Per tag: the tag, its src attribute as written, the src value and
+   *   the D7 file id.
+   */
+  protected function inlineImages(string $html): array {
+    if (!preg_match_all('/<img\b[^>]*>/i', $html, $tags)) {
+      return [];
+    }
+    $images = [];
+    foreach ($tags[0] as $tag) {
+      $attr = '';
+      $src = '';
+      if (preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/i', $tag, $m)) {
+        $attr = $m[0];
+        $src = html_entity_decode($m[2], ENT_QUOTES);
+      }
+      $fid = NULL;
+      if (preg_match('/\bimg__fid__(\d+)\b/', $tag, $m)) {
+        $fid = (int) $m[1];
+      }
+      elseif (($uri = $this->d7FileUri($src)) !== NULL) {
+        $fid = $this->fileIdByUri($uri);
+      }
+      $images[] = ['tag' => $tag, 'attr' => $attr, 'src' => $src, 'fid' => $fid];
+    }
+    return $images;
+  }
+
+  /**
+   * The D7 public:// URI a files URL points at, or NULL.
+   *
+   * .../sites/<site>/files/<path> and the image style form
+   * .../files/styles/<style>/public/<path> both give public://<path>.
+   */
+  protected function d7FileUri(string $src): ?string {
+    if (!preg_match('#/files/(?:styles/[^/]+/public/)?([^?\#]+)#', $src, $m)) {
+      return NULL;
+    }
+    $path = trim(rawurldecode($m[1]));
+    return $path === '' ? NULL : 'public://' . $path;
+  }
+
+  /**
+   * The public:// URI of a D7 file, or NULL (unknown fid, other scheme).
+   */
+  protected function fileUri(int $fid): ?string {
+    if (!array_key_exists($fid, $this->fileUris)) {
+      $uri = $this->select('file_managed', 'fm')
+        ->fields('fm', ['uri'])
+        ->condition('fm.fid', $fid)
+        ->execute()
+        ->fetchField();
+      $this->fileUris[$fid] = (is_string($uri) && str_starts_with($uri, 'public://')) ? $uri : NULL;
+    }
+    return $this->fileUris[$fid];
+  }
+
+  /**
+   * The id of the D7 file at a public:// URI, or NULL.
+   */
+  protected function fileIdByUri(string $uri): ?int {
+    if (!array_key_exists($uri, $this->fileIdsByUri)) {
+      $fid = $this->select('file_managed', 'fm')
+        ->fields('fm', ['fid'])
+        ->condition('fm.uri', $uri)
+        ->orderBy('fm.fid')
+        ->range(0, 1)
+        ->execute()
+        ->fetchField();
+      $this->fileIdsByUri[$uri] = $fid ? (int) $fid : NULL;
+    }
+    return $this->fileIdsByUri[$uri];
+  }
+
+  /**
+   * Points the inline images of a text at the imported files.
+   *
+   * Every <img> whose file is in file_managed (see inlineImages()) gets as
+   * src the URL of the file entity taxanotes_d7_file imports from it
+   * (public://scratchpads/<D7 path>, the original rather than the image
+   * style derivative), a path on this site that the basic_html format's
+   * "restrict images to this site" filter accepts once the file is there.
+   * An image whose file is unknown keeps its src (the filter then shows
+   * its "image removed" marker, as for any off-site image). Nothing else
+   * in the text changes. A source without the URL generator (the file
+   * source) returns the text as it is.
+   */
+  protected function rewriteInlineImages(?string $html): ?string {
+    if ($html === NULL || $html === '' || $this->fileUrlGenerator === NULL || stripos($html, '<img') === FALSE) {
+      return $html;
+    }
+    $replacements = [];
+    foreach ($this->inlineImages($html) as $image) {
+      $uri = $image['fid'] ? $this->fileUri($image['fid']) : NULL;
+      if ($uri === NULL || $image['attr'] === '') {
+        continue;
+      }
+      $src = $this->fileUrlGenerator->generateString('public://scratchpads/' . substr($uri, strlen('public://')));
+      $replacements[$image['tag']] = str_replace($image['attr'], 'src="' . htmlspecialchars($src, ENT_QUOTES) . '"', $image['tag']);
+    }
+    return $replacements ? strtr($html, $replacements) : $html;
+  }
+
+  /**
+   * The ids of the files the inline images of node texts point at.
+   *
+   * Every text field (text_long, text_with_summary) of the given D7 node
+   * bundles is scanned for <img> tags and each tag resolved to a file (see
+   * inlineImages()): the files taxanotes_d7_file must import for
+   * rewriteInlineImages() to have a target.
+   *
+   * @param string[] $bundles
+   *   D7 node bundles (page, blog, spm).
+   *
+   * @return int[]
+   *   Distinct file ids.
+   */
+  protected function inlineImageFileIds(array $bundles): array {
+    $schema = $this->getDatabase()->schema();
+    if (!$bundles || !$schema->tableExists('field_config_instance') || !$schema->tableExists('field_config')) {
+      return [];
+    }
+    $query = $this->select('field_config_instance', 'fci')
+      ->fields('fci', ['field_name'])
+      ->condition('fci.entity_type', 'node')
+      ->condition('fci.bundle', $bundles, 'IN')
+      ->condition('fci.deleted', 0)
+      ->distinct();
+    $query->innerJoin('field_config', 'fc', '[fc].[id] = [fci].[field_id]');
+    $query->condition('fc.type', ['text_long', 'text_with_summary'], 'IN')
+      ->condition('fc.deleted', 0);
+    $fids = [];
+    foreach ($query->execute()->fetchCol() as $field) {
+      $table = 'field_data_' . $field;
+      if (!$schema->tableExists($table)) {
+        continue;
+      }
+      $texts = $this->select($table, 'f')
+        ->fields('f', [$field . '_value'])
+        ->condition('f.entity_type', 'node')
+        ->condition('f.bundle', $bundles, 'IN')
+        ->condition('f.deleted', 0)
+        ->condition('f.' . $field . '_value', '%<img%', 'LIKE')
+        ->execute()
+        ->fetchCol();
+      foreach ($texts as $text) {
+        foreach ($this->inlineImages((string) $text) as $image) {
+          if ($image['fid']) {
+            $fids[$image['fid']] = $image['fid'];
+          }
+        }
+      }
+    }
+    return array_values($fids);
   }
 
 }

@@ -1,0 +1,17 @@
+{#
+/**
+ * @file
+ * The partner logos row of the footer (block taxanotes_front_footer_logos).
+ *
+ * Available variables:
+ * - logos: a list of logos, each with src (the image URL), alt and url (the
+ *   link, may be empty).
+ */
+#}
+<ul class="taxanotes-footer-logos">
+  {% for logo in logos %}
+    <li>
+      {% if logo.url %}<a href="{{ logo.url }}">{% endif %}<img src="{{ logo.src }}" alt="{{ logo.alt }}" loading="lazy">{% if logo.url %}</a>{% endif %}
+    </li>
+  {% endfor %}
+</ul>

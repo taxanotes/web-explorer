@@ -344,6 +344,11 @@ recipe_inputs=(
 [ -n "$front_intro" ] && recipe_inputs+=(--input="taxanotes_front.front_intro=$front_intro")
 [ -n "$about_body" ] && recipe_inputs+=(--input="taxanotes_front.about_body=$about_body")
 [ -n "$footer_text" ] && recipe_inputs+=(--input="taxanotes_front.footer_text=$footer_text")
+# Pending database and post-update hooks of the platform first: they carry
+# the changes to configuration the recipes create only once (a shipped
+# view's layout) to an instance that already has it. Nothing to do on a
+# fresh install.
+in_web drush --uri="$url" updatedb --yes
 in_web drush --uri="$url" recipe "$croot/recipes/taxanotes_front" "${recipe_inputs[@]}"
 
 # ---------------------------------------------------------------------------
@@ -401,6 +406,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+log "Footer logos: $inst_dir/assets/footer/"
+# The partner logos of the footer (the Scratchpads footer row): every png
+# and svg in instances/<slug>/assets/footer/ (gitignored, the rights are the
+# instance's) is copied into the site's files directory and listed in
+# taxanotes_front.settings:footer_logos with the link and alt text of
+# instance.yml site.footer_logos ({file, url, alt}); files no longer there
+# are removed. No file: an empty list, the footer shows no row.
+footer_src="$inst_dir/assets/footer"
+footer_dir="$site_dir/files/instance/footer"
+mkdir -p "$footer_dir"
+footer_count=0
+if [ -d "$footer_src" ]; then
+  for f in "$footer_src"/*.png "$footer_src"/*.svg "$footer_src"/*.PNG "$footer_src"/*.SVG; do
+    [ -f "$f" ] || continue
+    footer_count=$((footer_count + 1))
+    if ! cmp -s "$f" "$footer_dir/$(basename "$f")"; then
+      cp "$f" "$footer_dir/$(basename "$f")"
+      note "copied $(basename "$f")"
+    fi
+  done
+fi
+for f in "$footer_dir"/*; do
+  [ -f "$f" ] || continue
+  if [ ! -f "$footer_src/$(basename "$f")" ]; then
+    rm -f "$f"
+    note "removed $(basename "$f") (no longer in assets/footer/)"
+  fi
+done
+footer_yaml="$(php scripts/lib/instance.php footer-logos "$yml" "$footer_src")"
+in_web drush --uri="$url" config:set taxanotes_front.settings footer_logos --input-format=yaml "$footer_yaml" --yes
+note "$footer_count logo(s): taxanotes_front.settings footer_logos set"
+
+# ---------------------------------------------------------------------------
 log "Scratchpads (Drupal 7) import"
 # Taxa first (users, taxa, parents, revisions), then the literature
 # (contributors, keywords, the files, the references with their links to
@@ -418,7 +456,7 @@ if [ -n "$migrate_user" ] && [ -n "$(inst source.vocabulary)" ]; then
     note "D7 files: not on this machine (no SOURCE_FILES_DIR in .env, no source.files.$environment in instance.yml): the attachments and the images are skipped (taxanotes_d7_file, taxanotes_d7_media_image); references and species pages import without them"
     migrations+=(taxanotes_d7_biblio taxanotes_d7_taxon_reference)
   fi
-  migrations+=(taxanotes_d7_spm)
+  migrations+=(taxanotes_d7_spm taxanotes_d7_page taxanotes_d7_blog taxanotes_d7_menu_link)
   for m in "${migrations[@]}"; do
     note "migrate:import $m"
     in_web drush --uri="$url" migrate:import "$m" --feedback=2000

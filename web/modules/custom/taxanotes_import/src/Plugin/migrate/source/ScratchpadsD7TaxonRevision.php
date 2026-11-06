@@ -48,7 +48,12 @@ use Drupal\migrate\Row;
  *   forced re-import of unchanged terms detects no change;
  * - vernacular: the vernacular-name collection items of the revision (each
  *   collection item revision is joined on the field_collection_item revision
- *   id stored with the term revision).
+ *   id stored with the term revision);
+ * - the nomenclature fields the vocabulary has (ScratchpadsD7Base::
+ *   EXTRA_FIELDS), as of the revision (field_revision_*), the current
+ *   revision's from the current tables like every other value; the two
+ *   reference fields are not revisioned here (like the protologue, they are
+ *   linked by the reference pass on the current revision only).
  *
  * The hierarchy (parent), the sibling weight (drag-and-drop writes
  * taxonomy_term_data.weight without a revision; the revision rows all carry
@@ -77,6 +82,13 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
    * @var array<int, array<string, mixed>>|null
    */
   protected ?array $live = NULL;
+
+  /**
+   * The nomenclature field values keyed by term revision id, loaded once.
+   *
+   * @var array<int, array<string, mixed>>|null
+   */
+  protected ?array $extraValues = NULL;
 
   /**
    * Source properties the current revision takes from the current tables.
@@ -158,7 +170,8 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
       'changed' => $this->t('The revision timestamp, or term_changed for the current revision (what the node revision stores as changed).'),
       'vernacular' => $this->t('Vernacular names of the revision: array of name, language, area, remarks.'),
       'unit_names' => $this->t('Unit names of the revision: array of indicator, name, one per non-empty unit position (1-4), in order.'),
-    ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value as of this revision', ['@field' => $f]), static::SCALAR_FIELDS));
+    ] + array_combine(array_keys(static::SCALAR_FIELDS), array_map(fn($f) => $this->t('D7 @field value as of this revision', ['@field' => $f]), static::SCALAR_FIELDS))
+    + array_combine($this->extraFieldProperties(), array_map(fn($p) => $this->t('Nomenclature field @p as of this revision (see EXTRA_FIELDS).', ['@p' => $p]), $this->extraFieldProperties()));
   }
 
   /**
@@ -181,6 +194,7 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $is_current = (int) $row->getSourceProperty('is_current');
     $row->setSourceProperty('is_current', $is_current);
     $row->setSourceProperty('vernacular', $this->vernacularNames()[$revision_id] ?? []);
+    $this->setExtraFieldProperties($row, $this->extraValues()[$revision_id] ?? []);
     if ($is_current) {
       // The current revision carries what the D7 site renders now (see the
       // class comment): every revisioned value from the current tables.
@@ -251,13 +265,28 @@ final class ScratchpadsD7TaxonRevision extends ScratchpadsD7Base {
     $this->joinItisFields($query, 'td');
     $keep = array_merge(static::LIVE_PROPERTIES, array_keys(static::SCALAR_FIELDS));
     $vernacular = $this->loadVernacularNames(FALSE);
+    $extra = $this->loadExtraFieldValues(FALSE);
+    $extra_properties = $this->extraFieldProperties();
     foreach ($query->execute()->fetchAll() as $record) {
       $tid = (int) $record['tid'];
       $values = array_intersect_key($record, array_flip($keep));
       $values['vernacular'] = $vernacular[$tid] ?? [];
+      foreach ($extra_properties as $property) {
+        $values[$property] = $extra[$tid][$property] ?? NULL;
+      }
       $this->live[$tid] = $values;
     }
     return $this->live;
+  }
+
+  /**
+   * Loads the nomenclature field values of every term revision, once.
+   */
+  protected function extraValues(): array {
+    if ($this->extraValues === NULL) {
+      $this->extraValues = $this->loadExtraFieldValues(TRUE);
+    }
+    return $this->extraValues;
   }
 
 }

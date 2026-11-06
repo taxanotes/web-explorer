@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_synonyms_homotypic
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_synonyms_homotypic
+field_name: field_synonyms_homotypic
+entity_type: node
+bundle: taxon
+label: 'Synonyms, objective (homotypic)'
+description: 'Objective (homotypic) synonyms of the name as free text, one per item; the synonyms recorded as names of their own are the invalid child taxa. Scratchpads: field_synonyms.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long

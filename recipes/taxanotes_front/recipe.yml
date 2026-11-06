@@ -1,5 +1,5 @@
 name: 'Taxanotes front page'
-description: 'Gives a Taxanotes instance its public face in the spirit of the Scratchpads front page: a front page with a welcome text (/front), a taxon search, the classification tree and the instance in numbers in the sidebar, recently added and recently updated taxa below, a footer text, a placeholder About page (/about) and the main menu (Home, Taxa, Classification, About); and the taxon page blocks (link into the tree, child taxa). Applies taxanotes_base first. The texts are recipe inputs that scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing here names an instance. Re-applying changes nothing that is already in place (blocks are created only when missing, the views are left alone once they exist) except the texts, which follow instance.yml.'
+description: 'Gives a Taxanotes instance its public face in the spirit of the Scratchpads front page: a front page with a welcome text (/front), a taxon search, the classification tree and the instance in numbers in the sidebar, recently added and recently updated taxa below, a footer text, a placeholder About page (/about) and the main menu (Home, Taxa, Classification, About); and the taxon page blocks (the Nomenclature section: nomenclature fields and synonyms; the link into the tree and the child taxa). Applies taxanotes_base first. The texts are recipe inputs that scripts/new-instance.sh fills from instances/<slug>/instance.yml; nothing here names an instance. Re-applying changes nothing that is already in place (blocks are created only when missing, the views are left alone once they exist) except the texts, which follow instance.yml.'
 type: 'Site'
 recipes:
   - taxanotes_base
@@ -172,8 +172,49 @@ config:
           label_display: '0'
           provider: taxanotes_front
           text_key: footer_text
-    # Taxon page: the classification block (tree link, child taxa) under the
-    # taxon's fields.
+    # The footer logos row (the partner logos of the Scratchpads footer),
+    # between the footer menu and the licence text; nothing is rendered
+    # while taxanotes_front.settings:footer_logos is empty (the instance
+    # scripts fill it from instances/<slug>/assets/footer/).
+    block.block.taxanotes_front_footer_logos:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_front_footer_logos
+        region:
+          olivero: footer_top
+          taxanotes_classic: footer_top
+        default_region: content
+        weight: -3
+        settings:
+          id: taxanotes_front_footer_logos
+          label: 'Footer logos'
+          label_display: '0'
+          provider: taxanotes_front
+    # Taxon page: the Nomenclature section (the nomenclature fields and the
+    # synonyms: the invalid child taxa) right under the taxon's fields, then
+    # the classification block (tree link, child taxa).
+    block.block.taxanotes_taxon_nomenclature:
+      placeBlockInDefaultTheme:
+        plugin: taxanotes_taxon_nomenclature
+        region:
+          olivero: content
+          taxanotes_classic: content
+        default_region: content
+        weight: 5
+        settings:
+          id: taxanotes_taxon_nomenclature
+          label: 'Nomenclature'
+          label_display: visible
+          provider: taxanotes_front
+          context_mapping:
+            node: '@node.node_route_context:node'
+        visibility:
+          entity_bundle:node:
+            id: 'entity_bundle:node'
+            negate: false
+            context_mapping:
+              node: '@node.node_route_context:node'
+            bundles:
+              taxon: taxon
     block.block.taxanotes_taxon_classification:
       placeBlockInDefaultTheme:
         plugin: 'views_block:taxanotes_taxon_page-children'

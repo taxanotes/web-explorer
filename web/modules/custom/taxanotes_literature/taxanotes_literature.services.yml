@@ -1,0 +1,8 @@
+services:
+  # Home › Literature › the reference on a reference page, ahead of core's
+  # path-based builder (priority 0).
+  taxanotes_literature.breadcrumb:
+    class: Drupal\taxanotes_literature\Breadcrumb\ReferenceBreadcrumbBuilder
+    arguments: ['@router.route_provider']
+    tags:
+      - { name: breadcrumb_builder, priority: 100 }

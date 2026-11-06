@@ -113,3 +113,42 @@
 .taxanotes-search-results__more {
   margin-top: 0.25rem;
 }
+
+/* The Nomenclature section of a taxon page: the synonyms list (the rows of
+   the nomenclature fields are plain fields; the theme lays them out). */
+.taxanotes-synonyms {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.taxanotes-synonyms li {
+  padding: 0.15em 0;
+}
+.taxanotes-synonyms__authors {
+  font-style: italic;
+}
+.taxanotes-synonyms__reason {
+  opacity: 0.8;
+}
+
+/* The footer logos row: the partner logos side by side, centred. */
+.taxanotes-footer-logos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px 30px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.taxanotes-footer-logos li {
+  margin: 0;
+  padding: 0;
+}
+.taxanotes-footer-logos img {
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 100%;
+}

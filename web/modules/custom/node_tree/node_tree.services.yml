@@ -1,1 +1,7 @@
 services:
+  # The lineage breadcrumb of taxon and species pages (Home › root › … ›
+  # parent › current), ahead of core's path-based builder (priority 0).
+  node_tree.breadcrumb:
+    class: Drupal\node_tree\Breadcrumb\TaxonBreadcrumbBuilder
+    tags:
+      - { name: breadcrumb_builder, priority: 100 }

@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_type_material
+    - node.type.taxon
+  module:
+    - text
+id: node.taxon.field_type_material
+field_name: field_type_material
+entity_type: node
+bundle: taxon
+label: 'Type material'
+description: 'The type material of the name (holotype, paratypes, depositories), as free text. Scratchpads: field_description_taxa.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long
