@@ -12,6 +12,10 @@
         {
             "type": "composer",
             "url": "https://packages.drupal.org/8"
+        },
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
         }
     ],
     "require": {
@@ -29,7 +33,9 @@
         "drupal/shield": "^1.7",
         "drupal/taxonomy_import": "^2.0",
         "drupal/tour": "^2.0",
-        "drush/drush": "^13.6"
+        "drush/drush": "^13.6",
+        "npm-asset/jqtree": "1.6.2",
+        "oomphinc/composer-installers-extender": "^2.0"
     },
     "conflict": {
         "drupal/drupal": "*"
@@ -45,7 +51,8 @@
             "php-http/discovery": true,
             "phpstan/extension-installer": true,
             "tbachert/spi": true,
-            "symfony/runtime": true
+            "symfony/runtime": true,
+            "oomphinc/composer-installers-extender": true
         },
         "sort-packages": true
     },
@@ -60,7 +67,9 @@
                 "type:drupal-core"
             ],
             "web/libraries/{$name}": [
-                "type:drupal-library"
+                "type:bower-asset",
+                "type:drupal-library",
+                "type:npm-asset"
             ],
             "web/modules/contrib/{$name}": [
                 "type:drupal-module"
@@ -104,9 +113,16 @@
                 "  * Remove the plugin that prints this message:",
                 "      composer remove drupal/core-project-message"
             ]
-        }
+        },
+        "installer-types": [
+            "bower-asset",
+            "npm-asset"
+        ]
     },
     "require-dev": {
         "drupal/core-dev": "^11"
+    },
+    "replace": {
+        "npm-asset/jquery": "*"
     }
 }

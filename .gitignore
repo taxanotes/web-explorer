@@ -154,3 +154,6 @@ instances/*/assets/
 # Per-developer ddev compose files (bind mounts of local D7 files directories);
 # copy the committed .dist next to it (see instances/README.md).
 .ddev/docker-compose.*.local.yaml
+
+# Front-end libraries come from Composer (Asset Packagist, see composer.json), never from git.
+/web/libraries/

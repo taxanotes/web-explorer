@@ -3,6 +3,7 @@ expander
 jqtree
 licence
 organisation
+packagist
 prefilter
 taxanotes
 therobyouknow
