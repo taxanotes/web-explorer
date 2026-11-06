@@ -2,49 +2,24 @@
 
 /**
  * @file
- * Status report entries of the node_tree module.
+ * Status report entries of the node_tree module (Drupal before 11.2).
  */
 
 declare(strict_types=1);
 
 use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
-use Drupal\Core\Url;
-use Drupal\node_tree\NodeTree;
+use Drupal\node_tree\Hook\NodeTreeRequirements;
 
 /**
  * Implements hook_requirements().
+ *
+ * Drupal 11.2+ uses NodeTreeRequirements::runtime() (hook_runtime_requirements)
+ * instead; this is the same report for earlier versions.
  */
 #[LegacyRequirementsHook]
 function node_tree_requirements(string $phase): array {
-  $requirements = [];
   if ($phase !== 'runtime') {
-    return $requirements;
+    return [];
   }
-  if (NodeTree::jqtreeIsLocal()) {
-    $requirements['node_tree_jqtree'] = [
-      'title' => t('Node tree: jqTree library'),
-      'value' => t('Served from @path', ['@path' => NodeTree::JQTREE_LOCAL_JS]),
-      'severity' => REQUIREMENT_OK,
-    ];
-  }
-  else {
-    $requirements['node_tree_jqtree'] = [
-      'title' => t('Node tree: jqTree library'),
-      'value' => t('Loaded from the jsDelivr CDN (jqtree @version)', ['@version' => NodeTree::JQTREE_VERSION]),
-      'description' => t('To serve it yourself, put tree.jquery.js and jqtree.css of the jqtree npm package (version @version) in @dir under the Drupal root.', [
-        '@version' => NodeTree::JQTREE_VERSION,
-        '@dir' => dirname(NodeTree::JQTREE_LOCAL_JS),
-      ]),
-      'severity' => REQUIREMENT_WARNING,
-    ];
-  }
-  $bundles = \Drupal::config('node_tree.settings')->get('bundles') ?: [];
-  $requirements['node_tree_settings'] = [
-    'title' => t('Node tree: node types'),
-    'value' => $bundles
-      ? t('@bundles', ['@bundles' => implode(', ', $bundles)])
-      : t('None configured: the tree is empty until a node type is chosen on the <a href=":url">settings page</a>.', [':url' => Url::fromRoute('node_tree.settings')->toString()]),
-    'severity' => $bundles ? REQUIREMENT_OK : REQUIREMENT_WARNING,
-  ];
-  return $requirements;
+  return \Drupal::classResolver(NodeTreeRequirements::class)->runtime();
 }
