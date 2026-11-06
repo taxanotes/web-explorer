@@ -11,6 +11,8 @@
  *   field name, in display order (each a field with an inline label).
  * - synonyms: the invalid child taxa, each with title, url (a Url object),
  *   authors and reason (strings, may be empty).
+ * - synonyms_label: the label of that list ("Synonyms", or "Synonyms in
+ *   this classification" when rows holds the free-text synonym lists).
  */
 #}
 <div class="taxanotes-nomenclature">
@@ -18,7 +20,7 @@
     {{ rows }}
     {% if synonyms %}
       <div class="field field--name-synonyms field--label-inline clearfix taxanotes-nomenclature__synonyms">
-        <div class="field__label">{{ 'Synonyms'|t }}</div>
+        <div class="field__label">{{ synonyms_label ?: 'Synonyms'|t }}</div>
         <div class="field__item">
           <ul class="taxanotes-synonyms">
             {% for synonym in synonyms %}

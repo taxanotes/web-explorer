@@ -75,6 +75,11 @@ config:
   # order below, together with the synonyms (the invalid child taxa), under
   # the ITIS fields of the Overview.
   actions:
+    # The D7 label of field_synonymy_by is "Synonymy" (its values start with
+    # "by ..."); an instance built with the earlier label gets it here.
+    field.field.node.taxon.field_synonymy_by:
+      setProperties:
+        label: Synonymy
     core.entity_form_display.node.taxon.default:
       setComponents:
         - name: field_unit_names

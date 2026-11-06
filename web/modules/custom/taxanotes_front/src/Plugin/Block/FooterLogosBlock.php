@@ -6,6 +6,7 @@ namespace Drupal\taxanotes_front\Plugin\Block;
 
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\Block\BlockBase;
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\File\FileUrlGeneratorInterface;
@@ -24,7 +25,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * instance scripts fill from the png/svg files in the instance's
  * assets/footer/ directory (copied to public://instance/footer/) and the
  * optional links and alt texts of instance.yml site.footer_logos. A file
- * that is not in the files directory is skipped; no logo, no row.
+ * that is not in the files directory is skipped, a link that is not an
+ * absolute URL is dropped; no logo, no row.
  */
 #[Block(
   id: 'taxanotes_front_footer_logos',
@@ -61,7 +63,13 @@ final class FooterLogosBlock extends BlockBase implements ContainerFactoryPlugin
       if (!is_file($uri)) {
         continue;
       }
+      // The link: an absolute URL with its scheme (https://...); anything
+      // else (a bare host, a typo) leaves the logo unlinked rather than
+      // failing every page.
       $url = trim((string) ($logo['url'] ?? ''));
+      if ($url !== '' && !UrlHelper::isValid($url, TRUE)) {
+        $url = '';
+      }
       $logos[] = [
         'src' => $this->fileUrlGenerator->generateString($uri),
         'alt' => trim((string) ($logo['alt'] ?? '')) ?: pathinfo($file, PATHINFO_FILENAME),

@@ -8,7 +8,7 @@ id: node.taxon.field_synonymy_by
 field_name: field_synonymy_by
 entity_type: node
 bundle: taxon
-label: 'Synonymy by'
+label: Synonymy
 description: 'Who placed the name in synonymy. Scratchpads: field_synonymy_by.'
 required: false
 translatable: false

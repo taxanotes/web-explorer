@@ -335,9 +335,15 @@ switch ($command) {
         continue;
       }
       unset($files[$name]);
+      $url = trim((string) ($entry['url'] ?? ''));
+      // The block links a logo only to an absolute URL (scheme and host).
+      if ($url !== '' && !preg_match('#^[a-z][a-z0-9+.-]*://[^/\s]+#i', $url)) {
+        fwrite(STDERR, "warning: site.footer_logos: $name: url \"$url\" is not an absolute URL (https://...): the logo is shown without a link\n");
+        $url = '';
+      }
       $logos[] = [
         'file' => 'instance/footer/' . $name,
-        'url' => trim((string) ($entry['url'] ?? '')),
+        'url' => $url,
         'alt' => trim((string) ($entry['alt'] ?? '')) ?: pathinfo($name, PATHINFO_FILENAME),
       ];
     }

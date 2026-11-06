@@ -30,7 +30,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - "Synonyms": the published child taxa whose usage is invalid (a
  *   Scratchpads synonym is a child term of the accepted name with usage
  *   "invalid"), each linked, with its authors and the reason it is
- *   unacceptable (junior synonym, homonym, misspelling ...).
+ *   unacceptable (junior synonym, homonym, misspelling ...); labelled
+ *   "Synonyms in this classification" when the taxon also carries the
+ *   free-text synonym lists, which name the same names.
  * A taxon with neither renders nothing, so the block (and its tab or title
  * bar) does not appear.
  */
@@ -117,10 +119,16 @@ final class NomenclatureBlock extends BlockBase implements ContainerFactoryPlugi
       $metadata->applyTo($build);
       return $build;
     }
+    // A vocabulary that keeps its own synonym lists as text (Mormyrids:
+    // the homotypic and heterotypic rows above) names the same names
+    // again in the derived list; its label then says where that list
+    // comes from.
+    $text_synonyms = isset($rows['field_synonyms_homotypic']) || isset($rows['field_synonyms_heterotypic']);
     $build = [
       '#theme' => 'taxanotes_nomenclature',
       '#rows' => $rows,
       '#synonyms' => $synonyms,
+      '#synonyms_label' => $text_synonyms ? $this->t('Synonyms in this classification') : $this->t('Synonyms'),
       '#attached' => ['library' => ['taxanotes_front/front']],
     ];
     $metadata->applyTo($build);

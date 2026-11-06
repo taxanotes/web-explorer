@@ -47,8 +47,10 @@
               }
               else {
                 // On a taxon page the selection is only a highlight: bind
-                // the events after it, so it does not navigate.
-                $tree.tree('selectNode', target);
+                // the events after it, so it does not navigate, and without
+                // the focus jqTree would set, which scrolls the page to the
+                // tree (below the content on a phone).
+                $tree.tree('selectNode', target, { mustSetFocus: false });
                 bindEvents($tree);
               }
               scrollIntoTree(container, target.element);

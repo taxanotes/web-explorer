@@ -7,6 +7,7 @@ namespace Drupal\node_tree\Breadcrumb;
 use Drupal\Core\Breadcrumb\Breadcrumb;
 use Drupal\Core\Breadcrumb\BreadcrumbBuilderInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -21,8 +22,9 @@ use Drupal\node\NodeInterface;
  * field_taxonomic_name): Home › the taxon's lineage › the page, the page
  * left out when its title is the taxon's name (the usual case). The chain is
  * read from field_parent_taxon_reference up to the root (cycle-safe) and
- * cached with the route and the tags of every node in it, so a renamed or
- * moved ancestor refreshes the trail.
+ * cached with the route, the tags of every node in it and the access
+ * results of the links (an ancestor the visitor may not view is named, not
+ * linked), so a renamed or moved ancestor refreshes the trail.
  */
 final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
 
@@ -35,7 +37,7 @@ final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
     if ($cacheable_metadata) {
       $cacheable_metadata->addCacheContexts(['route']);
     }
-    return $route_match->getRouteName() === 'entity.node.canonical' && $this->taxonOf($route_match->getParameter('node')) !== NULL;
+    return $route_match->getRouteName() === 'entity.node.canonical' && $this->taxonOf($route_match->getParameter('node'), $cacheable_metadata) !== NULL;
   }
 
   /**
@@ -45,7 +47,7 @@ final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
     $breadcrumb = new Breadcrumb();
     $breadcrumb->addCacheContexts(['route']);
     $node = $route_match->getParameter('node');
-    $taxon = $this->taxonOf($node);
+    $taxon = $this->taxonOf($node, $breadcrumb);
     $links = [Link::createFromRoute($this->t('Home'), '<front>')];
     if ($node instanceof NodeInterface && $taxon instanceof NodeInterface) {
       $breadcrumb->addCacheableDependency($node);
@@ -59,9 +61,18 @@ final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
       }
       foreach (array_reverse($chain) as $ancestor) {
         $breadcrumb->addCacheableDependency($ancestor);
-        $links[] = $ancestor->id() === $node->id()
-          ? Link::createFromRoute($ancestor->label(), '<none>')
-          : $ancestor->toLink($ancestor->label());
+        if ($ancestor->id() === $node->id()) {
+          $links[] = Link::createFromRoute($ancestor->label(), '<none>');
+          continue;
+        }
+        // An ancestor the visitor may not view (unpublished) is named, not
+        // linked; the access result is part of the cacheability, so the
+        // trail is not shared between visitors who see different things.
+        $access = $ancestor->access('view', NULL, TRUE);
+        $breadcrumb->addCacheableDependency($access);
+        $links[] = $access->isAllowed()
+          ? $ancestor->toLink($ancestor->label())
+          : Link::createFromRoute($ancestor->label(), '<none>');
       }
       if ($taxon->id() !== $node->id() && mb_strtolower(trim((string) $node->label())) !== mb_strtolower(trim((string) $taxon->label()))) {
         $links[] = Link::createFromRoute($node->label(), '<none>');
@@ -73,8 +84,12 @@ final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
 
   /**
    * The taxon a node stands for: itself, or the one it describes.
+   *
+   * The described taxon counts only when the visitor may view it; that
+   * access result is added to $cacheability when given, so the breadcrumb
+   * built on it varies as the access does.
    */
-  private function taxonOf(mixed $node): ?NodeInterface {
+  private function taxonOf(mixed $node, ?RefinableCacheableDependencyInterface $cacheability = NULL): ?NodeInterface {
     if (!$node instanceof NodeInterface) {
       return NULL;
     }
@@ -83,8 +98,12 @@ final class TaxonBreadcrumbBuilder implements BreadcrumbBuilderInterface {
     }
     if ($node->hasField('field_taxonomic_name')) {
       $taxon = $node->get('field_taxonomic_name')->entity;
-      if ($taxon instanceof NodeInterface && $taxon->bundle() === 'taxon' && $taxon->access('view')) {
-        return $taxon;
+      if ($taxon instanceof NodeInterface && $taxon->bundle() === 'taxon') {
+        $access = $taxon->access('view', NULL, TRUE);
+        $cacheability?->addCacheableDependency($access);
+        if ($access->isAllowed()) {
+          return $taxon;
+        }
       }
     }
     return NULL;

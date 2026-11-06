@@ -12,6 +12,7 @@
 
 declare(strict_types=1);
 
+use Drupal\Core\Config\Config;
 use Drupal\Core\Serialization\Yaml;
 
 /**
@@ -61,7 +62,7 @@ function taxanotes_literature_post_update_taxon_block_author_year_title(): strin
  *   A message when the shipped file is missing, NULL when the view was
  *   replaced.
  */
-function _taxanotes_literature_reset_view(\Drupal\Core\Config\Config $config): ?string {
+function _taxanotes_literature_reset_view(Config $config): ?string {
   $file = \Drupal::root() . '/../recipes/taxanotes_literature/config/views.view.taxanotes_literature.yml';
   if (!is_file($file)) {
     return 'recipes/taxanotes_literature/config/views.view.taxanotes_literature.yml is missing: left alone.';
