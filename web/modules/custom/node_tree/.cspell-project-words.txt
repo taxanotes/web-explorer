@@ -2,6 +2,7 @@ braak
 expander
 jqtree
 licence
+oomphinc
 organisation
 packagist
 prefilter
