@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\taxanotes_import\Sheet;
 
 use Drupal\migrate\MigrateMessageInterface;
-use Symfony\Component\Console\Style\StyleInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Prints the migrate executable's messages on the Drush console.
@@ -15,7 +15,7 @@ use Symfony\Component\Console\Style\StyleInterface;
  */
 final class IoMigrateMessage implements MigrateMessageInterface {
 
-  public function __construct(private readonly StyleInterface $io) {}
+  public function __construct(private readonly SymfonyStyle $io) {}
 
   /**
    * {@inheritdoc}
