@@ -23,11 +23,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
  * nothing. The sheet import wants to say "3,047 rows matched, 12 changed",
  * so this listens to the run:
  * - the map save events give the per-status counts for this migration;
- * - the pre-row-save event, for a pass with `overwrite_properties`
- *   (entity:node), compares each overwritten field's current value with the
- *   row's before the save, which is the only moment both exist;
  * - the destination `taxanotes_entity_node` counts created / changed /
- *   unchanged itself (it has to know anyway) and is asked afterwards.
+ *   unchanged itself (it has to know anyway) and is asked afterwards;
+ * - for any other destination with `overwrite_properties` (entity:node), the
+ *   pre-row-save event compares each overwritten field's current value with
+ *   the row's before the save, which is the only moment both exist.
  * Attach before the import, detach after; the listeners are removed so a
  * later run in the same process is not counted twice.
  */
@@ -150,7 +150,7 @@ final class RunCounter {
    * Compares the overwritten fields with the entity before the save.
    */
   private function onPreRowSave(MigratePreRowSaveEvent $event): void {
-    if ($event->getMigration()->id() !== $this->migration->id()) {
+    if ($event->getMigration()->id() !== $this->migration->id() || $this->migration->getDestinationPlugin() instanceof TaxanotesEntityNode) {
       return;
     }
     $properties = $this->migration->getDestinationConfiguration()['overwrite_properties'] ?? [];

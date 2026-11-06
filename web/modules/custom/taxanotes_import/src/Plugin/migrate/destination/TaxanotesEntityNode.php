@@ -28,20 +28,29 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * This plugin tells the two cases apart by the log of the revision it is
  * about to update:
+ * - a row that changes no field value leaves the revision exactly as it is,
+ *   whatever its log: the log the row carries is discarded, so a forced
+ *   --update of unchanged rows adds no revision, alters no log and keeps a
+ *   placeholder a placeholder;
  * - a placeholder (log starts with one of `placeholder_log_prefixes`: the log
  *   this migration wrote on creation, the reset log of a rolled-back history,
  *   or an earlier sync revision) is updated in place, as core does;
- * - anything else is real history: when the row changes a field value the
- *   entity is saved as a *new* default revision with the row's
- *   `sync_revision_log` (destination-only property, removed before the entity
- *   is touched), author `sync_uid` (default 1) and the current time; when
- *   nothing changed the entity is saved in place with its log kept, so a
- *   forced --update of unchanged rows adds no revision and alters no log.
+ * - anything else is real history: the entity is saved as a *new* default
+ *   revision with the row's `sync_revision_log` (destination-only property,
+ *   removed before the entity is touched), author `sync_uid` (default 1) and
+ *   the current time.
  *
  * A sync revision is itself a placeholder: the revision migration lists its
  * prefix in `replace_log_prefixes`, so the D7 revision that caused the change
  * replaces it when the history is next imported, and the node's history stays
  * exactly the D7 history. Rows that create a new entity behave as in core.
+ *
+ * `create_only_properties` names destination properties (e.g. `uid`,
+ * `status`) that are set when the row creates the entity and dropped when it
+ * updates one, so a source without an author or a status column (the sheet)
+ * does not re-own or re-publish a taxon on every import. Works with
+ * `overwrite_properties` as in core: only the listed fields are compared and
+ * written.
  */
 #[MigrateDestination(
   id: 'taxanotes_entity_node',
@@ -99,7 +108,7 @@ final class TaxanotesEntityNode extends EntityContentBase {
     $this->syncLog = $row->hasDestinationProperty($property) ? (string) $row->getDestinationProperty($property) : NULL;
     $row->removeDestinationProperty($property);
     $entity = parent::getEntity($row, $old_destination_id_values);
-    if ($entity instanceof EntityInterface && $entity->isNew()) {
+    if ($entity->isNew()) {
       $this->counts['created']++;
     }
     return $entity;
@@ -109,6 +118,9 @@ final class TaxanotesEntityNode extends EntityContentBase {
    * {@inheritdoc}
    */
   protected function updateEntity(EntityInterface $entity, Row $row) {
+    foreach (array_filter((array) ($this->configuration['create_only_properties'] ?? [])) as $property) {
+      $row->removeDestinationProperty((string) $property);
+    }
     $previous_log = $entity instanceof RevisionLogInterface ? (string) $entity->getRevisionLogMessage() : NULL;
     $entity = parent::updateEntity($entity, $row);
     if (!$entity instanceof ContentEntityInterface || !$entity instanceof RevisionLogInterface || $previous_log === NULL) {
@@ -116,13 +128,15 @@ final class TaxanotesEntityNode extends EntityContentBase {
     }
     $changed = $entity->hasTranslationChanges();
     $this->counts[$changed ? 'updated' : 'unchanged']++;
-    if ($this->isPlaceholderLog($previous_log)) {
-      // Not real history: core behaviour (in place, log from the row).
+    if (!$changed) {
+      // Nothing changed: keep the revision exactly as it is, log included
+      // (core would still write the row's log; a placeholder would then stop
+      // being one and the revision import would keep it as history).
+      $entity->setRevisionLogMessage($previous_log);
       return $entity;
     }
-    if (!$changed) {
-      // Nothing changed: keep the revision exactly as it is.
-      $entity->setRevisionLogMessage($previous_log);
+    if ($this->isPlaceholderLog($previous_log)) {
+      // Not real history: core behaviour (in place, log from the row).
       return $entity;
     }
     $entity->setNewRevision(TRUE);

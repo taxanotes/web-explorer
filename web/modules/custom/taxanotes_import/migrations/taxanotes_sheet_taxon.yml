@@ -40,10 +40,12 @@ process:
     bundle: taxon
     field: field_guid
   title: name
+  # The sheet has no author or status column: a created taxon is published
+  # and owned by uid 1; an existing one keeps its own (create_only_properties
+  # below), so a taxon unpublished or re-owned on the site stays so.
   uid:
     plugin: default_value
     default_value: 1
-  # The sheet has no status column: every row is published.
   status: published
   # No created/changed: the sheet has no dates. A pipeline that yields NULL
   # (skip_on_empty) is recorded as an empty destination and would set the
@@ -118,6 +120,9 @@ destination:
     - 'Synced from Scratchpads GUID '
     - 'Scratchpads revision history rolled back'
   sync_uid: 1
+  create_only_properties:
+    - uid
+    - status
 migration_dependencies:
   required: {  }
   optional: {  }
