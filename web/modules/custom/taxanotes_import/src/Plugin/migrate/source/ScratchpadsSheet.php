@@ -57,8 +57,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - track_changes, constants: see SourcePluginBase.
  *
  * String cells longer than their field allows are cut to the field's length
- * with a message (the D7 fields were 255 characters too; Scratchpads stored
- * what MySQL kept).
+ * with a warning message (the D7 fields were 255 characters too; Scratchpads
+ * stored what MySQL kept); cuts() lists them for the report's headline, so
+ * the owner can shorten the cell rather than lose the end of it unseen.
  */
 #[MigrateSource(
   id: 'scratchpads_sheet',
@@ -86,7 +87,6 @@ final class ScratchpadsSheet extends SourcePluginBase implements ContainerFactor
   private const STRING_FIELDS = [
     'name' => 'title',
     'parent_name' => 'field_parent_term_name',
-    'accepted_name' => 'field_accepted_guid',
     'authors' => 'field_authors',
     'page_number' => 'field_page_number',
     'designation_by' => 'field_designation_by',
@@ -117,6 +117,13 @@ final class ScratchpadsSheet extends SourcePluginBase implements ContainerFactor
    * @var array<string, array<int, array{string, int}>>
    */
   protected array $messages = [];
+
+  /**
+   * The cells cut to their field's length: row, property, length, max.
+   *
+   * @var array<int, array{row: int, name: string, property: string, length: int, max: int}>
+   */
+  protected array $cuts = [];
 
   /**
    * The state service (the path and flags the Drush command sets).
@@ -335,6 +342,17 @@ final class ScratchpadsSheet extends SourcePluginBase implements ContainerFactor
   }
 
   /**
+   * The cells longer than their field, cut on import (after records()).
+   *
+   * @return array<int, array{row: int, name: string, property: string, length: int, max: int}>
+   *   In sheet order.
+   */
+  public function cuts(): array {
+    $this->records();
+    return $this->cuts;
+  }
+
+  /**
    * The lookup of this site's taxa by GUID and title.
    */
   public function siteGuids(): SiteGuids {
@@ -365,6 +383,7 @@ final class ScratchpadsSheet extends SourcePluginBase implements ContainerFactor
       return $this->records;
     }
     $this->records = [];
+    $this->cuts = [];
     $rows = $this->sheetRows();
     if ($rows === NULL) {
       return $this->records;
@@ -382,8 +401,15 @@ final class ScratchpadsSheet extends SourcePluginBase implements ContainerFactor
       }
       foreach ($lengths as $property => $length) {
         if (is_string($record[$property]) && mb_strlen($record[$property]) > $length) {
-          $message = sprintf('row %d: %s is %d characters, the field holds %d; cut', $record['row'], $property, mb_strlen($record[$property]), $length);
+          $message = sprintf('row %d (%s): %s is %d characters, the field holds %d; cut', $record['row'], $record['name'], $property, mb_strlen($record[$property]), $length);
           $this->messages[$id][] = [$message, MigrationInterface::MESSAGE_WARNING];
+          $this->cuts[] = [
+            'row' => $record['row'],
+            'name' => $record['name'],
+            'property' => $property,
+            'length' => mb_strlen($record[$property]),
+            'max' => $length,
+          ];
           $record[$property] = mb_substr($record[$property], 0, $length);
         }
       }

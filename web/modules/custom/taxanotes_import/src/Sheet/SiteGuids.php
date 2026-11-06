@@ -9,7 +9,7 @@ use Drupal\Core\Database\Statement\FetchAs;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
-use Drupal\Core\Entity\Sql\SqlEntityStorageInterface;
+use Drupal\Core\Entity\Sql\SqlContentEntityStorage;
 
 /**
  * Looks up the entities of this site by their Scratchpads GUID or label.
@@ -49,11 +49,13 @@ final class SiteGuids {
   ) {}
 
   /**
-   * The SQL storage of the entity type.
+   * The SQL storage of the entity type (node, bibcite_reference: both are).
    */
-  private function storage(): SqlEntityStorageInterface {
+  private function storage(): SqlContentEntityStorage {
     $storage = $this->entityTypeManager->getStorage($this->entityType);
-    assert($storage instanceof SqlEntityStorageInterface);
+    if (!$storage instanceof SqlContentEntityStorage) {
+      throw new \RuntimeException(sprintf('%s is not stored in SQL tables; the sheet lookups need its field tables.', $this->entityType));
+    }
     return $storage;
   }
 
@@ -116,7 +118,7 @@ final class SiteGuids {
    */
   public function byLabel(array $labels): array {
     $table = $this->guidTable();
-    $labels = array_values(array_unique(array_filter($labels, static fn($l) => $l !== NULL && $l !== '')));
+    $labels = array_values(array_unique(array_filter($labels, static fn($l) => $l !== '')));
     if ($table === NULL || !$labels) {
       return [];
     }
@@ -179,6 +181,42 @@ final class SiteGuids {
       }
     }
     return $ids;
+  }
+
+  /**
+   * The value of a string field per entity id: id => value, for the ids.
+   *
+   * @param string $field
+   *   The field (its first delta, main column).
+   * @param int[] $ids
+   *   The entity ids.
+   *
+   * @return array<int, string>
+   *   Values keyed by id, for the ids that have a non-empty value.
+   */
+  public function valuesById(string $field, array $ids): array {
+    $table = $this->fieldTable($field);
+    $ids = array_values(array_unique(array_map('intval', $ids)));
+    if ($table === NULL || !$ids) {
+      return [];
+    }
+    [$field_table, $column] = $table;
+    $values = [];
+    foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+      $query = $this->database->select($field_table, 'f');
+      $query->addField('f', 'entity_id', 'id');
+      $query->addField('f', $column, 'value');
+      $query->condition('f.entity_id', $chunk, 'IN')
+        ->condition('f.deleted', 0)
+        ->condition('f.delta', 0);
+      $this->addBundleCondition($query, 'f', 'bundle');
+      foreach ($query->execute()->fetchAll(FetchAs::Associative) as $row) {
+        if ($row['value'] !== NULL && $row['value'] !== '') {
+          $values[(int) $row['id']] = (string) $row['value'];
+        }
+      }
+    }
+    return $values;
   }
 
   /**

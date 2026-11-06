@@ -15,10 +15,12 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
  * reads any of the three the same way: the first non-empty row is the
  * header, every later row is a data row keyed by its 1-based sheet row
  * number (what the owner sees in the spreadsheet, and what the messages
- * quote), every cell trimmed and an empty cell NULL. Spreadsheet files go
- * through PhpSpreadsheet with formulas left uncalculated and numbers in
- * their displayed form (a page number 39 stays "39"); CSV through PHP's own
- * parser (UTF-8, a BOM dropped), so the two readers agree on the same data.
+ * quote), every cell trimmed (no-break spaces included) and an empty cell
+ * NULL. Spreadsheet files go through PhpSpreadsheet with formulas left
+ * uncalculated and numbers in their displayed form (a page number 39 stays
+ * "39"); CSV through PHP's own parser (UTF-8, a BOM dropped, the delimiter
+ * sniffed from the header line: comma, semicolon or tab, so a European
+ * export reads too), so the two readers agree on the same data.
  *
  * Reads are cached per process on path, size and mtime: the three sheet
  * migrations and the Drush report all open the same file in one run.
@@ -87,7 +89,7 @@ final class SheetReader {
   private static function readSpreadsheet(string $path, string $sheet): array {
     $reader = IOFactory::createReaderForFile($path);
     $reader->setReadDataOnly(TRUE);
-    $names = method_exists($reader, 'listWorksheetNames') ? $reader->listWorksheetNames($path) : [];
+    $names = $reader->listWorksheetNames($path);
     if (in_array($sheet, $names, TRUE)) {
       $reader->setLoadSheetsOnly([$sheet]);
     }
@@ -118,12 +120,14 @@ final class SheetReader {
     if ($handle === FALSE) {
       throw new \RuntimeException(sprintf('Sheet file %s cannot be opened.', $path));
     }
+    $delimiter = self::delimiter((string) fgets($handle));
+    rewind($handle);
     $rows = [];
     $number = 0;
-    while (($cells = fgetcsv($handle, 0, ',', '"', '')) !== FALSE) {
+    while (($cells = fgetcsv($handle, 0, $delimiter, '"', '')) !== FALSE) {
       $number++;
-      if ($number === 1 && isset($cells[0]) && is_string($cells[0]) && str_starts_with($cells[0], "\u{FEFF}")) {
-        $cells[0] = substr($cells[0], 3);
+      if ($number === 1 && isset($cells[0]) && str_starts_with((string) $cells[0], "\u{FEFF}")) {
+        $cells[0] = substr((string) $cells[0], 3);
       }
       $rows[$number] = array_map(self::cell(...), $cells);
     }
@@ -132,13 +136,30 @@ final class SheetReader {
   }
 
   /**
-   * Normalises one cell: a trimmed string, NULL when empty.
+   * The delimiter a CSV header line uses: the commonest of , ; and tab.
+   *
+   * Counted outside quoted cells (a quoted "Latreille, 1802" is not a
+   * column). Comma when the line has none of the three.
    */
-  private static function cell(mixed $value): ?string {
+  public static function delimiter(string $line): string {
+    $outside = preg_replace('/"[^"]*"/', '', $line) ?? $line;
+    $counts = [
+      ',' => substr_count($outside, ','),
+      ';' => substr_count($outside, ';'),
+      "\t" => substr_count($outside, "\t"),
+    ];
+    arsort($counts);
+    return (int) reset($counts) > 0 ? (string) array_key_first($counts) : ',';
+  }
+
+  /**
+   * Normalises one cell: trimmed (no-break spaces too), NULL when empty.
+   */
+  public static function cell(mixed $value): ?string {
     if ($value === NULL) {
       return NULL;
     }
-    $value = trim((string) $value);
+    $value = preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', (string) $value) ?? trim((string) $value);
     return $value === '' ? NULL : $value;
   }
 

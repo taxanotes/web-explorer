@@ -17,9 +17,10 @@ use Drupal\taxanotes_import\Plugin\migrate\source\ScratchpadsSheet;
  * counts, the identity decisions (duplicates, derived ids, GUID-less rows,
  * parents by name), the columns the template has that the taxon type has
  * not, and, against the site: which rows match an existing taxon by GUID,
- * which are new, how many existing taxa the sheet does not mention, which
- * parent and accepted-name GUIDs resolve nowhere, and which of the
- * literature GUIDs are references this site has.
+ * which are new, how many existing taxa the sheet does not mention (and how
+ * many of those have a parent the sheet re-keys), which parent and
+ * accepted-name GUIDs resolve nowhere, the cells cut to their field's
+ * length, and which of the literature GUIDs are references this site has.
  */
 final class SheetReport {
 
@@ -54,6 +55,10 @@ final class SheetReport {
       'sheet' => $source->sheet(),
     ] + $rows->stats();
     $analysis['notes'] = $rows->notes();
+    $analysis['cuts'] = $source->cuts();
+    // The template columns the sheet lacks whose fields an import would clear
+    // (a missing column without a field clears nothing).
+    $analysis['missing_mapped_columns'] = array_values(array_diff($analysis['missing_columns'], SheetRows::UNMAPPED));
 
     // Against the site's taxa.
     $taxa = $source->siteGuids();
@@ -72,10 +77,24 @@ final class SheetReport {
     $analysis['new'] = count($records) - count($existing) - count($matched);
     $analysis['site_not_in_sheet'] = count(array_diff_key($site, $records, $matched));
     $analysis['site_not_in_sheet_list'] = [];
+    $analysis['orphaned'] = [];
     if ($analysis['site_not_in_sheet']) {
-      $labels = $taxa->labelsByGuid(array_keys(array_diff_key($site, $records, $matched)));
+      $absent = array_diff_key($site, $records, $matched);
+      $labels = $taxa->labelsByGuid(array_keys($absent));
       foreach ($labels as $guid => $label) {
         $analysis['site_not_in_sheet_list'][] = ['guid' => $guid, 'name' => $label];
+      }
+      // Those whose parent GUID is one --match-names re-keys to the sheet's:
+      // the tree lists children by parent GUID, so after the run their
+      // parent GUID is rewritten from the reference (ParentGuidSync).
+      $rekeyed = array_fill_keys(array_column($analysis['name_matches'], 'site_guid'), TRUE);
+      if ($rekeyed) {
+        $parents = $taxa->valuesById('field_parent_guid', array_values($absent));
+        foreach ($absent as $guid => $id) {
+          if (isset($parents[$id], $rekeyed[$parents[$id]])) {
+            $analysis['orphaned'][] = ['guid' => $guid, 'name' => $labels[$guid] ?? '', 'parent_guid' => $parents[$id]];
+          }
+        }
       }
     }
     $analysis['renamed'] = [];
@@ -150,8 +169,8 @@ final class SheetReport {
    * @param array<string, mixed> $a
    *   An analysis from analyse().
    * @param bool $everything
-   *   TRUE to list every item of the long lists (the report file), FALSE
-   *   to cut them at SHOW with an "and N more" line.
+   *   TRUE to list every item of the long lists (--list-all), FALSE to cut
+   *   them at SHOW with an "and N more" line.
    *
    * @return string[]
    *   The lines.
@@ -168,12 +187,17 @@ final class SheetReport {
       $lines[] = 'Columns not in the template (ignored): ' . implode(' | ', $a['unknown_columns']);
     }
     if ($a['missing_columns']) {
-      $lines[] = 'Template columns missing from the sheet (their fields are cleared): ' . implode(', ', $a['missing_columns']);
+      $lines[] = sprintf('Template columns missing from the sheet: %s%s', implode(', ', $a['missing_columns']),
+        $a['missing_mapped_columns'] ? ' (their fields would be cleared on every taxon: the import refuses the sheet unless --allow-missing-columns is given)' : ' (no field: nothing is lost)');
     }
     if ($a['unmapped_columns']) {
       $lines[] = 'Columns the taxon type has no field for (read, not imported): ' . implode(', ', $a['unmapped_columns']);
     }
-    $lines[] = sprintf('Cells with markup (imported as basic_html): %d', $a['text_cells']);
+    $lines[] = sprintf('Cells with markup: %d in the notes columns (imported as basic_html), %d in plain-text columns (markup removed)', $a['text_cells'], $a['stripped_cells']);
+    $lines[] = sprintf('Cells longer than their field (cut to the field\'s length; shorten them in the sheet): %d', count($a['cuts']));
+    foreach ($a['cuts'] as $cut) {
+      $lines[] = sprintf('  row %d "%s": %s is %d characters, the field holds %d', $cut['row'], $cut['name'], $cut['property'], $cut['length'], $cut['max']);
+    }
 
     $lines[] = sprintf('Duplicate GUIDs (shared by rows with different names): %d', count($a['duplicates']));
     foreach ($a['duplicates'] as $duplicate) {
@@ -183,7 +207,10 @@ final class SheetReport {
       }
       $lines[] = sprintf('  %s: %s', $duplicate['guid'], implode('; ', $parts));
     }
-    $lines[] = sprintf('Rows without a GUID: %d', count($a['guidless']));
+    $lines[] = sprintf('Rows without a GUID: %d (of which %d have a cell that is not a GUID, treated as missing)', count($a['guidless']), count($a['invalid_guids']));
+    foreach ($a['invalid_guids'] as $row) {
+      $lines[] = sprintf('  row %d "%s": GUID cell "%s" is not a GUID; fix it in the sheet', $row['row'], $row['name'], $row['guid']);
+    }
     foreach ($a['guidless'] as $row) {
       $lines[] = sprintf('  row %d "%s": %s %s', $row['row'], $row['name'], $row['matched'] ? 'the existing taxon' : 'derived GUID', $row['id']);
     }
@@ -195,6 +222,12 @@ final class SheetReport {
     $lines[] = sprintf('Against the site: %d taxa on the site; %d rows match an existing taxon by GUID, %d by name (match-names), %d are new; %d existing taxa are not in the sheet',
       $a['site_taxa'], $a['existing'], $a['name_matched'], $a['new'], $a['site_not_in_sheet']);
     $this->list($lines, $a['site_not_in_sheet_list'], $everything, static fn(array $r) => sprintf('  %s (%s)', $r['name'], $r['guid']));
+    if ($a['orphaned']) {
+      $lines[] = sprintf($a['match_names']
+        ? '  %d of them have a parent the sheet re-keys: their parent GUID is rewritten from the parent reference after the link pass, so the tree still lists them'
+        : '  %d of them have a parent --match-names would re-key (their parent GUID would then be rewritten from the parent reference after the link pass)', count($a['orphaned']));
+      $this->list($lines, $a['orphaned'], $everything, static fn(array $r) => sprintf('    %s (%s), parent GUID %s', $r['name'], $r['guid'], $r['parent_guid']));
+    }
     if ($a['match_names']) {
       $lines[] = sprintf('Rows whose GUID is not on the site matched to a taxon of the same name (re-keyed to the sheet GUID): %d; same name but ambiguous (imported as new): %d', count($a['name_matches']), count($a['name_ambiguous']));
     }

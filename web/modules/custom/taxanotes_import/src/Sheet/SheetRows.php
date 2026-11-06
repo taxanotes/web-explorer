@@ -26,14 +26,17 @@ namespace Drupal\taxanotes_import\Sheet;
  *   uuid5(GUID + "|" + Term name), the same on every run;
  * - a row without a GUID is the taxon of that name on the site when exactly
  *   one exists (and its GUID is not another row's), else the derived id
- *   uuid5(Term name + "|" + Parent GUID or Parent Term Name);
+ *   uuid5(Term name + "|" + Parent GUID or Parent Term Name); a GUID cell
+ *   that is neither md5- nor uuid-shaped (a name typed into the column) is
+ *   treated as missing, with a note;
  * - a row without a Term name is skipped;
  * - with `match_names` on, a row whose GUID no taxon on the site carries
  *   updates the taxon of the same Term name when that name is unique in the
  *   sheet and on the site (else the same name and Authors, unique on both
  *   sides), and that taxon takes the row's GUID: the rule for a site built
- *   from a dump older than the sheet, whose Scratchpads re-import gave every
- *   term a new Feeds GUID (Anthophila). Off by default, since a genuinely
+ *   from a dump older than the sheet, whose owner re-imported the
+ *   classification on Scratchpads in between (every term then got a new
+ *   Feeds GUID). Off by default, since a genuinely
  *   new homonym must not be folded into an existing name; the report says
  *   how many rows it would match.
  * The derived ids are RFC 4122 version 5 UUIDs under the namespace
@@ -45,6 +48,12 @@ namespace Drupal\taxanotes_import\Sheet;
  * A parent given by name only (Parent GUID empty, Parent Term Name set)
  * resolves to the unique row of that name in the sheet, else to the unique
  * taxon of that name on the site, else stays empty with a note.
+ *
+ * Only the formatted-text columns (TEXT_PROPERTIES) keep markup; every other
+ * cell is plain text: tags are removed and entities decoded (the exporter
+ * writes the <em> of an italicised name into "Synonymy by" and "Designation
+ * by" too, whose fields are plain strings that would show the tags), before
+ * the identity rules compare names and the length rule counts characters.
  *
  * Pure PHP: what it needs from the site comes in as two callables, so the
  * rules can be unit-tested and the source plugin, the Drush report and the
@@ -251,9 +260,10 @@ final class SheetRows {
    *
    * @return array<string, mixed>
    *   Keys: rows, records, skipped, guid_styles, duplicates, collapsed,
-   *   conflicts, derived, guidless, parents_by_name, parents_unresolved,
-   *   unknown_columns, missing_columns, unmapped_columns, text_cells,
-   *   match_names, name_matches, name_ambiguous.
+   *   conflicts, derived, guidless, invalid_guids, parents_by_name,
+   *   parents_unresolved, unknown_columns, missing_columns,
+   *   unmapped_columns, text_cells, stripped_cells, match_names,
+   *   name_matches, name_ambiguous.
    */
   public function stats(): array {
     return $this->stats;
@@ -343,27 +353,39 @@ final class SheetRows {
       'conflicts' => 0,
       'derived' => 0,
       'guidless' => [],
+      'invalid_guids' => [],
       'parents_by_name' => 0,
       'parents_unresolved' => [],
       'text_cells' => 0,
+      'stripped_cells' => 0,
       'match_names' => $match_names,
       'name_matches' => [],
       'name_ambiguous' => [],
     ];
 
-    // The raw cells per row, by property.
+    // The raw cells per row, by property; plain text except the formatted
+    // texts.
     $raw = [];
     foreach ($rows as $number => $cells) {
       $record = array_fill_keys(array_values(self::COLUMNS), NULL);
       foreach ($columns as $index => $property) {
-        $record[$property] = $cells[$index] ?? NULL;
+        $record[$property] = in_array($property, self::TEXT_PROPERTIES, TRUE) ? ($cells[$index] ?? NULL) : $this->plain($cells[$index] ?? NULL);
       }
       if ($record['name'] === NULL) {
         $this->note($number, NULL, sprintf('row %d has no Term name; skipped', $number));
         $this->stats['skipped']++;
         continue;
       }
-      $this->stats['guid_styles'][$record['sheet_guid'] === NULL ? 'none' : self::guidStyle($record['sheet_guid'])]++;
+      $style = $record['sheet_guid'] === NULL ? 'none' : self::guidStyle($record['sheet_guid']);
+      $this->stats['guid_styles'][$style]++;
+      if ($style === 'other') {
+        // A name or a note in the GUID column: not an identifier the
+        // Scratchpads importer would have written; the GUID-less rule
+        // applies (identities() words the note).
+        $this->stats['invalid_guids'][] = ['row' => $number, 'name' => $record['name'], 'guid' => $record['sheet_guid']];
+        $record['invalid_guid'] = $record['sheet_guid'];
+        $record['sheet_guid'] = NULL;
+      }
       $raw[$number] = $record;
     }
 
@@ -473,14 +495,17 @@ final class SheetRows {
     $taken = array_flip($ids);
     foreach ($guidless as $number) {
       $name = $raw[$number]['name'];
+      $why = isset($raw[$number]['invalid_guid'])
+        ? sprintf('row %d (%s): the GUID cell "%s" is not a GUID (neither md5 nor uuid), treated as missing;', $number, $name, $raw[$number]['invalid_guid'])
+        : sprintf('row %d has no GUID;', $number);
       if (isset($site_guids[$name]) && !isset($taken[$site_guids[$name]])) {
         $id = $site_guids[$name];
-        $this->note($number, $id, sprintf('row %d has no GUID; it is the existing taxon %s (GUID %s)', $number, $name, $id));
+        $this->note($number, $id, sprintf('%s it is the existing taxon %s (GUID %s)', $why, $name, $id));
         $this->stats['guidless'][] = ['row' => $number, 'name' => $name, 'id' => $id, 'matched' => TRUE];
       }
       else {
         $id = self::derivedId($name . '|' . ($raw[$number]['parent_guid'] ?? $raw[$number]['parent_name'] ?? ''));
-        $this->note($number, $id, sprintf('row %d has no GUID; imported as derived GUID %s', $number, $id));
+        $this->note($number, $id, sprintf('%s imported as derived GUID %s', $why, $id));
         $this->stats['guidless'][] = ['row' => $number, 'name' => $name, 'id' => $id, 'matched' => FALSE];
         $this->stats['derived']++;
       }
@@ -685,6 +710,23 @@ final class SheetRows {
       $shaped[$property] = $this->text($record[$property]);
     }
     return $shaped;
+  }
+
+  /**
+   * A plain-text cell: tags removed, entities decoded, NULL when empty.
+   *
+   * Counted in stats['stripped_cells'] when the cell changed.
+   */
+  private function plain(?string $value): ?string {
+    if ($value === NULL) {
+      return NULL;
+    }
+    $plain = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    if ($plain !== $value) {
+      $this->stats['stripped_cells']++;
+    }
+    $plain = SheetReader::cell($plain);
+    return $plain;
   }
 
   /**
