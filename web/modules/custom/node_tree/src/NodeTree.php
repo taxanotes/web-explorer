@@ -45,6 +45,20 @@ final class NodeTree {
   }
 
   /**
+   * The version of the jqTree installed under /libraries/jqtree, if known.
+   *
+   * Read from the "JqTree x.y.z" header of tree.jquery.js; NULL when the
+   * file is absent or carries no header.
+   */
+  public static function jqtreeLocalVersion(): ?string {
+    if (!self::jqtreeIsLocal()) {
+      return NULL;
+    }
+    $head = (string) @file_get_contents(DRUPAL_ROOT . self::JQTREE_LOCAL_JS, FALSE, NULL, 0, 512);
+    return preg_match('/JqTree\s+v?(\d+\.\d+\.\d+)/i', $head, $m) ? $m[1] : NULL;
+  }
+
+  /**
    * The settings, keyed by field name, resolved to their table and column.
    *
    * @var array<string, array{table: string, column: string, key: string, dedicated: bool}|null>

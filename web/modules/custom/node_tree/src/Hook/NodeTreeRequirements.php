@@ -41,11 +41,21 @@ final class NodeTreeRequirements implements ContainerInjectionInterface {
   public function runtime(): array {
     $requirements = [];
     if (NodeTree::jqtreeIsLocal()) {
+      $local = NodeTree::jqtreeLocalVersion();
       $requirements['node_tree_jqtree'] = [
         'title' => $this->t('Node tree: jqTree library'),
-        'value' => $this->t('Served from @path', ['@path' => NodeTree::JQTREE_LOCAL_JS]),
+        'value' => $local
+          ? $this->t('Served from @path (jqtree @version)', ['@path' => NodeTree::JQTREE_LOCAL_JS, '@version' => $local])
+          : $this->t('Served from @path', ['@path' => NodeTree::JQTREE_LOCAL_JS]),
         'severity' => $this->severity('ok'),
       ];
+      if ($local && $local !== NodeTree::JQTREE_VERSION) {
+        $requirements['node_tree_jqtree']['description'] = $this->t('This release of Node tree was tested with jqtree @tested; the installed @installed may behave differently.', [
+          '@tested' => NodeTree::JQTREE_VERSION,
+          '@installed' => $local,
+        ]);
+        $requirements['node_tree_jqtree']['severity'] = $this->severity('warning');
+      }
     }
     else {
       $requirements['node_tree_jqtree'] = [

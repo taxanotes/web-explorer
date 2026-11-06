@@ -43,13 +43,37 @@ are plain cacheable GETs.
 - Drupal 10.3 or 11, the core Node module.
 - [jqTree](https://mbraak.github.io/jqTree/) 1.6.2 (Apache-2.0). It is not
   part of the module, as drupal.org does not allow Apache-2.0 code in a
-  project's repository. Either install it under the Drupal root as
-  `libraries/jqtree/tree.jquery.js` and `libraries/jqtree/jqtree.css` (the
-  two files of the `jqtree` npm package at that version, for example with
-  `npm pack jqtree@1.6.2` or a download from
-  <https://cdn.jsdelivr.net/npm/jqtree@1.6.2/>), or do nothing: without the
-  local files the module loads the library from the jsDelivr CDN at the
-  same version. The status report says which is in use.
+  project's repository. Three ways to provide it, in order of preference:
+
+  1. **Composer** (no Node or npm involved: Composer downloads the npm
+     package as a zip). Add the [Asset Packagist](https://asset-packagist.org)
+     mirror and the installer extender to your project's `composer.json`,
+     then require the package:
+
+     ```
+     composer config repositories.asset-packagist composer https://asset-packagist.org
+     composer config --json extra.installer-types '["npm-asset", "bower-asset"]'
+     composer config --json extra.installer-paths.web/libraries/{$name} '["type:drupal-library", "type:npm-asset", "type:bower-asset"]'
+     composer config allow-plugins.oomphinc/composer-installers-extender true
+     composer require oomphinc/composer-installers-extender npm-asset/jqtree:1.6.2
+     ```
+
+     (`web` is your Drupal root; adjust the path if yours differs.) Drupal
+     core already ships jQuery, so add `"replace": {"npm-asset/jquery": "*"}`
+     to keep the mirror from installing a second copy. The files land at
+     `<root>/libraries/jqtree/tree.jquery.js` and `jqtree.css`, which is
+     where the module looks; `composer outdated` then reports new jqTree
+     releases like any other package.
+  2. **By hand**: put the two files of the `jqtree` npm package at exactly
+     `<root>/libraries/jqtree/tree.jquery.js` and
+     `<root>/libraries/jqtree/jqtree.css` (for example from
+     <https://cdn.jsdelivr.net/npm/jqtree@1.6.2/>).
+  3. **Nothing**: without the local files the module loads the library from
+     the jsDelivr CDN at the tested version.
+
+  The status report (Reports › Status) says which is in use and the
+  installed version, and warns when it differs from the version this
+  release was tested with.
 
 ## Configuration
 
