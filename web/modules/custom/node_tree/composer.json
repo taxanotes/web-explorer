@@ -1,17 +1,17 @@
 {
     "name": "drupal/node_tree",
-    "description": "Populates nodes of content type node",
+    "description": "A lazily loaded tree of nodes (jqTree) built from a parent reference field: tree page, tree block, JSON endpoints, lineage breadcrumb, Drush parent linking.",
     "type": "drupal-module",
-    "autoload": {
-        "psr-4": {
-            "Drupal\\node_tree\\": "src/"
-        }
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://www.drupal.org/project/node_tree",
+    "support": {
+        "issues": "https://www.drupal.org/project/issues/node_tree",
+        "source": "https://git.drupalcode.org/project/node_tree"
     },
-    "extra": {
-        "drush": {
-            "services": {
-                "drush.services.yml": "^10"
-            }
-        }
+    "require": {
+        "php": ">=8.1"
+    },
+    "suggest": {
+        "drush/drush": "Provides the node_tree:link-parents and node_tree:status commands."
     }
 }

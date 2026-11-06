@@ -1,0 +1,15 @@
+################
+# GitLab CI integration with Drupal.org, through the templates of
+# https://project.pages.drupalcode.org/gitlab_templates/.
+################
+include:
+  - project: $_GITLAB_TEMPLATES_REPO
+    ref: $_GITLAB_TEMPLATES_REF
+    file:
+      - '/includes/include.drupalci.main.yml'
+      - '/includes/include.drupalci.variables.yml'
+      - '/includes/include.drupalci.workflows.yml'
+
+variables:
+  # Test against the previous major too (core_version_requirement: ^10.3 || ^11).
+  OPT_IN_TEST_PREVIOUS_MAJOR: '1'
