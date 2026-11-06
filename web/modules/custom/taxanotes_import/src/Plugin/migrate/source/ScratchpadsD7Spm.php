@@ -152,7 +152,7 @@ final class ScratchpadsD7Spm extends ScratchpadsD7Base {
     $nid = (int) $row->getSourceProperty('nid');
     foreach ($this->textFields() as $field) {
       $text = $this->text($field)[$nid] ?? [];
-      $row->setSourceProperty($field . '_value', $text['value'] ?? NULL);
+      $row->setSourceProperty($field . '_value', $this->rewriteInlineImages($text['value'] ?? NULL));
       $row->setSourceProperty($field . '_format', $text['format'] ?? NULL);
     }
     $taxon = $this->taxa()[$nid] ?? NULL;

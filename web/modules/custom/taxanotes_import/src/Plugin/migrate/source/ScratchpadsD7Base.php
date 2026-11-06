@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\taxanotes_import\Plugin\migrate\source;
 
 use Drupal\Core\Database\Query\SelectInterface;
+use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Plugin\migrate\source\SqlBase;
+use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\Row;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Shared behaviour of the Scratchpads (Drupal 7) taxon source plugins.
@@ -135,6 +138,27 @@ abstract class ScratchpadsD7Base extends SqlBase {
   protected ?bool $termsHaveLanguage = NULL;
 
   /**
+   * The file URL generator, for the inline images of the texts.
+   *
+   * Set by create(); the file source, which builds itself, leaves it NULL.
+   */
+  protected ?FileUrlGeneratorInterface $fileUrlGenerator = NULL;
+
+  /**
+   * The file_managed URIs by fid, as looked up (NULL for an unknown file).
+   *
+   * @var array<int, string|null>
+   */
+  protected array $fileUris = [];
+
+  /**
+   * The file_managed ids by public:// URI, as looked up (NULL when none).
+   *
+   * @var array<string, int|null>
+   */
+  protected array $fileIdsByUri = [];
+
+  /**
    * {@inheritdoc}
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, $migration, $state) {
@@ -143,6 +167,18 @@ abstract class ScratchpadsD7Base extends SqlBase {
       $configuration['bundle'] = $instance['source_vocabulary'];
     }
     parent::__construct($configuration, $plugin_id, $plugin_definition, $migration, $state);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The sources that carry texts take the file URL generator too, for
+   * rewriteInlineImages().
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
+    $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition, $migration);
+    $instance->fileUrlGenerator = $container->get('file_url_generator');
+    return $instance;
   }
 
   /**
@@ -736,6 +772,171 @@ abstract class ScratchpadsD7Base extends SqlBase {
     }
     $field = 'field_aan_' . $vid;
     return $this->getDatabase()->schema()->tableExists('field_data_' . $field) ? $field : NULL;
+  }
+
+  /**
+   * The inline images of a Scratchpads text: one entry per <img> tag.
+   *
+   * The Scratchpads media module wrote an inline image with the file id in
+   * a class (img__fid__<fid>) and an absolute src on the D7 host, often an
+   * image style path (sites/<site>/files/styles/<style>/public/<path>). The
+   * file id is taken from the class, else resolved from the src through
+   * file_managed by its public:// path; NULL when neither gives a file.
+   *
+   * @return array<int, array{tag: string, attr: string, src: string, fid: int|null}>
+   *   Per tag: the tag, its src attribute as written, the src value and
+   *   the D7 file id.
+   */
+  protected function inlineImages(string $html): array {
+    if (!preg_match_all('/<img\b[^>]*>/i', $html, $tags)) {
+      return [];
+    }
+    $images = [];
+    foreach ($tags[0] as $tag) {
+      $attr = '';
+      $src = '';
+      if (preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/i', $tag, $m)) {
+        $attr = $m[0];
+        $src = html_entity_decode($m[2], ENT_QUOTES);
+      }
+      $fid = NULL;
+      if (preg_match('/\bimg__fid__(\d+)\b/', $tag, $m)) {
+        $fid = (int) $m[1];
+      }
+      elseif (($uri = $this->d7FileUri($src)) !== NULL) {
+        $fid = $this->fileIdByUri($uri);
+      }
+      $images[] = ['tag' => $tag, 'attr' => $attr, 'src' => $src, 'fid' => $fid];
+    }
+    return $images;
+  }
+
+  /**
+   * The D7 public:// URI a files URL points at, or NULL.
+   *
+   * .../sites/<site>/files/<path> and the image style form
+   * .../files/styles/<style>/public/<path> both give public://<path>.
+   */
+  protected function d7FileUri(string $src): ?string {
+    if (!preg_match('#/files/(?:styles/[^/]+/public/)?([^?\#]+)#', $src, $m)) {
+      return NULL;
+    }
+    $path = trim(rawurldecode($m[1]));
+    return $path === '' ? NULL : 'public://' . $path;
+  }
+
+  /**
+   * The public:// URI of a D7 file, or NULL (unknown fid, other scheme).
+   */
+  protected function fileUri(int $fid): ?string {
+    if (!array_key_exists($fid, $this->fileUris)) {
+      $uri = $this->select('file_managed', 'fm')
+        ->fields('fm', ['uri'])
+        ->condition('fm.fid', $fid)
+        ->execute()
+        ->fetchField();
+      $this->fileUris[$fid] = (is_string($uri) && str_starts_with($uri, 'public://')) ? $uri : NULL;
+    }
+    return $this->fileUris[$fid];
+  }
+
+  /**
+   * The id of the D7 file at a public:// URI, or NULL.
+   */
+  protected function fileIdByUri(string $uri): ?int {
+    if (!array_key_exists($uri, $this->fileIdsByUri)) {
+      $fid = $this->select('file_managed', 'fm')
+        ->fields('fm', ['fid'])
+        ->condition('fm.uri', $uri)
+        ->orderBy('fm.fid')
+        ->range(0, 1)
+        ->execute()
+        ->fetchField();
+      $this->fileIdsByUri[$uri] = $fid ? (int) $fid : NULL;
+    }
+    return $this->fileIdsByUri[$uri];
+  }
+
+  /**
+   * Points the inline images of a text at the imported files.
+   *
+   * Every <img> whose file is in file_managed (see inlineImages()) gets as
+   * src the URL of the file entity taxanotes_d7_file imports from it
+   * (public://scratchpads/<D7 path>, the original rather than the image
+   * style derivative), a path on this site that the basic_html format's
+   * "restrict images to this site" filter accepts once the file is there.
+   * An image whose file is unknown keeps its src (the filter then shows
+   * its "image removed" marker, as for any off-site image). Nothing else
+   * in the text changes. A source without the URL generator (the file
+   * source) returns the text as it is.
+   */
+  protected function rewriteInlineImages(?string $html): ?string {
+    if ($html === NULL || $html === '' || $this->fileUrlGenerator === NULL || stripos($html, '<img') === FALSE) {
+      return $html;
+    }
+    $replacements = [];
+    foreach ($this->inlineImages($html) as $image) {
+      $uri = $image['fid'] ? $this->fileUri($image['fid']) : NULL;
+      if ($uri === NULL || $image['attr'] === '') {
+        continue;
+      }
+      $src = $this->fileUrlGenerator->generateString('public://scratchpads/' . substr($uri, strlen('public://')));
+      $replacements[$image['tag']] = str_replace($image['attr'], 'src="' . htmlspecialchars($src, ENT_QUOTES) . '"', $image['tag']);
+    }
+    return $replacements ? strtr($html, $replacements) : $html;
+  }
+
+  /**
+   * The ids of the files the inline images of node texts point at.
+   *
+   * Every text field (text_long, text_with_summary) of the given D7 node
+   * bundles is scanned for <img> tags and each tag resolved to a file (see
+   * inlineImages()): the files taxanotes_d7_file must import for
+   * rewriteInlineImages() to have a target.
+   *
+   * @param string[] $bundles
+   *   D7 node bundles (page, blog, spm).
+   *
+   * @return int[]
+   *   Distinct file ids.
+   */
+  protected function inlineImageFileIds(array $bundles): array {
+    $schema = $this->getDatabase()->schema();
+    if (!$bundles || !$schema->tableExists('field_config_instance') || !$schema->tableExists('field_config')) {
+      return [];
+    }
+    $query = $this->select('field_config_instance', 'fci')
+      ->fields('fci', ['field_name'])
+      ->condition('fci.entity_type', 'node')
+      ->condition('fci.bundle', $bundles, 'IN')
+      ->condition('fci.deleted', 0)
+      ->distinct();
+    $query->innerJoin('field_config', 'fc', '[fc].[id] = [fci].[field_id]');
+    $query->condition('fc.type', ['text_long', 'text_with_summary'], 'IN')
+      ->condition('fc.deleted', 0);
+    $fids = [];
+    foreach ($query->execute()->fetchCol() as $field) {
+      $table = 'field_data_' . $field;
+      if (!$schema->tableExists($table)) {
+        continue;
+      }
+      $texts = $this->select($table, 'f')
+        ->fields('f', [$field . '_value'])
+        ->condition('f.entity_type', 'node')
+        ->condition('f.bundle', $bundles, 'IN')
+        ->condition('f.deleted', 0)
+        ->condition('f.' . $field . '_value', '%<img%', 'LIKE')
+        ->execute()
+        ->fetchCol();
+      foreach ($texts as $text) {
+        foreach ($this->inlineImages((string) $text) as $image) {
+          if ($image['fid']) {
+            $fids[$image['fid']] = $image['fid'];
+          }
+        }
+      }
+    }
+    return array_values($fids);
   }
 
 }

@@ -17,7 +17,8 @@ use Drupal\migrate\Row;
  * promote, sticky) the row carries:
  * - body_value, body_summary, body_format: the body (text_with_summary),
  *   the row set in the node's own language, else `und`, else the first
- *   language (the rule of the other node sources);
+ *   language (the rule of the other node sources), its inline images
+ *   pointed at the imported files (ScratchpadsD7Base::rewriteInlineImages());
  * - taxa: [{tid, guid}] of `taxon_field` (field_taxonomic_name), every term
  *   of the instance vocabulary the node names, in delta order (terms of
  *   other vocabularies are left out).
@@ -130,7 +131,7 @@ final class ScratchpadsD7Node extends ScratchpadsD7Base {
   public function prepareRow(Row $row) {
     $nid = (int) $row->getSourceProperty('nid');
     $body = $this->bodies()[$nid] ?? [];
-    $row->setSourceProperty('body_value', $body['value'] ?? NULL);
+    $row->setSourceProperty('body_value', $this->rewriteInlineImages($body['value'] ?? NULL));
     $row->setSourceProperty('body_summary', $body['summary'] ?? NULL);
     $row->setSourceProperty('body_format', $body['format'] ?? NULL);
     $row->setSourceProperty('taxa', $this->taxa()[$nid] ?? []);
