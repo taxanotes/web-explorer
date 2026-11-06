@@ -10,6 +10,7 @@ use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\node_tree\Hook\NodeTreeRequirements;
+use Drupal\Core\Url;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -183,7 +184,7 @@ final class NodeTreeTest extends BrowserTestBase {
     $assert->responseContains('"nodeTree":{"path":"node-tree","selected":"' . $leaf->uuid() . '"}');
     $root_url = $this->nodes['Root']->toUrl()->toString();
     $branch_url = $this->nodes['Branch']->toUrl()->toString();
-    $this->assertBreadcrumb(['Home' => '/', 'Root' => $root_url, 'Branch' => $branch_url, 'Leaf' => NULL]);
+    $this->assertBreadcrumb(['Home' => $this->homeUrl(), 'Root' => $root_url, 'Branch' => $branch_url, 'Leaf' => NULL]);
 
     // Elsewhere the block starts at the roots.
     $this->drupalGet('<front>');
@@ -199,7 +200,7 @@ final class NodeTreeTest extends BrowserTestBase {
     ]);
     $this->drupalGet($document->toUrl());
     $this->assertBreadcrumb([
-      'Home' => '/',
+      'Home' => $this->homeUrl(),
       'Root' => $root_url,
       'Branch' => $branch_url,
       'Leaf' => $leaf->toUrl()->toString(),
@@ -208,7 +209,7 @@ final class NodeTreeTest extends BrowserTestBase {
     $same_name = $this->drupalCreateNode(['type' => 'document', 'title' => 'Leaf', 'field_folder' => $leaf->id()]);
     $this->drupalGet($same_name->toUrl());
     $this->assertBreadcrumb([
-      'Home' => '/',
+      'Home' => $this->homeUrl(),
       'Root' => $root_url,
       'Branch' => $branch_url,
       'Leaf' => $leaf->toUrl()->toString(),
@@ -218,12 +219,12 @@ final class NodeTreeTest extends BrowserTestBase {
     // path-based breadcrumb.
     $plain = $this->drupalCreateNode(['type' => 'document', 'title' => 'Plain']);
     $this->drupalGet($plain->toUrl());
-    $this->assertBreadcrumb(['Home' => '/']);
+    $this->assertBreadcrumb(['Home' => $this->homeUrl()]);
 
     // Breadcrumb off: a tree node keeps the path-based breadcrumb too.
     $this->config('node_tree.settings')->set('breadcrumb', FALSE)->save();
     $this->drupalGet($leaf->toUrl());
-    $this->assertBreadcrumb(['Home' => '/']);
+    $this->assertBreadcrumb(['Home' => $this->homeUrl()]);
   }
 
   /**
@@ -391,6 +392,13 @@ final class NodeTreeTest extends BrowserTestBase {
     $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->responseHeaderContains('Content-Type', 'application/json');
     return Json::decode($this->getSession()->getPage()->getContent());
+  }
+
+  /**
+   * The front page's href as the breadcrumb renders it (base path aware).
+   */
+  private function homeUrl(): string {
+    return Url::fromRoute('<front>')->toString();
   }
 
   /**
