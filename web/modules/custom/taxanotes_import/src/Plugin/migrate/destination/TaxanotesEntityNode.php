@@ -63,6 +63,16 @@ final class TaxanotesEntityNode extends EntityContentBase {
   protected ?string $syncLog = NULL;
 
   /**
+   * What this run did to the entities: created, updated (changed), unchanged.
+   *
+   * Core's id map counts rows, not outcomes; a --update run processes every
+   * row and most change nothing. The sheet import reports these instead.
+   *
+   * @var array{created: int, updated: int, unchanged: int}
+   */
+  protected array $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0];
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition, ?MigrationInterface $migration = NULL) {
@@ -72,13 +82,27 @@ final class TaxanotesEntityNode extends EntityContentBase {
   }
 
   /**
+   * The entities this instance created, changed and left unchanged so far.
+   *
+   * @return array{created: int, updated: int, unchanged: int}
+   *   The counts.
+   */
+  public function counts(): array {
+    return $this->counts;
+  }
+
+  /**
    * {@inheritdoc}
    */
   protected function getEntity(Row $row, array $old_destination_id_values) {
     $property = $this->configuration['sync_log_property'] ?? 'sync_revision_log';
     $this->syncLog = $row->hasDestinationProperty($property) ? (string) $row->getDestinationProperty($property) : NULL;
     $row->removeDestinationProperty($property);
-    return parent::getEntity($row, $old_destination_id_values);
+    $entity = parent::getEntity($row, $old_destination_id_values);
+    if ($entity instanceof EntityInterface && $entity->isNew()) {
+      $this->counts['created']++;
+    }
+    return $entity;
   }
 
   /**
@@ -90,11 +114,13 @@ final class TaxanotesEntityNode extends EntityContentBase {
     if (!$entity instanceof ContentEntityInterface || !$entity instanceof RevisionLogInterface || $previous_log === NULL) {
       return $entity;
     }
+    $changed = $entity->hasTranslationChanges();
+    $this->counts[$changed ? 'updated' : 'unchanged']++;
     if ($this->isPlaceholderLog($previous_log)) {
       // Not real history: core behaviour (in place, log from the row).
       return $entity;
     }
-    if (!$entity->hasTranslationChanges()) {
+    if (!$changed) {
       // Nothing changed: keep the revision exactly as it is.
       $entity->setRevisionLogMessage($previous_log);
       return $entity;

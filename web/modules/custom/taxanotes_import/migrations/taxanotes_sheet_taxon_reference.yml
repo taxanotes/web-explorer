@@ -1,0 +1,80 @@
+id: taxanotes_sheet_taxon_reference
+label: 'Scratchpads taxonomy importer sheet: link the protologue, synonymy and designation references'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - sheet
+source:
+  plugin: scratchpads_sheet
+  # Only the rows that name a reference (Reference, Synonymy reference or
+  # Designation reference GUID = the D7 biblio node uuid). The sheet carries
+  # no titles, so a reference this site does not have cannot be created
+  # here: the row keeps its shadow fields (field_reference_guid/_nid) from
+  # the first pass and the link stays empty, with a message.
+  with_reference_only: true
+  track_changes: true
+  identity_messages: false
+process:
+  nid:
+    -
+      plugin: taxanotes_guid_lookup
+      source: guid
+      migrations:
+        - taxanotes_sheet_taxon
+        - taxanotes_d7_taxon
+      entity_type: node
+      bundle: taxon
+      field: field_guid
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  # bibcite references by the D7 node uuid: the literature migration's id
+  # map, else field_scratchpads_uuid (recipes/taxanotes_literature).
+  field_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): reference GUID @value (NID @reference_nid) is not on this site; reference left empty'
+  field_synonymy_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: synonymy_reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): synonymy reference GUID @value (NID @synonymy_reference_nid) is not on this site; synonymy reference left empty'
+  field_designation_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: designation_reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): designation reference GUID @value (NID @designation_reference_nid) is not on this site; designation reference left empty'
+destination:
+  plugin: 'entity:node'
+  default_bundle: taxon
+  overwrite_properties:
+    - field_reference
+    - field_synonymy_reference
+    - field_designation_reference
+migration_dependencies:
+  required:
+    - taxanotes_sheet_taxon
+  optional: {  }

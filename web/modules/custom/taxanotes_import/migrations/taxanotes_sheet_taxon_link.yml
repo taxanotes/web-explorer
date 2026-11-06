@@ -1,0 +1,69 @@
+id: taxanotes_sheet_taxon_link
+label: 'Scratchpads taxonomy importer sheet: link parent and accepted name'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - sheet
+source:
+  plugin: scratchpads_sheet
+  track_changes: true
+  # The first pass reports the identity notes; the same rows need not twice.
+  identity_messages: false
+process:
+  # The node the first pass created or updated for this row; a row without
+  # one (it failed there) is skipped.
+  nid:
+    -
+      plugin: taxanotes_guid_lookup
+      source: guid
+      migrations:
+        - taxanotes_sheet_taxon
+        - taxanotes_d7_taxon
+      entity_type: node
+      bundle: taxon
+      field: field_guid
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  # The parent and the accepted name by GUID: a row of this sheet, a taxon
+  # the D7 track imported, or one that carries the GUID in field_guid. A
+  # GUID none of them knows leaves the field empty and records a message.
+  field_parent_taxon_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: parent_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_sheet_taxon
+        - taxanotes_d7_taxon
+      entity_type: node
+      bundle: taxon
+      field: field_guid
+      message: 'row @row (@name): parent GUID @value is not in the sheet nor on the site; parent left empty'
+  field_accepted_name:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: accepted_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_sheet_taxon
+        - taxanotes_d7_taxon
+      entity_type: node
+      bundle: taxon
+      field: field_guid
+      message: 'row @row (@name): accepted name GUID @value is not in the sheet nor on the site; accepted name left empty'
+destination:
+  plugin: 'entity:node'
+  default_bundle: taxon
+  overwrite_properties:
+    - field_parent_taxon_reference
+    - field_accepted_name
+migration_dependencies:
+  required:
+    - taxanotes_sheet_taxon
+  optional: {  }
