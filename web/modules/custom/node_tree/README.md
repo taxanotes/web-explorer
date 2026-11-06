@@ -156,10 +156,30 @@ The tree page is `.node-tree-page` with `#node_tree.node-tree-column` and
 selected node's title `.node-tree-title`. jqTree's own classes
 (`.jqtree-tree`, `.jqtree-element`, `.jqtree-selected`, …) style the tree
 itself. `css/node_tree.css` gives the page its two columns (stacked under
-800 px) and the block a scrolling box. The expanders are a boxed minus
-(open) and plus (closed) drawn as inline SVG (`.node-tree-expander` inside
-jqTree's `.jqtree-toggler`), a 1.5 rem box that grows to 2.75 rem on touch
-screens (`pointer: coarse`); override those two selectors for another look.
+800 px) and the block a scrolling box.
+
+The expanders are a boxed minus (open) and plus (closed) drawn as inline SVG
+(`.node-tree-expander` inside jqTree's `.jqtree-toggler`), centred on the
+title's line. Their sizes are custom properties declared on
+`ul.jqtree-tree`, in em so that they follow the tree's font size:
+`--node-tree-box` (the box, 1.5em; 2.75em on touch screens, `pointer:
+coarse`), `--node-tree-glyph` (the plus or minus inside it, 1em; 1.375em on
+touch screens) and `--node-tree-stroke` (the line width, 1.5). A theme
+changes them without touching the module, because a theme's CSS loads after
+a module's:
+
+```css
+ul.jqtree-tree {
+  --node-tree-box: 2em;
+  --node-tree-glyph: 1.25em;
+}
+```
+
+The glyphs take their colour from the text (`currentColor`). For a
+different look altogether, a theme can drop or replace the module's CSS
+with `libraries-override` in its info file (`node_tree/node_tree: css:
+component: css/node_tree.css: false`, or a path to its own file) and style
+`.jqtree-toggler` and `.node-tree-expander` itself.
 
 ## Licence
 
