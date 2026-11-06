@@ -18,6 +18,25 @@
   const CONTENT_URL = Drupal.url('node_tree/api/getNodeTreeContent/');
 
   /**
+   * The expander icons: a boxed minus (open) and plus (closed), as inline SVG
+   * so they stay crisp at any zoom. jqTree clones the element for each node;
+   * css/node_tree.css sizes the box and widens it on touch screens.
+   *
+   * @param {string} paths
+   *   The SVG path data drawn inside the box.
+   *
+   * @return {jQuery}
+   *   The icon element.
+   */
+  function expanderIcon(paths) {
+    return $(
+      `<svg class="node-tree-expander" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="${paths}"/></svg>`,
+    );
+  }
+  const OPENED_ICON = expanderIcon('M4.5 8h7');
+  const CLOSED_ICON = expanderIcon('M4.5 8h7M8 4.5v7');
+
+  /**
    * The base of the tree permalinks: <path>/node/.
    *
    * @return {string}
@@ -198,7 +217,14 @@
           );
           $.getJSON(EXPAND_URL + encodeURIComponent(id), (data) => {
             $container.find('.node-tree-loading').remove();
-            $tree.tree({ data, autoOpen: false, dragAndDrop: false, dataUrl });
+            $tree.tree({
+              data,
+              autoOpen: false,
+              dragAndDrop: false,
+              dataUrl,
+              openedIcon: OPENED_ICON,
+              closedIcon: CLOSED_ICON,
+            });
             const target = $tree.tree('getNodeById', id);
             if (target) {
               if (onTreePage) {
@@ -219,7 +245,12 @@
             }
           });
         } else {
-          $tree.tree({ dataUrl, dragAndDrop: false });
+          $tree.tree({
+            dataUrl,
+            dragAndDrop: false,
+            openedIcon: OPENED_ICON,
+            closedIcon: CLOSED_ICON,
+          });
           bindEvents($tree);
         }
       });

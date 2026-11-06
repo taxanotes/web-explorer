@@ -132,7 +132,10 @@ The tree page is `.node-tree-page` with `#node_tree.node-tree-column` and
 selected node's title `.node-tree-title`. jqTree's own classes
 (`.jqtree-tree`, `.jqtree-element`, `.jqtree-selected`, …) style the tree
 itself. `css/node_tree.css` gives the page its two columns (stacked under
-800 px) and the block a scrolling box.
+800 px) and the block a scrolling box. The expanders are a boxed minus
+(open) and plus (closed) drawn as inline SVG (`.node-tree-expander` inside
+jqTree's `.jqtree-toggler`), a 1.5 rem box that grows to 2.75 rem on touch
+screens (`pointer: coarse`); override those two selectors for another look.
 
 ## Licence
 
