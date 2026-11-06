@@ -69,6 +69,27 @@ you have), `ddev restart`, and point `source.files.ddev` in `instance.yml` (or
 `SOURCE_FILES_DIR` in `.env`) at the container path. Without the file the
 instance scripts skip the file and image migrations and say so.
 
+## Importing an owner's sheet
+
+An owner who keeps the classification in the Scratchpads *taxonomy importer*
+spreadsheet (the `.xls` template every Scratchpads site exports) sends the
+sheet, not a database. It is imported with `drush taxanotes:import-sheet
+FILE` (module `taxanotes_import`, "Sheet track" in its README): existing taxa
+are matched by GUID and updated, new rows create taxa, the parent, accepted
+name and literature links are resolved, and every change to a taxon with
+history is a revision "Imported from sheet <file> row N"; the same sheet
+twice changes nothing, so a new sheet is imported the same way whenever it
+arrives. Run it with `--report-only` first: it lists the duplicate and
+missing GUIDs, the parents and references that resolve nowhere, how many
+rows update and how many create, and how many existing taxa the sheet no
+longer mentions. A site built from a dump older than the sheet can carry
+other GUIDs for the same terms (Anthophila); `--match-names` then updates
+the taxon of the same name instead of creating it again. The file never
+goes into git: locally under `instances/<slug>/data-imports/sheets/`
+(gitignored), on the server under `/var/www/09/<domain>/source/sheets/`,
+both mode 0600; snapshot the database first (`ddev snapshot`, or the
+hosting toolkit's `backup_db`).
+
 ## `instance.yml` schema
 
 ```yaml

@@ -1,5 +1,5 @@
 name: 'Taxanotes import'
-description: 'Migrations and source plugins that bring taxa and literature into Taxanotes: the live Scratchpads (Drupal 7) database track. Instance-specific values (which vocabulary, which database, where the files are) come from settings, not from this module.'
+description: 'Migrations and source plugins that bring taxa and literature into Taxanotes: the live Scratchpads (Drupal 7) database track, and the sheet track (the Scratchpads taxonomy importer spreadsheet, drush taxanotes:import-sheet). Instance-specific values (which vocabulary, which database, where the files and the sheet are) come from settings and the command line, not from this module.'
 type: module
 package: Taxanotes
 # FetchAs (Drupal\Core\Database\Statement\FetchAs) and the #[MigrateSource]
