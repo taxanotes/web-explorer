@@ -41,7 +41,7 @@ are plain cacheable GETs.
 ## Requirements
 
 - Drupal 10.3 or 11, the core Node module.
-- [jqTree](https://mbraak.github.io/jqTree/) 1.6.2 (Apache-2.0). It is not
+- [jqTree](https://mbraak.github.io/jqTree/) 1.9.1 (Apache-2.0). It is not
   part of the module, as drupal.org does not allow Apache-2.0 code in a
   project's repository. Three ways to provide it, in order of preference:
 
@@ -55,7 +55,7 @@ are plain cacheable GETs.
      composer config --json extra.installer-types '["npm-asset", "bower-asset"]'
      composer config --json extra.installer-paths.web/libraries/{$name} '["type:drupal-library", "type:npm-asset", "type:bower-asset"]'
      composer config allow-plugins.oomphinc/composer-installers-extender true
-     composer require oomphinc/composer-installers-extender npm-asset/jqtree:1.6.2
+     composer require oomphinc/composer-installers-extender npm-asset/jqtree:1.9.1
      ```
 
      (`web` is your Drupal root; adjust the path if yours differs.) Drupal
@@ -67,7 +67,7 @@ are plain cacheable GETs.
   2. **By hand**: put the two files of the `jqtree` npm package at exactly
      `<root>/libraries/jqtree/tree.jquery.js` and
      `<root>/libraries/jqtree/jqtree.css` (for example from
-     <https://cdn.jsdelivr.net/npm/jqtree@1.6.2/>).
+     <https://cdn.jsdelivr.net/npm/jqtree@1.9.1/>).
   3. **Nothing**: without the local files the module loads the library from
      the jsDelivr CDN at the tested version.
 

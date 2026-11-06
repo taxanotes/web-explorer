@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e2b883290804a5fe1f003c2f54f4a796",
+    "content-hash": "97cc18edc7e93e96c4184023abbc924a",
     "packages": [
         {
             "name": "adci/full-name-parser",
@@ -3651,14 +3651,11 @@
         },
         {
             "name": "npm-asset/jqtree",
-            "version": "1.6.2",
+            "version": "1.9.1",
             "dist": {
                 "type": "tar",
-                "url": "https://registry.npmjs.org/jqtree/-/jqtree-1.6.2.tgz",
-                "shasum": "b4bb643f2b178966d6e77bf802898770a3439837"
-            },
-            "require": {
-                "npm-asset/jquery": ">=3.6.0,<4.0.0"
+                "url": "https://registry.npmjs.org/jqtree/-/jqtree-1.9.1.tgz",
+                "shasum": "2e2efa6ae4212a16fdd2a28b9e91a9d3c16a0fb8"
             },
             "type": "npm-asset",
             "license": [

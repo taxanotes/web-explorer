@@ -29,7 +29,7 @@ final class NodeTree {
   /**
    * The jqTree version the module is written against (and the CDN fallback).
    */
-  public const JQTREE_VERSION = '1.6.2';
+  public const JQTREE_VERSION = '1.9.1';
 
   /**
    * The jqTree files under the Drupal root, when installed locally.
