@@ -112,6 +112,11 @@ selected node's title `.node-tree-title`. jqTree's own classes
 itself. `css/node_tree.css` gives the page its two columns (stacked under
 800 px) and the block a scrolling box.
 
+## Licence
+
+GNU General Public License, version 2 or later, like Drupal itself.
+jqTree, which the module uses but does not contain, is Apache-2.0.
+
 ## Credits
 
 Written by Rob Davis ([therobyouknow](https://www.drupal.org/u/therobyouknow))
