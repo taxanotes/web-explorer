@@ -7,6 +7,7 @@ namespace Drupal\taxanotes_import\Plugin\migrate\destination;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\ContentEntityTypeInterface;
 use Drupal\Core\Entity\Sql\SqlEntityStorageInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\migrate\Attribute\MigrateDestination;
@@ -141,7 +142,7 @@ final class TaxanotesEntityRevision extends EntityRevision {
       return $entity;
     }
     if (!$entity->isNewRevision()) {
-      $log_key = $entity->getEntityType()->getRevisionMetadataKey('revision_log_message');
+      $log_key = $this->revisionLogKey($entity);
       $this->inPlaceLog = $log_key && $row->hasDestinationProperty($log_key) ? (string) $row->getDestinationProperty($log_key) : '';
     }
     if ($entity->isNewRevision()) {
@@ -183,6 +184,14 @@ final class TaxanotesEntityRevision extends EntityRevision {
   }
 
   /**
+   * The revision log key of a content entity type ('' when it has none).
+   */
+  protected function revisionLogKey(ContentEntityInterface $entity): string {
+    $type = $entity->getEntityType();
+    return $type instanceof ContentEntityTypeInterface ? (string) $type->getRevisionMetadataKey('revision_log_message') : '';
+  }
+
+  /**
    * Empties the stored log of a revision that was updated in place.
    *
    * Node::preSaveRevision() refuses an empty log on a save that creates no
@@ -192,7 +201,7 @@ final class TaxanotesEntityRevision extends EntityRevision {
    * table is set to NULL directly; a revision's log is not cached.
    */
   protected function clearRevisionLog(ContentEntityInterface $entity): void {
-    $log_key = $entity->getEntityType()->getRevisionMetadataKey('revision_log_message');
+    $log_key = $this->revisionLogKey($entity);
     if (!$log_key || !$this->database || !$this->storage instanceof SqlEntityStorageInterface) {
       return;
     }

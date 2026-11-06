@@ -1,0 +1,128 @@
+id: taxanotes_sheet_taxon
+label: 'Scratchpads taxonomy importer sheet to taxon nodes'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - sheet
+source:
+  plugin: scratchpads_sheet
+  # path / sheet: omitted on purpose; the plugin reads the state keys drush
+  # taxanotes:import-sheet sets for its run, else
+  # $settings['taxanotes_import']['sheet_path'], so this file serves every
+  # instance and every sheet unchanged.
+  # Re-runs are idempotent: only rows whose hash changed are re-imported.
+  # Together with the destination below, an unchanged row saves nothing and
+  # a changed row on a node with real history becomes a new revision.
+  track_changes: true
+  constants:
+    log_prefix: 'Imported from sheet '
+    row_infix: ' row '
+process:
+  type:
+    plugin: default_value
+    default_value: taxon
+  langcode:
+    plugin: default_value
+    default_value: en
+  # The node to update: the one the D7 track created for this GUID, else the
+  # one that carries the GUID in field_guid (made by hand or by an earlier
+  # sheet). Empty for a new taxon: the destination then creates the node. A
+  # row this migration already imported is found through its own id map
+  # before this lookup is consulted. match_guid is the row id, or, when the
+  # source matched the row to a taxon of the same name (match_names), that
+  # taxon's current GUID; field_guid below then re-keys it to the row id.
+  nid:
+    plugin: taxanotes_guid_lookup
+    source: match_guid
+    migrations:
+      - taxanotes_d7_taxon
+    entity_type: node
+    bundle: taxon
+    field: field_guid
+  title: name
+  # The sheet has no author or status column: a created taxon is published
+  # and owned by uid 1; an existing one keeps its own (create_only_properties
+  # below), so a taxon unpublished or re-owned on the site stays so.
+  uid:
+    plugin: default_value
+    default_value: 1
+  status: published
+  # No created/changed: the sheet has no dates. A pipeline that yields NULL
+  # (skip_on_empty) is recorded as an empty destination and would set the
+  # existing node's created to NULL on an update; left out, a new node takes
+  # the import time and an existing one keeps its own.
+  # "Imported from sheet <file> row N": the log of a created node's first
+  # revision and of the revision a changed row adds to a node with history.
+  # Not a placeholder prefix of the destination: every sheet change is a
+  # genuine edit by the owner and stays in the history.
+  revision_log:
+    plugin: concat
+    source:
+      - constants/log_prefix
+      - sheet
+      - constants/row_infix
+      - row
+  sync_revision_log:
+    plugin: concat
+    source:
+      - constants/log_prefix
+      - sheet
+      - constants/row_infix
+      - row
+  # The row id (the sheet GUID, or the derived id of a duplicate or GUID-less
+  # row). field_legacy_tid and field_weight are not in the sheet and are left
+  # as they are.
+  field_guid: guid
+  field_parent_guid: parent_guid
+  field_parent_term_name: parent_name
+  field_rank: rank
+  field_usage: usage
+  field_unacceptability_reason: unacceptability_reason
+  field_unit_names:
+    plugin: sub_process
+    source: unit_names
+    process:
+      indicator: indicator
+      name: name
+  field_authors: authors
+  field_page_number: page_number
+  field_accepted_guid: accepted_guid
+  field_accepted_tid: accepted_tid
+  field_reference_nid: reference_nid
+  field_reference_title: reference_title
+  field_reference_guid: reference_guid
+  # Whole-field values built by the source plugin: {value, format} or NULL
+  # for the formatted texts (see the README on why not sub-properties).
+  field_term_description: description
+  field_vernacular_names:
+    plugin: sub_process
+    source: vernacular
+    process:
+      name: name
+      language: language
+      area: area
+      remarks: remarks
+  field_type_material_notes: type_material_notes
+  field_family_level_name_origins: family_level_name_origins
+  field_designation_by: designation_by
+  field_synonymy_by: synonymy_by
+  field_taxonomic_notes: taxonomic_notes
+  field_biological_notes: biological_notes
+destination:
+  # entity:node plus the real-history rule (see the destination's docblock):
+  # a placeholder revision (a D7 track log) is updated in place, anything
+  # else gets a new revision when a value changes and nothing when none does.
+  plugin: taxanotes_entity_node
+  entity_type: node
+  default_bundle: taxon
+  placeholder_log_prefixes:
+    - 'Migrated from Scratchpads GUID '
+    - 'Synced from Scratchpads GUID '
+    - 'Scratchpads revision history rolled back'
+  sync_uid: 1
+  create_only_properties:
+    - uid
+    - status
+migration_dependencies:
+  required: {  }
+  optional: {  }

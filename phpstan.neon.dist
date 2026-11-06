@@ -1,0 +1,9 @@
+# PHPStan for the custom modules: vendor/bin/phpstan (phpstan-drupal is wired
+# in by phpstan/extension-installer). Level 5 over the modules that are clean
+# at it; node_tree, taxanotes_front and taxanotes_literature join this list
+# as they are brought to it (they report DependencySerializationTrait and
+# return-type findings today). A phpstan.neon beside this file overrides it.
+parameters:
+  level: 5
+  paths:
+    - web/modules/custom/taxanotes_import

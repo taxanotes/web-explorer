@@ -1,0 +1,108 @@
+id: taxanotes_sheet_taxon_reference
+label: 'Scratchpads taxonomy importer sheet: link the protologue, synonymy and designation references'
+migration_group: taxanotes
+migration_tags:
+  - taxanotes
+  - sheet
+source:
+  plugin: scratchpads_sheet
+  # Only the rows that name a reference (Reference, Synonymy reference or
+  # Designation reference GUID = the D7 biblio node uuid). The sheet carries
+  # no titles, so a reference this site does not have cannot be created
+  # here: the row keeps its shadow fields (field_reference_guid/_nid) from
+  # the first pass and the link stays empty, with a message.
+  with_reference_only: true
+  track_changes: true
+  constants:
+    log_prefix: 'Imported from sheet '
+    row_infix: ' row '
+  identity_messages: false
+process:
+  # The log of the revision a changed link adds to a node whose current
+  # revision is real history (destination-only, see below).
+  sync_revision_log:
+    plugin: concat
+    source:
+      - constants/log_prefix
+      - sheet
+      - constants/row_infix
+      - row
+  nid:
+    -
+      plugin: taxanotes_guid_lookup
+      source: guid
+      migrations:
+        - taxanotes_sheet_taxon
+        - taxanotes_d7_taxon
+      entity_type: node
+      bundle: taxon
+      field: field_guid
+    -
+      plugin: skip_on_empty
+      method: row
+      message: 'Taxon node not found for GUID'
+  # bibcite references by the D7 node uuid: the literature migration's id
+  # map, else field_scratchpads_uuid (recipes/taxanotes_literature).
+  field_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): reference GUID @value (NID @reference_nid) is not on this site; reference left empty'
+  field_synonymy_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: synonymy_reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): synonymy reference GUID @value (NID @synonymy_reference_nid) is not on this site; synonymy reference left empty'
+  field_designation_reference:
+    -
+      plugin: skip_on_empty
+      method: process
+      source: designation_reference_guid
+    -
+      plugin: taxanotes_guid_lookup
+      migrations:
+        - taxanotes_d7_biblio
+      entity_type: bibcite_reference
+      field: field_scratchpads_uuid
+      message: 'row @row (@name): designation reference GUID @value (NID @designation_reference_nid) is not on this site; designation reference left empty'
+destination:
+  # The real-history rule of the first pass (taxanotes_entity_node), on the
+  # listed fields only: a link that already holds the row's value saves
+  # nothing; a changed link lands in the revision this sheet import made
+  # ("Imported from sheet ..." is a placeholder for this pass: the first
+  # pass's revision of this run, or an earlier sheet's) or in a D7
+  # placeholder; on any other revision (a D7 revision, an edit made on the
+  # site, e.g. a taxon re-parented by hand) it becomes a new revision logged
+  # "Imported from sheet <file> row N", so every sheet change stays visible
+  # in the history.
+  plugin: taxanotes_entity_node
+  entity_type: node
+  default_bundle: taxon
+  overwrite_properties:
+    - field_reference
+    - field_synonymy_reference
+    - field_designation_reference
+  placeholder_log_prefixes:
+    - 'Imported from sheet '
+    - 'Migrated from Scratchpads GUID '
+    - 'Synced from Scratchpads GUID '
+    - 'Scratchpads revision history rolled back'
+  sync_uid: 1
+migration_dependencies:
+  required:
+    - taxanotes_sheet_taxon
+  optional: {  }
