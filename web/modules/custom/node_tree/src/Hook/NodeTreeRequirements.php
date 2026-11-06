@@ -4,24 +4,35 @@ declare(strict_types=1);
 
 namespace Drupal\node_tree\Hook;
 
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Extension\Requirement\RequirementSeverity;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\node_tree\NodeTree;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Status report entries: which jqTree is served, whether a bundle is set.
  *
  * Drupal 11.2+ collects hook_runtime_requirements() from here; earlier
  * versions call node_tree_requirements() in node_tree.install, which
- * delegates to ::runtime().
+ * delegates to ::runtime() through the class resolver. Before Drupal 11.1
+ * hook classes are not services, so the class resolver builds the object
+ * itself: ::create() is what makes that possible.
  */
-final class NodeTreeRequirements {
+final class NodeTreeRequirements implements ContainerInjectionInterface {
 
   use StringTranslationTrait;
 
   public function __construct(private readonly NodeTree $tree) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('node_tree'));
+  }
 
   /**
    * Implements hook_runtime_requirements().

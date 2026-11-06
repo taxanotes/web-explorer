@@ -9,6 +9,7 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
+use Drupal\node_tree\Hook\NodeTreeRequirements;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -316,6 +317,35 @@ final class NodeTreeTest extends BrowserTestBase {
     $this->assertSame([], $this->getJson('node_tree/api/getImmediateChildrenOfParent'));
     $this->drupalGet($this->nodes['Leaf']->toUrl());
     $assert->elementNotExists('css', '#node_tree');
+  }
+
+  /**
+   * The status report: the jqTree source and the configured node types.
+   *
+   * Drupal 11.2+ reaches NodeTreeRequirements::runtime() as a
+   * hook_runtime_requirements() service; earlier versions through
+   * node_tree_requirements() and the class resolver. Both must render.
+   */
+  public function testStatusReport(): void {
+    $assert = $this->assertSession();
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $this->drupalGet('admin/reports/status');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('Node tree: jqTree library');
+    $assert->pageTextContains('Node tree: node types');
+    $assert->pageTextContains('folder');
+
+    // Without a node type the report says so.
+    $this->config('node_tree.settings')->set('bundles', [])->save();
+    $this->drupalGet('admin/reports/status');
+    $assert->pageTextContains('None configured: the tree is empty until a node type is chosen');
+
+    // The legacy path (Drupal before 11.2) builds the object through the
+    // class resolver, which must work without a service definition.
+    $this->container->get('module_handler')->loadInclude('node_tree', 'install');
+    $legacy = \Drupal::classResolver(NodeTreeRequirements::class)->runtime();
+    $this->assertSame(['node_tree_jqtree', 'node_tree_settings'], array_keys($legacy));
+    $this->assertEquals($legacy, node_tree_requirements('runtime'));
   }
 
   /**
