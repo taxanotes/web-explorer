@@ -34,7 +34,7 @@
         "drupal/taxonomy_import": "^2.0",
         "drupal/tour": "^2.0",
         "drush/drush": "^13.6",
-        "npm-asset/jqtree": "1.6.2",
+        "npm-asset/jqtree": "^1.8",
         "oomphinc/composer-installers-extender": "^2.0"
     },
     "conflict": {

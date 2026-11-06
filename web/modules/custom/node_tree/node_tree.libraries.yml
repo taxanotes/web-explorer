@@ -2,7 +2,7 @@
 # /libraries/jqtree when it is installed there; otherwise
 # node_tree_library_info_alter() points this library at the jsDelivr CDN.
 jqtree:
-  version: 1.6.2
+  version: 1.9.1
   remote: https://github.com/mbraak/jqTree
   license:
     name: Apache-2.0
