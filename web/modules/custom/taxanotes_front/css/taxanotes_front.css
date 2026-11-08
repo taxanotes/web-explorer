@@ -131,7 +131,8 @@
   opacity: 0.8;
 }
 
-/* The footer logos row: the partner logos side by side, centred. */
+/* The footer logos row: the partner logos side by side, centred; the
+   Taxanotes mark (the platform credit) last, a little apart from them. */
 .taxanotes-footer-logos {
   display: flex;
   flex-wrap: wrap;
@@ -151,4 +152,15 @@
   height: 40px;
   width: auto;
   max-width: 100%;
+}
+.taxanotes-footer-logos__credit {
+  margin-left: 10px;
+}
+.taxanotes-footer-logos__credit img {
+  height: 32px;
+  opacity: 0.85;
+}
+.taxanotes-footer-logos__credit a:hover img,
+.taxanotes-footer-logos__credit a:focus img {
+  opacity: 1;
 }

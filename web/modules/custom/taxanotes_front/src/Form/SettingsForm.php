@@ -68,6 +68,12 @@ final class SettingsForm extends ConfigFormBase {
       '#rows' => 3,
       '#description' => $this->t('HTML; shown by the "Instance text" block placed in the footer (licence, credits).'),
     ];
+    $form['footer_credit'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show the Taxanotes mark at the end of the footer logos row'),
+      '#default_value' => $config->get('footer_credit') ?? TRUE,
+      '#description' => $this->t('The platform\'s own credit: the Taxanotes leaf mark linked to taxanotes.org, after this site\'s partner logos.'),
+    ];
     return parent::buildForm($form, $form_state);
   }
 
@@ -81,6 +87,7 @@ final class SettingsForm extends ConfigFormBase {
       ->set('about_title', trim((string) $form_state->getValue('about_title')))
       ->set('about_body', (string) $form_state->getValue('about_body'))
       ->set('footer_text', (string) $form_state->getValue('footer_text'))
+      ->set('footer_credit', (bool) $form_state->getValue('footer_credit'))
       ->save();
     parent::submitForm($form, $form_state);
   }
