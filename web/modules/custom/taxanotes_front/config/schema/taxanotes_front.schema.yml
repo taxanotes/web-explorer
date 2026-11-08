@@ -17,6 +17,9 @@ taxanotes_front.settings:
     footer_text:
       type: text
       label: 'Footer text (HTML)'
+    footer_credit:
+      type: boolean
+      label: 'End the footer logos row with the Taxanotes mark linked to taxanotes.org'
     footer_logos:
       type: sequence
       label: 'Footer logos (the instance scripts fill this from assets/footer/)'

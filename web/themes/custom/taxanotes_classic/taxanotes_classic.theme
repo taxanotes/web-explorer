@@ -39,6 +39,30 @@ function taxanotes_classic_preprocess_html(array &$variables): void {
 }
 
 /**
+ * Implements hook_page_attachments_alter().
+ *
+ * The Taxanotes mark as the site icon: favicon.ico in the theme root is
+ * what Drupal links by default; this adds the SVG (crisp at any size) and
+ * the Apple touch icon beside it. An instance that sets its own favicon in
+ * the theme settings keeps it: the links are added only while the default
+ * is in use.
+ */
+function taxanotes_classic_page_attachments_alter(array &$attachments): void {
+  if (!theme_get_setting('favicon.use_default', 'taxanotes_classic')) {
+    return;
+  }
+  $path = base_path() . \Drupal::service('extension.list.theme')->getPath('taxanotes_classic') . '/images/';
+  $attachments['#attached']['html_head'][] = [
+    ['#tag' => 'link', '#attributes' => ['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => $path . 'taxanotes-mark.svg']],
+    'taxanotes_classic_icon_svg',
+  ];
+  $attachments['#attached']['html_head'][] = [
+    ['#tag' => 'link', '#attributes' => ['rel' => 'apple-touch-icon', 'sizes' => '180x180', 'href' => $path . 'apple-touch-icon.png']],
+    'taxanotes_classic_icon_touch',
+  ];
+}
+
+/**
  * Implements hook_preprocess_HOOK() for block.html.twig.
  *
  * On a taxon page the Scratchpads showed Descriptions, Media and Literature

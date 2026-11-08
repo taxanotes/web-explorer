@@ -9,6 +9,7 @@ use Drupal\Core\Block\BlockBase;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -26,7 +27,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * assets/footer/ directory (copied to public://instance/footer/) and the
  * optional links and alt texts of instance.yml site.footer_logos. A file
  * that is not in the files directory is skipped, a link that is not an
- * absolute URL is dropped; no logo, no row.
+ * absolute URL is dropped. After the instance's logos the row ends with the
+ * Taxanotes mark linked to taxanotes.org (alt "Built with Taxanotes"), the
+ * platform's own credit, unless taxanotes_front.settings:footer_credit is
+ * FALSE (a missing key, as on an instance installed before the setting
+ * existed, counts as TRUE). Nothing to show, no row.
  */
 #[Block(
   id: 'taxanotes_front_footer_logos',
@@ -35,7 +40,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 )]
 final class FooterLogosBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
-  public function __construct(array $configuration, string $plugin_id, mixed $plugin_definition, private readonly ConfigFactoryInterface $configFactory, private readonly FileUrlGeneratorInterface $fileUrlGenerator) {
+  public function __construct(array $configuration, string $plugin_id, mixed $plugin_definition, private readonly ConfigFactoryInterface $configFactory, private readonly FileUrlGeneratorInterface $fileUrlGenerator, private readonly ModuleExtensionList $moduleList) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
 
@@ -43,7 +48,7 @@ final class FooterLogosBlock extends BlockBase implements ContainerFactoryPlugin
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    return new static($configuration, $plugin_id, $plugin_definition, $container->get('config.factory'), $container->get('file_url_generator'));
+    return new static($configuration, $plugin_id, $plugin_definition, $container->get('config.factory'), $container->get('file_url_generator'), $container->get('extension.list.module'));
   }
 
   /**
@@ -74,6 +79,15 @@ final class FooterLogosBlock extends BlockBase implements ContainerFactoryPlugin
         'src' => $this->fileUrlGenerator->generateString($uri),
         'alt' => trim((string) ($logo['alt'] ?? '')) ?: pathinfo($file, PATHINFO_FILENAME),
         'url' => $url !== '' ? Url::fromUri($url)->toString() : '',
+        'class' => '',
+      ];
+    }
+    if ($config->get('footer_credit') ?? TRUE) {
+      $logos[] = [
+        'src' => $this->fileUrlGenerator->generateString($this->moduleList->getPath('taxanotes_front') . '/images/taxanotes-mark.svg'),
+        'alt' => (string) $this->t('Built with Taxanotes'),
+        'url' => 'https://taxanotes.org',
+        'class' => 'taxanotes-footer-logos__credit',
       ];
     }
     $build = [];
