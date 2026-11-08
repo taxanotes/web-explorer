@@ -115,11 +115,11 @@ config:
         - name: field_synonyms_heterotypic
           options: { type: text_textarea, weight: 45, region: content, settings: { rows: 2, placeholder: '' }, third_party_settings: {  } }
         - name: field_synonymy_by
-          options: { type: string_textfield, weight: 46, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+          options: { type: string_textarea, weight: 46, region: content, settings: { rows: 2, placeholder: '' }, third_party_settings: {  } }
         - name: field_page_number_synonymy
           options: { type: string_textfield, weight: 48, region: content, settings: { size: 20, placeholder: '' }, third_party_settings: {  } }
         - name: field_designation_by
-          options: { type: string_textfield, weight: 49, region: content, settings: { size: 60, placeholder: '' }, third_party_settings: {  } }
+          options: { type: string_textarea, weight: 49, region: content, settings: { rows: 2, placeholder: '' }, third_party_settings: {  } }
         - name: field_page_number_designation
           options: { type: string_textfield, weight: 51, region: content, settings: { size: 20, placeholder: '' }, third_party_settings: {  } }
         - name: field_family_level_name_origins
